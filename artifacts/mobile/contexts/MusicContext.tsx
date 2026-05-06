@@ -1,11 +1,14 @@
 /**
- * MusicContext — in-match background music player
+ * MusicContext — background music player
  *
- * Playlist: shuffled on every match start, re-shuffles after all 4 tracks play.
+ * Two modes:
+ *  • Splash  — "Sparks Fly" loops on the lobby screen (6 s fade-in, 6 s
+ *              fade-out before each loop boundary, seamless restart).
+ *  • Match   — shuffled playlist of all 4 tracks, 6 s fade-in per track.
  *
  * ─── TRACKS ──────────────────────────────────────────────────────────────────
  *   track1.wav — Low Energy 2nd Wind
- *   track2.wav — Sparks Fly
+ *   track2.wav — Sparks Fly  ← splash screen track
  *   track3.wav — Wife Changing Money
  *   track4.wav — Go! Go! Go!
  *
@@ -17,8 +20,10 @@ import { Audio } from 'expo-av';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 const MUTED_KEY = '@castleroyale_music_muted';
-const FADE_STEPS = 60;
-const FADE_MS    = 100; // 60 × 100ms = 6 000ms fade-in
+const FADE_STEPS        = 60;
+const FADE_MS           = 100;  // 60 × 100 ms = 6 000 ms per fade
+const FADE_DURATION_MS  = FADE_STEPS * FADE_MS; // 6 000 ms
+const SPLASH_TRACK_IDX  = 1;    // track2.wav — Sparks Fly
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const TRACKS: number[] = [
@@ -44,6 +49,9 @@ interface MusicContextValue {
   isMuted: boolean;
   isPlaying: boolean;
   toggleMute: () => void;
+  /** Start the looping splash-screen track (Sparks Fly). */
+  playSplashTrack: () => void;
+  /** Start the shuffled in-match playlist. */
   startMusic: () => void;
   stopMusic: () => void;
 }
@@ -52,6 +60,7 @@ const MusicContext = createContext<MusicContextValue>({
   isMuted: false,
   isPlaying: false,
   toggleMute: () => {},
+  playSplashTrack: () => {},
   startMusic: () => {},
   stopMusic: () => {},
 });
@@ -70,7 +79,11 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const mountedRef    = useRef(true);
   const prefLoadedRef = useRef(false);
 
-  // Shuffle queue — rebuilt at each startMusic() call and when exhausted
+  // Splash-mode flags
+  const splashActiveRef        = useRef(false);
+  const splashFadeOutStartedRef = useRef(false);
+
+  // Match-mode shuffle queue
   const queueRef = useRef<number[]>(shuffleIndices(TRACKS.length));
   const queuePos = useRef(0);
 
@@ -96,21 +109,98 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isMuted]);
 
-  const clearFade = () => {
+  const clearFade = useCallback(() => {
     if (fadeRef.current !== null) {
       clearInterval(fadeRef.current);
       fadeRef.current = null;
     }
-  };
+  }, []);
 
   const unloadCurrent = useCallback(async () => {
+    clearFade();
     if (soundRef.current) {
       const s = soundRef.current;
       soundRef.current = null;
       try { await s.stopAsync(); } catch {}
       try { await s.unloadAsync(); } catch {}
     }
-  }, []);
+  }, [clearFade]);
+
+  /** Run a volume ramp. direction: +1 = fade in, -1 = fade out. */
+  const startFade = useCallback((direction: 1 | -1, onDone?: () => void) => {
+    clearFade();
+    if (isMutedRef.current) {
+      onDone?.();
+      return;
+    }
+    let vol = direction === 1 ? 0 : 1;
+    const step = 1 / FADE_STEPS;
+    fadeRef.current = setInterval(() => {
+      vol = direction === 1
+        ? Math.min(1, vol + step)
+        : Math.max(0, vol - step);
+      soundRef.current?.setVolumeAsync(vol).catch(() => {});
+      const done = direction === 1 ? vol >= 1 : vol <= 0;
+      if (done) {
+        clearFade();
+        onDone?.();
+      }
+    }, FADE_MS);
+  }, [clearFade]);
+
+  // ─── Splash track (looping) ────────────────────────────────────────────────
+
+  const playSplashTrackAsync = useCallback(async () => {
+    if (!mountedRef.current) return;
+    splashFadeOutStartedRef.current = false;
+
+    await unloadCurrent();
+    if (!mountedRef.current || !splashActiveRef.current) return;
+
+    try {
+      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false });
+
+      const { sound } = await Audio.Sound.createAsync(
+        TRACKS[SPLASH_TRACK_IDX] as number,
+        { volume: 0, shouldPlay: true },
+        (status) => {
+          if (!('isLoaded' in status) || !status.isLoaded) return;
+
+          // Begin fade-out 6 s before the track ends so it reaches 0 exactly
+          // at the boundary, then the loop restarts with a fresh fade-in.
+          if (
+            !splashFadeOutStartedRef.current &&
+            status.durationMillis != null &&
+            status.positionMillis >= status.durationMillis - FADE_DURATION_MS
+          ) {
+            splashFadeOutStartedRef.current = true;
+            startFade(-1);
+          }
+
+          // Loop: restart with fade-in
+          if (status.didJustFinish && splashActiveRef.current) {
+            void playSplashTrackAsync();
+          }
+        },
+      );
+
+      soundRef.current = sound;
+      if (mountedRef.current) setIsPlaying(true);
+
+      // 6-second fade-in from silence
+      startFade(1);
+    } catch {
+      // Audio is best-effort — never crash the app
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unloadCurrent, startFade]);
+
+  const playSplashTrack = useCallback(() => {
+    splashActiveRef.current = true;
+    void playSplashTrackAsync();
+  }, [playSplashTrackAsync]);
+
+  // ─── Match playlist ────────────────────────────────────────────────────────
 
   const playTrack = useCallback(async (trackAssetIndex: number, startVol: number) => {
     await unloadCurrent();
@@ -129,7 +219,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
               queuePos.current = 0;
             }
             const next = queueRef.current[queuePos.current];
-            playTrack(next, isMutedRef.current ? 0 : 1);
+            void playTrack(next, isMutedRef.current ? 0 : 1);
           }
         },
       );
@@ -141,32 +231,30 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   }, [unloadCurrent]);
 
   const startMusic = useCallback(() => {
+    splashActiveRef.current = false;
+
     // Fresh shuffle every match
     queueRef.current = shuffleIndices(TRACKS.length);
     queuePos.current = 0;
 
-    clearFade();
     void playTrack(queueRef.current[0], 0);
 
-    // 6-second fade in
-    if (!isMutedRef.current) {
-      let vol = 0;
-      const step = 1 / FADE_STEPS;
-      fadeRef.current = setInterval(() => {
-        vol = Math.min(1, vol + step);
-        soundRef.current?.setVolumeAsync(vol).catch(() => {});
-        if (vol >= 1) clearFade();
-      }, FADE_MS);
-    }
-  }, [playTrack]);
+    // 6-second fade-in
+    startFade(1);
+  }, [playTrack, startFade]);
+
+  // ─── Stop (shared) ─────────────────────────────────────────────────────────
 
   const stopMusic = useCallback(() => {
+    splashActiveRef.current = false;
+
     clearFade();
     const sound = soundRef.current;
     if (!sound) {
       if (mountedRef.current) setIsPlaying(false);
       return;
     }
+
     let vol = isMutedRef.current ? 0 : 1;
     const step = 1 / FADE_STEPS;
     fadeRef.current = setInterval(() => {
@@ -181,14 +269,14 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }, FADE_MS);
-  }, []);
+  }, [clearFade]);
 
   const toggleMute = useCallback(() => {
     setIsMuted((m) => !m);
   }, []);
 
   return (
-    <MusicContext.Provider value={{ isMuted, isPlaying, toggleMute, startMusic, stopMusic }}>
+    <MusicContext.Provider value={{ isMuted, isPlaying, toggleMute, playSplashTrack, startMusic, stopMusic }}>
       {children}
     </MusicContext.Provider>
   );

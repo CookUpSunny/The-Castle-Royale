@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -21,6 +21,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import { useMusicPlayer } from '@/contexts/MusicContext';
 import CosmeticsModal from '@/components/CosmeticsModal';
 import SplashCards from '@/components/SplashCards';
 
@@ -92,9 +93,17 @@ export default function LobbyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { playerName, setPlayerName, joinQueue, quickPlayBot, isInQueue, connectionStatus, gameView } = useGame();
+  const { playSplashTrack, stopMusic } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
   const [cosmeticsOpen, setCosmeticsOpen] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      playSplashTrack();
+      return () => { stopMusic(); };
+    }, [playSplashTrack, stopMusic]),
+  );
 
   const playScale = useSharedValue(1);
   const logoOpacity = useSharedValue(0);
