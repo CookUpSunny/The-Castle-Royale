@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Castle Royale",
-    "slug": "mobile",
+    "name": "The Castle Royale",
+    "slug": "thecastleroyale",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "thecastleroyale",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "dlp.castle"
+      "bundleIdentifier": "com.thecastleroyale.app"
     },
     "android": {
-      "package": "dlp.castle",
+      "package": "com.thecastleroyale.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#07000f"

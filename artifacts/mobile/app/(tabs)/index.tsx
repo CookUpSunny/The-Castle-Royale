@@ -174,20 +174,20 @@ export default function LobbyScreen() {
       <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 20, paddingBottom: insets.bottom + 34 }]}>
 
         <Animated.View style={[styles.logoSection, logoStyle]}>
-          <Text style={[styles.logoSub, { color: colors.accent }]}>✦ ANIME ✦</Text>
+          <Text style={styles.logoCrown}>♛</Text>
           <OutlinedTitle
             text="CASTLE"
             textStyle={styles.logoTitle}
-            mainColor="#ffffff"
-            glowColor="#a855f7"
+            mainColor="#ffd700"
+            glowColor="#c8960a"
           />
           <OutlinedTitle
             text="ROYALE"
             textStyle={styles.logoRoyale}
-            mainColor={colors.neonGold}
-            glowColor="#ffd700"
+            mainColor="#a855f7"
+            glowColor="#a855f7"
           />
-          <Text style={[styles.logoTagline, { color: colors.mutedForeground }]}>RISK IT ALL. WIN IT ALL.</Text>
+          <Text style={[styles.logoTagline, { color: colors.mutedForeground }]}>RISK IT ALL · WIN IT ALL</Text>
         </Animated.View>
 
         <View style={styles.nameSection}>
@@ -220,13 +220,16 @@ export default function LobbyScreen() {
             <Pressable
               onPress={handlePlay}
               disabled={connectionStatus !== 'connected'}
-              style={({ pressed }) => [styles.playButtonOuter, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.goldPillOuter, pressed && { opacity: 0.88 }]}
             >
               <LinearGradient
-                colors={connectionStatus === 'connected' ? ['#fbbf24', '#f59e0b', '#d97706'] : ['#4a3a1a', '#2a2010']}
-                style={styles.playButton}
+                colors={connectionStatus === 'connected'
+                  ? ['#f5e070', '#d4a820', '#f5e070']
+                  : ['#3a3020', '#1e1a0a', '#3a3020']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.goldPill}
               >
-                <Text style={styles.playButtonText}>
+                <Text style={[styles.goldPillText, connectionStatus !== 'connected' && { color: '#5a5030' }]}>
                   {connectionStatus === 'connected' ? 'PLAY' : 'CONNECTING...'}
                 </Text>
               </LinearGradient>
@@ -236,12 +239,18 @@ export default function LobbyScreen() {
           <Pressable
             onPress={handleBotPlay}
             disabled={connectionStatus !== 'connected'}
-            style={({ pressed }) => [styles.menuButton, { borderColor: colors.electric }, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.goldPillOuter, styles.goldPillSmall, pressed && { opacity: 0.88 }]}
           >
-            <LinearGradient colors={['#0a3d4d', '#082030']} style={styles.menuButtonInner}>
-              <View style={styles.botBtnRow}>
-                <Text style={[styles.botIcon, { color: colors.electric }]}>⚡</Text>
-                <Text style={[styles.menuButtonText, { color: colors.electric }]}>QUICK PLAY · BOT</Text>
+            <LinearGradient
+              colors={connectionStatus === 'connected'
+                ? ['#e8d060', '#b89018', '#e8d060']
+                : ['#2e2810', '#181408', '#2e2810']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.goldPill}
+            >
+              <View style={styles.pillRow}>
+                <Text style={[styles.pillIcon, connectionStatus !== 'connected' && { color: '#5a5030' }]}>⚡</Text>
+                <Text style={[styles.goldPillText, styles.goldPillTextSm, connectionStatus !== 'connected' && { color: '#5a5030' }]}>QUICK PLAY · BOT</Text>
               </View>
             </LinearGradient>
           </Pressable>
@@ -249,25 +258,35 @@ export default function LobbyScreen() {
           <Pressable
             onPress={() => { if (connectionStatus === 'connected') router.push('/private-room'); }}
             disabled={connectionStatus !== 'connected'}
-            style={({ pressed }) => [styles.menuButton, { borderColor: colors.neonPurple }, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.goldPillOuter, styles.goldPillSmall, pressed && { opacity: 0.88 }]}
           >
-            <LinearGradient colors={['#2a1745', '#1a0a2e']} style={styles.menuButtonInner}>
-              <View style={styles.botBtnRow}>
-                <Text style={[styles.botIcon, { color: colors.neonPurple }]}>♛</Text>
-                <Text style={[styles.menuButtonText, { color: colors.neonPurple }]}>PRIVATE ROOM</Text>
+            <LinearGradient
+              colors={connectionStatus === 'connected'
+                ? ['#e8d060', '#b89018', '#e8d060']
+                : ['#2e2810', '#181408', '#2e2810']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.goldPill}
+            >
+              <View style={styles.pillRow}>
+                <Text style={[styles.pillIcon, connectionStatus !== 'connected' && { color: '#5a5030' }]}>♛</Text>
+                <Text style={[styles.goldPillText, styles.goldPillTextSm, connectionStatus !== 'connected' && { color: '#5a5030' }]}>PRIVATE ROOM</Text>
               </View>
             </LinearGradient>
           </Pressable>
 
           <Pressable
             onPress={() => setCosmeticsOpen(true)}
-            style={({ pressed }) => [styles.menuButton, { borderColor: colors.neonGold }, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.goldPillOuter, styles.goldPillSmall, pressed && { opacity: 0.88 }]}
           >
-            <LinearGradient colors={['#3a2a05', '#1a1505']} style={styles.menuButtonInner}>
-              <View style={styles.botBtnRow}>
-                <Text style={[styles.botIcon, { color: colors.neonGold }]}>✦</Text>
-                <Text style={[styles.menuButtonText, { color: colors.neonGold }]}>COSMETICS</Text>
-                <View style={[styles.premiumDot, { backgroundColor: colors.neonGold }]} />
+            <LinearGradient
+              colors={['#e8d060', '#b89018', '#e8d060']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.goldPill}
+            >
+              <View style={styles.pillRow}>
+                <Text style={styles.pillIcon}>✦</Text>
+                <Text style={[styles.goldPillText, styles.goldPillTextSm]}>COSMETICS</Text>
+                <View style={styles.premiumDot} />
               </View>
             </LinearGradient>
           </Pressable>
@@ -307,9 +326,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   logoSection: { alignItems: 'center', marginTop: 20 },
-  logoSub: { fontSize: 13, fontWeight: '700', letterSpacing: 6 },
+  logoCrown: { fontSize: 28, color: '#ffd700', marginBottom: 2, textShadowColor: '#c8960a', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14 },
   logoTitle: { fontSize: 64, fontWeight: '900', letterSpacing: 8, lineHeight: 68 },
-  logoRoyale: { fontSize: 28, fontWeight: '800', letterSpacing: 10 },
+  logoRoyale: { fontSize: 52, fontWeight: '900', letterSpacing: 6, fontStyle: 'italic', lineHeight: 58 },
   logoTagline: { marginTop: 8, fontSize: 11, letterSpacing: 3, fontWeight: '500' },
   nameSection: { marginTop: 8 },
   nameEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -317,15 +336,22 @@ const styles = StyleSheet.create({
   nameConfirm: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   nameConfirmText: { color: '#fff', fontSize: 18, fontWeight: '700' },
   playerName: { fontSize: 14, fontWeight: '600', letterSpacing: 1 },
-  menuSection: { width: '100%', gap: 12 },
-  playButtonOuter: { borderRadius: 14, overflow: 'hidden', shadowColor: '#fbbf24', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 16 },
-  playButton: { height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: 14 },
-  playButtonText: { color: '#07000f', fontSize: 20, fontWeight: '900', letterSpacing: 4 },
-  menuButton: { borderRadius: 10, overflow: 'hidden', borderWidth: 1 },
-  menuButtonInner: { height: 48, justifyContent: 'center', alignItems: 'center' },
-  menuButtonText: { fontSize: 13, fontWeight: '700', letterSpacing: 3 },
-  botBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  botIcon: { fontSize: 16, fontWeight: '900' },
+  menuSection: { width: '100%', gap: 10 },
+  goldPillOuter: {
+    borderRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#d4a820',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
+    elevation: 12,
+  },
+  goldPillSmall: { shadowOpacity: 0.35, shadowRadius: 10, elevation: 8 },
+  goldPill: { height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: 32 },
+  goldPillText: { color: '#1a0e00', fontSize: 20, fontWeight: '900', letterSpacing: 4 },
+  goldPillTextSm: { fontSize: 13, letterSpacing: 3 },
+  pillRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pillIcon: { fontSize: 16, fontWeight: '900', color: '#1a0e00' },
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: 24 },
   statItem: { alignItems: 'center' },
   statValue: { fontSize: 20, fontWeight: '800' },
@@ -334,5 +360,5 @@ const styles = StyleSheet.create({
   connectionDot: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   connectionText: { fontSize: 10, fontWeight: '600', letterSpacing: 1.5 },
-  premiumDot: { width: 6, height: 6, borderRadius: 3, marginLeft: 6 },
+  premiumDot: { width: 6, height: 6, borderRadius: 3, marginLeft: 6, backgroundColor: '#1a0e00' },
 });
