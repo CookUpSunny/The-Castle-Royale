@@ -113,7 +113,14 @@ export function isRedSuit(suit: Card['suit']): boolean {
   return suit === 'H' || suit === 'D';
 }
 
-export function GameProvider({ children }: { children: React.ReactNode }) {
+export function GameProvider({
+  children,
+  gameCenterId,
+}: {
+  children: React.ReactNode;
+  /** Game Center player ID from GameCenterContext, if authenticated. */
+  gameCenterId?: string | null;
+}) {
   const [playerId, setPlayerId] = useState<string>('');
   const [playerName, setPlayerNameState] = useState<string>('Player');
   const [gameView, setGameView] = useState<GameView | null>(null);
@@ -130,6 +137,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const opponentEmoteBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const queueTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Keep a ref to the latest gameCenterId so join callbacks always have fresh value
+  const gameCenterIdRef = useRef<string | null | undefined>(gameCenterId);
+  useEffect(() => { gameCenterIdRef.current = gameCenterId; }, [gameCenterId]);
 
   const clearEmoteBubbleTimers = useCallback(() => {
     if (myEmoteBubbleTimerRef.current) {
@@ -192,7 +202,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       // Re-identify ourselves on every (re)connect so the server can route
       // private-room joins and game updates to our current socket.id even if
       // we briefly lost connectivity (app backgrounded, network blip, etc).
-      socket.emit('register', { playerId });
+      socket.emit('register', { playerId, gameCenterId: gameCenterIdRef.current ?? undefined });
     });
 
     socket.on('disconnect', () => {
@@ -281,6 +291,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, [playerId, clearEmoteBubbleTimers]);
 
+  // When gameCenterId becomes available after the socket is already connected
+  // (auth completes after initial connect), re-register so the server updates
+  // its mapping.
+  useEffect(() => {
+    if (!playerId || !gameCenterId || !socketRef.current) return;
+    if (socketRef.current.connected) {
+      socketRef.current.emit('register', { playerId, gameCenterId });
+    }
+  }, [playerId, gameCenterId]);
+
   const setPlayerName = useCallback(async (name: string) => {
     setPlayerNameState(name);
     await AsyncStorage.setItem('playerName', name);
@@ -288,12 +308,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const joinQueue = useCallback(() => {
     if (!socketRef.current || connectionStatus !== 'connected') return;
-    socketRef.current.emit('join_queue', { playerId, playerName });
+    socketRef.current.emit('join_queue', {
+      playerId,
+      playerName,
+      gameCenterId: gameCenterIdRef.current ?? undefined,
+    });
   }, [playerId, playerName, connectionStatus]);
 
   const quickPlayBot = useCallback(() => {
     if (!socketRef.current || connectionStatus !== 'connected') return;
-    socketRef.current.emit('start_bot_game', { playerId, playerName });
+    socketRef.current.emit('start_bot_game', {
+      playerId,
+      playerName,
+      gameCenterId: gameCenterIdRef.current ?? undefined,
+    });
   }, [playerId, playerName, connectionStatus]);
 
   const cancelQueue = useCallback(() => {
@@ -306,7 +334,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!socketRef.current || connectionStatus !== 'connected') return;
     setRoomError(null);
     setHostedRoomCode(null);
-    socketRef.current.emit('create_room', { playerId, playerName });
+    socketRef.current.emit('create_room', {
+      playerId,
+      playerName,
+      gameCenterId: gameCenterIdRef.current ?? undefined,
+    });
   }, [playerId, playerName, connectionStatus]);
 
   const joinRoom = useCallback((code: string) => {
@@ -317,7 +349,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setRoomError(null);
-    socketRef.current.emit('join_room', { playerId, playerName, code: cleaned });
+    socketRef.current.emit('join_room', {
+      playerId,
+      playerName,
+      code: cleaned,
+      gameCenterId: gameCenterIdRef.current ?? undefined,
+    });
   }, [playerId, playerName, connectionStatus]);
 
   const cancelRoom = useCallback(() => {

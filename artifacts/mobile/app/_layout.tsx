@@ -16,11 +16,25 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
+import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
 import { MusicProvider } from '@/contexts/MusicContext';
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+/**
+ * Bridge: reads the authenticated Game Center ID (if any) and passes it into
+ * GameProvider so the socket layer can include it in join/queue events.
+ */
+function GameProviderBridge({ children }: { children: React.ReactNode }) {
+  const { profile } = useGameCenter();
+  return (
+    <GameProvider gameCenterId={profile?.gameCenterId ?? null}>
+      {children}
+    </GameProvider>
+  );
+}
 
 function RootLayoutNav() {
   return (
@@ -58,9 +72,11 @@ export default function RootLayout() {
             <KeyboardProvider>
               <MusicProvider>
                 <CosmeticsProvider>
-                  <GameProvider>
-                    <RootLayoutNav />
-                  </GameProvider>
+                  <GameCenterProvider>
+                    <GameProviderBridge>
+                      <RootLayoutNav />
+                    </GameProviderBridge>
+                  </GameCenterProvider>
                 </CosmeticsProvider>
               </MusicProvider>
             </KeyboardProvider>

@@ -12,11 +12,16 @@ import {
 } from './gameEngine.js';
 import { isBotId, newBotId, pickBotMove, pickBotSetupSwaps, randomBotName } from './botPlayer.js';
 import { logger } from './logger.js';
+import { db } from '@workspace/db';
+import { playersTable } from '@workspace/db/schema';
+import { eq } from 'drizzle-orm';
+import { submitLeaderboardScore } from './gamecenter.js';
 
 interface QueueEntry {
   socketId: string;
   playerId: string;
   playerName: string;
+  gameCenterId?: string;
 }
 
 interface PrivateRoom {
@@ -29,10 +34,12 @@ const queue: QueueEntry[] = [];
 const games = new Map<string, GameState>();
 const playerToGame = new Map<string, string>();
 const socketToPlayer = new Map<string, string>();
+/** Maps anonymous playerId → Game Center player ID (set on register/join events). */
+const playerToGameCenterId = new Map<string, string>();
+/** Stores the game center IDs for both participants of a finished game so stats can be updated. */
+const gameParticipants = new Map<string, { playerId: string; gameCenterId?: string }[]>();
 
-// Allow-list of emotes the client can send. Keeps the channel bounded so we
-// don't accidentally end up with a free-form chat (which would need
-// moderation). Mix of emoji-only and short taunt phrases.
+// Allow-list of emotes the client can send.
 const ALLOWED_EMOTES = new Set<string>([
   '👋', '🔥', '😎', '🎉', '🤝', '👑', '⚡', '💀',
   'GG!', 'NICE!', 'LUCKY!', 'OOF!',
@@ -41,9 +48,104 @@ const EMOTE_COOLDOWN_MS = 1500;
 const lastEmoteAt = new Map<string, number>();
 
 /**
+ * Standard ELO update (K=32).
+ * Returns [newWinnerElo, newLoserElo].
+ */
+function calcElo(winnerElo: number, loserElo: number): [number, number] {
+  const K = 32;
+  const expectedWinner = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+  const expectedLoser = 1 - expectedWinner;
+  const newWinner = Math.round(winnerElo + K * (1 - expectedWinner));
+  const newLoser = Math.round(loserElo + K * (0 - expectedLoser));
+  return [newWinner, newLoser];
+}
+
+/** Assumed ELO for an anonymous/bot opponent when their profile isn't in the DB. */
+const ANONYMOUS_ELO = 1000;
+
+/**
+ * Award coins/stats in the DB for every authenticated participant after a game.
+ * Players without a Game Center ID are silently skipped; the other player still
+ * receives their update (e.g. authenticated user beats a bot or anonymous opponent).
+ */
+async function updatePlayerStats(gameId: string, winnerId: string): Promise<void> {
+  const participants = gameParticipants.get(gameId);
+  gameParticipants.delete(gameId);
+  if (!participants || participants.length < 2) return;
+
+  const winner = participants.find((p) => p.playerId === winnerId);
+  const loser = participants.find((p) => p.playerId !== winnerId);
+
+  // Neither player authenticated — nothing to do.
+  if (!winner?.gameCenterId && !loser?.gameCenterId) return;
+
+  try {
+    // Fetch rows for authenticated players only.
+    const [winnerRow] = winner?.gameCenterId
+      ? await db
+          .select()
+          .from(playersTable)
+          .where(eq(playersTable.gameCenterId, winner.gameCenterId))
+          .limit(1)
+      : [undefined];
+
+    const [loserRow] = loser?.gameCenterId
+      ? await db
+          .select()
+          .from(playersTable)
+          .where(eq(playersTable.gameCenterId, loser.gameCenterId))
+          .limit(1)
+      : [undefined];
+
+    // Use the other player's actual ELO when available; fall back to ANONYMOUS_ELO.
+    const winnerElo = winnerRow?.elo ?? ANONYMOUS_ELO;
+    const loserElo = loserRow?.elo ?? ANONYMOUS_ELO;
+    const [newWinnerElo, newLoserElo] = calcElo(winnerElo, loserElo);
+
+    if (winnerRow && winner?.gameCenterId) {
+      await db
+        .update(playersTable)
+        .set({
+          coins: winnerRow.coins + 50,
+          wins: winnerRow.wins + 1,
+          winStreak: winnerRow.winStreak + 1,
+          elo: newWinnerElo,
+        })
+        .where(eq(playersTable.gameCenterId, winner.gameCenterId));
+
+      // Submit the winner's new ELO to the Game Center leaderboard.
+      void submitLeaderboardScore(winner.gameCenterId, newWinnerElo);
+    }
+
+    if (loserRow && loser?.gameCenterId) {
+      await db
+        .update(playersTable)
+        .set({
+          coins: Math.max(0, loserRow.coins - 20),
+          losses: loserRow.losses + 1,
+          winStreak: 0,
+          elo: newLoserElo,
+        })
+        .where(eq(playersTable.gameCenterId, loser.gameCenterId));
+    }
+
+    logger.info(
+      {
+        gameId,
+        winnerGcId: winner?.gameCenterId,
+        loserGcId: loser?.gameCenterId,
+        newWinnerElo,
+        newLoserElo,
+      },
+      'Player stats updated after game',
+    );
+  } catch (err) {
+    logger.error({ err, gameId }, 'Failed to update player stats');
+  }
+}
+
+/**
  * Bot replies to a human emote with a friendly counter-emote after a beat.
- * This ONLY runs in bot games — when both players are real humans the server
- * just relays each player's actual emote and never injects extras.
  */
 function scheduleBotEmote(io: Server, gameId: string, botId: string): void {
   const replies = ['👋', '🔥', '😎', '🎉', 'GG!', 'NICE!'];
@@ -67,16 +169,14 @@ function scheduleBotEmote(io: Server, gameId: string, botId: string): void {
 
 /** Open invite-only rooms keyed by their 6-character code. */
 const rooms = new Map<string, PrivateRoom>();
-/** Index from playerId to the room they're hosting (so we can clean up on disconnect). */
+/** Index from playerId to the room they're hosting. */
 const playerToRoom = new Map<string, string>();
 
-const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // omits I, L, O, 0, 1 to avoid confusion
+const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const ROOM_CODE_LENGTH = 6;
-const ROOM_TTL_MS = 15 * 60 * 1000; // rooms older than 15 minutes are garbage-collected
+const ROOM_TTL_MS = 15 * 60 * 1000;
 
 function generateRoomCode(): string {
-  // Keyspace is 31^6 ≈ 887M, so collisions among a small live set are vanishingly rare.
-  // Loop until we find a free code (bounded only by Map.has being O(1)).
   for (let attempt = 0; attempt < 50; attempt++) {
     let code = '';
     for (let i = 0; i < ROOM_CODE_LENGTH; i++) {
@@ -84,7 +184,6 @@ function generateRoomCode(): string {
     }
     if (!rooms.has(code)) return code;
   }
-  // Should be unreachable in practice; throw rather than silently colliding.
   throw new Error('Could not allocate a unique room code');
 }
 
@@ -120,6 +219,7 @@ function notifyAndTeardownGame(io: Server, gameId: string, exceptPlayerId?: stri
   }
   for (const id of state.playerOrder) playerToGame.delete(id);
   games.delete(gameId);
+  gameParticipants.delete(gameId);
 }
 
 function removeFromQueue(playerId: string): void {
@@ -146,10 +246,18 @@ function emitGameView(
 }
 
 /**
- * The bot performs strategic swaps (sending its highest cards to face-up) and
- * then confirms ready, ~1.5s after game start so the human sees the activity
- * play out naturally rather than instantly.
+ * Register game participants so we can update their stats when the game ends.
  */
+function registerParticipants(gameId: string, players: QueueEntry[]): void {
+  gameParticipants.set(
+    gameId,
+    players.map((p) => ({
+      playerId: p.playerId,
+      gameCenterId: p.gameCenterId ?? playerToGameCenterId.get(p.playerId),
+    })),
+  );
+}
+
 function scheduleBotSetup(io: Server, gameId: string, botId: string): void {
   setTimeout(() => {
     let state = games.get(gameId);
@@ -212,8 +320,6 @@ function scheduleBotTurn(io: Server, gameId: string): void {
       emitGameView(io, fallback.newState, 'game_update', {
         lastEvent: { type: 'pickup', playerId: botId },
       });
-      // Bot just picked up via the fallback path → it now owes a starter play.
-      // Re-schedule so the bot commits its starter card.
       if (fallback.newState.currentPlayerId === botId && fallback.newState.phase === 'playing') {
         scheduleBotTurn(io, gameId);
       }
@@ -237,6 +343,8 @@ function scheduleBotTurn(io: Server, gameId: string): void {
       });
 
       if (outcome.result.gameOver) {
+        // Bot won — winner is the bot (no DB update needed for bot winner)
+        void updatePlayerStats(gameId, botId);
         games.delete(gameId);
         for (const id of outcome.newState.playerOrder) playerToGame.delete(id);
         logger.info({ gameId, winner: botId }, 'Bot won game');
@@ -266,14 +374,15 @@ export function initSocketGame(httpServer: HttpServer): void {
   io.on('connection', (socket: Socket) => {
     logger.info({ sid: socket.id }, 'Socket connected');
 
-    socket.on('join_queue', (data: { playerId: string; playerName: string }) => {
-      const { playerId, playerName } = data;
+    socket.on('join_queue', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
+      const { playerId, playerName, gameCenterId } = data;
       socketToPlayer.set(socket.id, playerId);
+      if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
 
       const existing = queue.findIndex((e) => e.playerId === playerId);
       if (existing >= 0) queue.splice(existing, 1);
 
-      queue.push({ socketId: socket.id, playerId, playerName });
+      queue.push({ socketId: socket.id, playerId, playerName, gameCenterId });
       socket.emit('queue_joined');
       logger.info({ playerId, queueLen: queue.length }, 'Joined queue');
 
@@ -285,6 +394,7 @@ export function initSocketGame(httpServer: HttpServer): void {
         games.set(state.gameId, state);
         playerToGame.set(p1.playerId, state.gameId);
         playerToGame.set(p2.playerId, state.gameId);
+        registerParticipants(state.gameId, [p1, p2]);
 
         for (const p of [p1, p2]) {
           const view = getGameView(state, p.playerId);
@@ -295,9 +405,10 @@ export function initSocketGame(httpServer: HttpServer): void {
       }
     });
 
-    socket.on('start_bot_game', (data: { playerId: string; playerName: string }) => {
-      const { playerId, playerName } = data;
+    socket.on('start_bot_game', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
+      const { playerId, playerName, gameCenterId } = data;
       socketToPlayer.set(socket.id, playerId);
+      if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
 
       removeFromQueue(playerId);
 
@@ -314,14 +425,16 @@ export function initSocketGame(httpServer: HttpServer): void {
       games.set(state.gameId, state);
       playerToGame.set(playerId, state.gameId);
       playerToGame.set(botId, state.gameId);
+      registerParticipants(state.gameId, [
+        { socketId: socket.id, playerId, playerName, gameCenterId },
+        { socketId: '', playerId: botId, playerName: botName },
+      ]);
 
       const view = getGameView(state, playerId);
       socket.emit('game_start', view);
 
       logger.info({ gameId: state.gameId, botName }, 'Bot game started');
 
-      // Schedule the bot's setup choices so the human sees the ready indicator
-      // change after a brief "thinking" delay rather than instantly.
       scheduleBotSetup(io, state.gameId, botId);
     });
 
@@ -334,24 +447,22 @@ export function initSocketGame(httpServer: HttpServer): void {
       socket.emit('queue_cancelled');
     });
 
-    socket.on('create_room', (data: { playerId: string; playerName: string }) => {
-      const { playerId, playerName } = data;
+    socket.on('create_room', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
+      const { playerId, playerName, gameCenterId } = data;
       socketToPlayer.set(socket.id, playerId);
+      if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
 
       reapStaleRooms();
 
-      // If this player is already hosting a room, replace it (e.g. they reconnected
-      // or pressed Create Room again). Stale codes get GC'd above.
       const oldCode = playerToRoom.get(playerId);
       if (oldCode) rooms.delete(oldCode);
 
-      // Also pull them out of the public queue if they were waiting there.
       removeFromQueue(playerId);
 
       const code = generateRoomCode();
       const room: PrivateRoom = {
         code,
-        creator: { socketId: socket.id, playerId, playerName },
+        creator: { socketId: socket.id, playerId, playerName, gameCenterId },
         createdAt: Date.now(),
       };
       rooms.set(code, room);
@@ -361,10 +472,11 @@ export function initSocketGame(httpServer: HttpServer): void {
       logger.info({ playerId, code }, 'Private room created');
     });
 
-    socket.on('join_room', (data: { playerId: string; playerName: string; code: string }) => {
-      const { playerId, playerName } = data;
+    socket.on('join_room', (data: { playerId: string; playerName: string; code: string; gameCenterId?: string }) => {
+      const { playerId, playerName, gameCenterId } = data;
       const code = (data.code ?? '').toUpperCase().trim();
       socketToPlayer.set(socket.id, playerId);
+      if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
 
       reapStaleRooms();
 
@@ -378,11 +490,9 @@ export function initSocketGame(httpServer: HttpServer): void {
         return;
       }
 
-      // Consume the room — only one opponent can join.
       rooms.delete(code);
       playerToRoom.delete(room.creator.playerId);
 
-      // Tear down any stale games either player might be in.
       const hostOldGame = playerToGame.get(room.creator.playerId);
       if (hostOldGame) notifyAndTeardownGame(io, hostOldGame, room.creator.playerId);
       const joinerOldGame = playerToGame.get(playerId);
@@ -399,19 +509,20 @@ export function initSocketGame(httpServer: HttpServer): void {
       games.set(state.gameId, state);
       playerToGame.set(room.creator.playerId, state.gameId);
       playerToGame.set(playerId, state.gameId);
+      registerParticipants(state.gameId, [
+        room.creator,
+        { socketId: socket.id, playerId, playerName, gameCenterId },
+      ]);
 
-      // Find the host's CURRENT socket (they may have reconnected since creating the
-      // room). If they have no live socket, the room is effectively dead — refund the
-      // join attempt instead of dealing into the void.
       let hostSocketId: string | null = null;
       for (const [sid, p] of socketToPlayer.entries()) {
         if (p === room.creator.playerId) { hostSocketId = sid; break; }
       }
       if (!hostSocketId) {
-        // Roll back: tear down the just-created game and tell the joiner.
         games.delete(state.gameId);
         playerToGame.delete(room.creator.playerId);
         playerToGame.delete(playerId);
+        gameParticipants.delete(state.gameId);
         socket.emit('room_error', { message: 'The host has left. Ask for a new code.' });
         return;
       }
@@ -466,6 +577,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       });
 
       if (outcome.result.gameOver) {
+        void updatePlayerStats(data.gameId, pid);
         games.delete(data.gameId);
         for (const id of outcome.newState.playerOrder) playerToGame.delete(id);
         logger.info({ gameId: data.gameId, winner: pid }, 'Game over');
@@ -521,8 +633,6 @@ export function initSocketGame(httpServer: HttpServer): void {
       games.set(data.gameId, outcome.newState);
 
       if (outcome.started) {
-        // Game just transitioned to playing — emit game_start so clients
-        // animate the deal/start screen, then schedule bot if it's their turn.
         for (const orderedPid of outcome.newState.playerOrder) {
           if (isBotId(orderedPid)) continue;
           const view = getGameView(outcome.newState, orderedPid);
@@ -563,16 +673,6 @@ export function initSocketGame(httpServer: HttpServer): void {
       }
     });
 
-    // Lightweight identification handshake — every client emits this on
-     // (re)connect so the server can re-bind socket.id → playerId without
-     // requiring a queue/room/game action first. Critical for private rooms:
-     // if the host's socket blips while sharing the code, they reconnect with
-     // a NEW socket.id, and the joiner's lookup needs to find the host's
-     // current live socket to deliver game_start.
-    // Emote broadcast — sender (or anyone in the game) emits a short emote;
-    // we relay it to BOTH players (including the sender so their own bubble
-    // animates in confirming the send). Validated against an allow-list to
-    // prevent abuse, with a per-player cooldown to throttle spam.
     socket.on('send_emote', (data: { gameId: string; emote: string }) => {
       const pid = socketToPlayer.get(socket.id);
       if (!pid) return;
@@ -588,7 +688,6 @@ export function initSocketGame(httpServer: HttpServer): void {
       lastEmoteAt.set(pid, now);
 
       const payload = { playerId: pid, emote, ts: now };
-      // Broadcast to every human in the game (including sender for echo).
       for (const orderedPid of state.playerOrder) {
         if (isBotId(orderedPid)) continue;
         for (const [sid, p] of socketToPlayer.entries()) {
@@ -599,18 +698,16 @@ export function initSocketGame(httpServer: HttpServer): void {
         }
       }
 
-      // Only schedule a bot auto-reply if the opponent is actually a bot. In
-      // human-vs-human games we never inject extra emotes — each player only
-      // sees the emotes the other player actually sent.
       const opponentId = state.playerOrder.find((id) => id !== pid);
       if (opponentId && isBotId(opponentId)) {
         scheduleBotEmote(io, data.gameId, opponentId);
       }
     });
 
-    socket.on('register', (data: { playerId: string }) => {
+    socket.on('register', (data: { playerId: string; gameCenterId?: string }) => {
       if (!data?.playerId) return;
       socketToPlayer.set(socket.id, data.playerId);
+      if (data.gameCenterId) playerToGameCenterId.set(data.playerId, data.gameCenterId);
     });
 
     socket.on('leave_game', (data: { gameId: string }) => {
@@ -643,28 +740,22 @@ export function initSocketGame(httpServer: HttpServer): void {
               }
             }
             games.delete(gameId);
+            gameParticipants.delete(gameId);
             playerToGame.delete(pid);
             if (otherId) playerToGame.delete(otherId);
           }
         }
         const qi = queue.findIndex((e) => e.playerId === pid);
         if (qi >= 0) queue.splice(qi, 1);
-        // NOTE: Intentionally do NOT delete hosted private rooms here. Mobile
-        // clients routinely lose the WebSocket while the user switches apps to
-        // share the room code with a friend; killing the room on every blip
-        // produces the dreaded "Room not found" right when the friend types it
-        // in. The room is GC'd by reapStaleRooms() once it exceeds ROOM_TTL_MS,
-        // which gives plenty of time for a real handoff. When the joiner later
-        // tries to enter, the server checks for the host's CURRENT live socket
-        // (via socketToPlayer) and rolls back the join if the host is truly
-        // gone, so a stale room can never deal into the void.
+        // NOTE: Intentionally do NOT delete hosted private rooms here.
+        // Mobile clients routinely lose the WebSocket while the user switches
+        // apps to share the room code. The room is GC'd by reapStaleRooms()
+        // once it exceeds ROOM_TTL_MS.
         socketToPlayer.delete(socket.id);
       }
     });
   });
 
-  // Periodic GC sweep so abandoned rooms (host left tab open then closed laptop, etc.)
-  // don't linger past their TTL even with no incoming traffic.
   setInterval(reapStaleRooms, 60 * 1000).unref();
 
   logger.info('Socket.io game server initialized');

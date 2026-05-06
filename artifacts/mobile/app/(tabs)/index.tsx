@@ -20,13 +20,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
+import { useGameCenter } from '@/contexts/GameCenterContext';
 import { useColors } from '@/hooks/useColors';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import CosmeticsModal from '@/components/CosmeticsModal';
 import SplashCards from '@/components/SplashCards';
 
 // ─── Outlined title text ──────────────────────────────────────────────────────
-// Renders text with a black stroke border and a colored glow emanating from it.
 const STROKE_OFFSETS: [number, number][] = [
   [-2, -2], [0, -2], [2, -2],
   [-2,  0],          [2,  0],
@@ -46,7 +46,6 @@ function OutlinedTitle({
 }) {
   return (
     <View>
-      {/* Colored glow radiating from the black border area */}
       <Text
         style={[
           textStyle,
@@ -64,7 +63,6 @@ function OutlinedTitle({
       >
         {text}
       </Text>
-      {/* Black stroke — 8-direction offset copies */}
       {STROKE_OFFSETS.map(([dx, dy], i) => (
         <Text
           key={i}
@@ -83,7 +81,6 @@ function OutlinedTitle({
           {text}
         </Text>
       ))}
-      {/* Main colored text — sizes the parent View */}
       <Text style={[textStyle, { color: mainColor, textAlign: 'center' }]}>{text}</Text>
     </View>
   );
@@ -93,6 +90,7 @@ export default function LobbyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { playerName, setPlayerName, joinQueue, quickPlayBot, isInQueue, connectionStatus, gameView } = useGame();
+  const { isGameCenterAvailable, isAuthenticated, isLoading, profile, signIn } = useGameCenter();
   const { playSplashTrack, stopMusic } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
@@ -162,6 +160,13 @@ export default function LobbyScreen() {
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
+  const displayCoins = profile?.coins ?? null;
+  const displayElo = profile?.elo ?? null;
+  // Show GC sign-in button only when the native module is truly available (native iOS EAS build).
+  // Show the anonymous-mode banner on Android, web, AND Expo Go on iOS.
+  const showGameCenterButton = isGameCenterAvailable && !isAuthenticated && !isLoading;
+  const showGameCenterBanner = !isGameCenterAvailable;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
@@ -209,13 +214,35 @@ export default function LobbyScreen() {
           ) : (
             <Pressable onPress={() => { setNameInput(playerName); setEditingName(true); }}>
               <Text style={[styles.playerName, { color: colors.mutedForeground }]}>
-                ✎  {playerName}
+                ✎  {profile?.displayName ?? playerName}
               </Text>
             </Pressable>
+          )}
+          {isAuthenticated && displayElo !== null && (
+            <Text style={[styles.eloText, { color: colors.accent }]}>
+              ELO {displayElo}
+            </Text>
           )}
         </View>
 
         <View style={styles.menuSection}>
+          {showGameCenterButton && (
+            <Pressable
+              onPress={() => { signIn(); }}
+              style={({ pressed }) => [styles.gcButton, pressed && { opacity: 0.78 }]}
+            >
+              <Text style={styles.gcButtonText}>Sign in with Game Center</Text>
+            </Pressable>
+          )}
+
+          {showGameCenterBanner && (
+            <View style={styles.gcBanner}>
+              <Text style={[styles.gcBannerText, { color: colors.mutedForeground }]}>
+                Game Center leaderboards are iOS-only. Playing anonymously.
+              </Text>
+            </View>
+          )}
+
           <Animated.View style={playStyle}>
             <Pressable
               onPress={handlePlay}
@@ -293,15 +320,33 @@ export default function LobbyScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.accent }]}>125,000</Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>COINS</Text>
-          </View>
+          {displayCoins !== null ? (
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: colors.accent }]}>
+                {displayCoins.toLocaleString()}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>COINS</Text>
+            </View>
+          ) : (
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: '#444' }]}>—</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>COINS</Text>
+            </View>
+          )}
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.electric }]}>8,450</Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>GEMS</Text>
-          </View>
+          {isAuthenticated && profile ? (
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: colors.electric }]}>
+                {profile.wins}W · {profile.losses}L
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>RECORD</Text>
+            </View>
+          ) : (
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: '#444' }]}>—</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>RECORD</Text>
+            </View>
+          )}
         </View>
 
         <CosmeticsModal visible={cosmeticsOpen} onClose={() => setCosmeticsOpen(false)} />
@@ -330,13 +375,31 @@ const styles = StyleSheet.create({
   logoTitle: { fontSize: 64, fontWeight: '900', letterSpacing: 8, lineHeight: 68 },
   logoRoyale: { fontSize: 52, fontWeight: '900', letterSpacing: 6, fontStyle: 'italic', lineHeight: 58 },
   logoTagline: { marginTop: 8, fontSize: 11, letterSpacing: 3, fontWeight: '500' },
-  nameSection: { marginTop: 8 },
+  nameSection: { marginTop: 8, alignItems: 'center' },
   nameEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nameInput: { height: 40, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1.5, fontSize: 16, minWidth: 140 },
   nameConfirm: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   nameConfirmText: { color: '#fff', fontSize: 18, fontWeight: '700' },
   playerName: { fontSize: 14, fontWeight: '600', letterSpacing: 1 },
+  eloText: { fontSize: 11, fontWeight: '700', letterSpacing: 2, marginTop: 3 },
   menuSection: { width: '100%', gap: 10 },
+  gcButton: {
+    backgroundColor: '#1c1c1e',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3a3a3c',
+  },
+  gcButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', letterSpacing: 0.5 },
+  gcBanner: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  gcBannerText: { fontSize: 11, textAlign: 'center', letterSpacing: 0.3 },
   goldPillOuter: {
     borderRadius: 32,
     overflow: 'hidden',

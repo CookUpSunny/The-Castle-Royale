@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.thecastleroyale.app"
+      "bundleIdentifier": "com.thecastleroyale.app",
+      "entitlements": {
+        "com.apple.developer.game-center": true
+      }
     },
     "android": {
       "package": "com.thecastleroyale.app",
@@ -39,7 +42,15 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
