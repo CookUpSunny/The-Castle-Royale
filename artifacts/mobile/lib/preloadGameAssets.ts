@@ -2,22 +2,6 @@ import { Image } from 'expo-image';
 import { TABLE_BACKDROP } from '@/lib/sceneAssets';
 import { SCENE_PACKS, type SceneId } from '@/lib/scenePacks';
 
-/**
- * Bundled character portraits + gems (duplicated paths from CosmeticsContext
- * on purpose — avoids a circular import if hot-path preload lived next to
- * the cosmetics provider).
- */
-const AVATAR_BUNDLE_IDS: number[] = [
-  require('../assets/avatars/maverick.png'),
-  require('../assets/avatars/gem-maverick.png'),
-  require('../assets/avatars/viper.png'),
-  require('../assets/avatars/gem-viper.png'),
-  require('../assets/avatars/ronin.png'),
-  require('../assets/avatars/gem-ronin.png'),
-  require('../assets/avatars/empress.png'),
-  require('../assets/avatars/gem-empress.png'),
-];
-
 function collectSceneSources(sceneId: SceneId): number[] {
   const pack = SCENE_PACKS[sceneId];
   const ids = new Set<number>();
@@ -42,7 +26,6 @@ function collectSceneSources(sceneId: SceneId): number[] {
 export async function warmGameVisualCache(sceneId: SceneId): Promise<void> {
   const sources = new Set<number>();
   for (const id of collectSceneSources(sceneId)) sources.add(id);
-  for (const id of AVATAR_BUNDLE_IDS) sources.add(id);
   if (typeof TABLE_BACKDROP === 'number') sources.add(TABLE_BACKDROP);
 
   await Promise.all(
