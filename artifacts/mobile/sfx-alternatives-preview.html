@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Castle — SFX alternatives (slots + fanfares)</title>
+  <style>
+    :root {
+      --bg: #07000f;
+      --card: #1a0535;
+      --border: #5b1a8c;
+      --gold: #fbbf24;
+      --text: #e0c8ff;
+      --muted: #9b7fb8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+      max-width: 920px;
+      margin-inline: auto;
+      line-height: 1.45;
+    }
+    h1 { font-size: 1.35rem; color: var(--gold); margin-top: 0; }
+    p.note { color: var(--muted); font-size: 0.9rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 0.92rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    th { color: var(--gold); font-weight: 700; }
+    tr:hover td { background: rgba(91, 26, 140, 0.2); }
+    code {
+      font-size: 0.82rem;
+      background: var(--card);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    audio { width: 220px; height: 32px; vertical-align: middle; }
+    .current { color: #4ade80; font-size: 0.78rem; }
+  </style>
+</head>
+<body>
+  <h1>Castle — SFX audition</h1>
+  <p class="note">
+    Open this file in Chrome or Safari (double-click, or “Open with…”).
+    Regenerate all cues with <code>node scripts/generate-sfx.js</code> from
+    <code>artifacts/mobile</code>.
+  </p>
+  <p class="note">
+    <strong>In-game wiring:</strong> match start → <code>fanfare-epic.wav</code> (<code>fanfare-epic</code>).
+    Playing a <strong>2</strong> or <strong>10</strong> → <code>slot-alt-b-bright.wav</code> (<code>slot-bright</code>).
+    <strong>First castle</strong> (hand cleared, face-up row remains) → <code>fanfare-opt-e-cathedral.wav</code> (<code>fanfare-cathedral</code>).
+    <strong>Bottom castle</strong> (face-up cleared, face-down remains) → <code>fanfare-epic.wav</code> (<code>fanfare-epic</code>).
+    <strong>Full match win</strong> → <code>fanfare-victory.wav</code> (<code>fanfare-victory</code>): long **slot-machine-style jackpot** — spin ticks, three reel locks, fast credit bleeps, hopper pour, then major chord + sparkles (~4.4s incl. ring-out).
+    Swap sounds by overwriting the bundled WAV or changing <code>require()</code> in <code>lib/sfx.ts</code>.
+  </p>
+
+  <h2 style="margin-top:2rem;font-size:1.05rem;color:var(--gold);">Slot-style alternatives (not used in-game)</h2>
+  <p class="note">The app no longer bundles the default lever-spin cue. These rows are for browsing only; regenerate with <code>generate-sfx.js</code> if you delete the WAVs.</p>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>File</th>
+        <th>Vibe</th>
+        <th>Listen</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>—</strong></td>
+        <td><code>slot-machine.wav</code></td>
+        <td>Legacy generated cue (lever + ticks + three stops + payoff).</td>
+        <td><audio controls preload="none" src="assets/audio/slot-machine.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>A</strong></td>
+        <td><code>slot-alt-a-vintage.wav</code></td>
+        <td>Slower, darker mechanical spin; brassy locks; longer tail.</td>
+        <td><audio controls preload="none" src="assets/audio/slot-alt-a-vintage.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>B</strong></td>
+        <td><code>slot-alt-b-bright.wav</code></td>
+        <td>Fast shiny strip: quick ticks, high “reel lock” dings, sparkly end.</td>
+        <td><audio controls preload="none" src="assets/audio/slot-alt-b-bright.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>C</strong></td>
+        <td><code>slot-alt-c-tight.wav</code></td>
+        <td>Short (~0.75s): good if you want less audio footprint per event.</td>
+        <td><audio controls preload="none" src="assets/audio/slot-alt-c-tight.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>D</strong></td>
+        <td><code>slot-alt-d-digital.wav</code></td>
+        <td>Video-slot beeps; lighter mechanical noise.</td>
+        <td><audio controls preload="none" src="assets/audio/slot-alt-d-digital.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>E</strong></td>
+        <td><code>slot-alt-e-heavy.wav</code></td>
+        <td>Big cabinet thunk; slow, weighty reel stops.</td>
+        <td><audio controls preload="none" src="assets/audio/slot-alt-e-heavy.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>F</strong></td>
+        <td><code>slot-alt-f-fanfare.wav</code></td>
+        <td>Similar arc to default, ends with a tiny C–E–G flourish.</td>
+        <td><audio controls preload="none" src="assets/audio/slot-alt-f-fanfare.wav"></audio></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:2rem;font-size:1.05rem;color:var(--gold);">Fanfares — castle milestones (mid-game)</h2>
+  <p class="note">
+    <strong>Top / first castle</strong> uses option <strong>E</strong> (<code>fanfare-cathedral</code>).
+    <strong>Bottom castle</strong> uses <code>fanfare-epic.wav</code>. Other rows are alternate stingers you can substitute in <code>sfx.ts</code>.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>File</th>
+        <th>Vibe</th>
+        <th>Listen</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>★</strong></td>
+        <td><code>fanfare-epic.wav</code></td>
+        <td>Bottom-castle default: brass stairs, major chord, sparkles, cadence (~2.4s).</td>
+        <td><audio controls preload="none" src="assets/audio/fanfare-epic.wav"></audio></td>
+      </tr>
+      <tr>
+        <td style="color:var(--gold);"><strong>E</strong></td>
+        <td><code>fanfare-opt-e-cathedral.wav</code></td>
+        <td>First-castle default: low hum + tierce peal + shimmer tail.</td>
+        <td><audio controls preload="none" src="assets/audio/fanfare-opt-e-cathedral.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>A</strong></td>
+        <td><code>fanfare-opt-a-regal.wav</code></td>
+        <td>Regal horn call; heraldic fourths; longer brass tail.</td>
+        <td><audio controls preload="none" src="assets/audio/fanfare-opt-a-regal.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>B</strong></td>
+        <td><code>fanfare-opt-b-herald.wav</code></td>
+        <td>Bright fanfare stacks; shorter, punchy “proclamation”.</td>
+        <td><audio controls preload="none" src="assets/audio/fanfare-opt-b-herald.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>C</strong></td>
+        <td><code>fanfare-opt-c-cinema.wav</code></td>
+        <td>Noise swell + wide stacked fifths; trailer-ish.</td>
+        <td><audio controls preload="none" src="assets/audio/fanfare-opt-c-cinema.wav"></audio></td>
+      </tr>
+      <tr>
+        <td><strong>D</strong></td>
+        <td><code>fanfare-opt-d-gameshow.wav</code></td>
+        <td>Glossy “big win” brass + sparkly arpeggio.</td>
+        <td><audio controls preload="none" src="assets/audio/fanfare-opt-d-gameshow.wav"></audio></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:2rem;font-size:1.05rem;color:var(--gold);">Match win — slot jackpot</h2>
+  <p class="note">
+    <code>fanfare-victory.wav</code> follows a classic floor-slot hit: mechanical spin blur, three reel-lock dings, rising credit-counter beeps, dense metallic tray payout, and a final C-major land with high sparkles.
+    Replace the file or change the <code>require</code> in <code>lib/sfx.ts</code> if you use your own recording.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>File</th>
+        <th>Vibe</th>
+        <th>Listen</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>★</strong></td>
+        <td><code>fanfare-victory.wav</code></td>
+        <td>Slot jackpot arc: ticks → 3 locks → credit run-up → hopper pour → chord + shimmer.</td>
+        <td><audio controls preload="none" src="assets/audio/fanfare-victory.wav"></audio></td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

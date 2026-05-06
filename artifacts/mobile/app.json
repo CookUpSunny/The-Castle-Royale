@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Castle Royale",
+    "slug": "mobile",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "mobile",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#07000f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "dlp.castle"
+    },
+    "android": {
+      "package": "dlp.castle",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#07000f"
+      }
+    },
+    "notification": {
+      "icon": "./assets/images/notification-icon.png",
+      "color": "#a855f7"
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "86070001-353d-4654-bbd9-4359a9954254"
+      }
+    }
+  }
+}

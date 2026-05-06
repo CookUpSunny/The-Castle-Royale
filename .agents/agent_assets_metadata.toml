@@ -1,0 +1,139 @@
+uploads = []
+
+[[generated]]
+id = "LhZvjDlhclrn1unDdrygf"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "castle royale anime icon"
+
+[[generated]]
+id = "o_UuKy5dr2ZwF77GGQU_8"
+uri = "file://attached_assets/casino/hero_player_pov.png"
+type = "image"
+title = "hero player over shoulder"
+
+[[generated]]
+id = "r23-qBeUdUI5Sp_faeNdD"
+uri = "file://attached_assets/casino/opponent_silver.png"
+type = "image"
+title = "opponent silver haired"
+
+[[generated]]
+id = "kDpb3uRxbkAnho8S9LFzi"
+uri = "file://attached_assets/casino/table_backdrop_neon.png"
+type = "image"
+title = "neon casino table backdrop"
+
+[[generated]]
+id = "wDVpT8ovU8XkbDDqtapP0"
+uri = "file://artifacts/mobile/assets/images/notification-icon.png"
+type = "image"
+title = "castle royale notification icon mono"
+
+[[generated]]
+id = "eICNwW17YDP8qtep59Y-f"
+uri = "file://artifacts/mobile/assets/casino/hero_player_pov.png"
+type = "image"
+title = "hero player pov"
+
+[[generated]]
+id = "YV7RRclPZZv6dJ4k24nif"
+uri = "file://artifacts/mobile/assets/casino/opponent_silver.png"
+type = "image"
+title = "opponent silver"
+
+[[generated]]
+id = "RJBhhjf4GVz348nfgczo7"
+uri = "file://artifacts/mobile/assets/casino/table_backdrop_neon.png"
+type = "image"
+title = "casino table neon"
+
+[[generated]]
+id = "CKJT2CnL4pyXQh7N3-L1g"
+uri = "file://artifacts/mobile/assets/avatars/maverick.png"
+type = "image"
+title = "maverick avatar"
+
+[[generated]]
+id = "u0-lR1-aV2y4pk1nlQn1m"
+uri = "file://artifacts/mobile/assets/avatars/viper.png"
+type = "image"
+title = "viper avatar"
+
+[[generated]]
+id = "R2I2loeXxVw3NhjQPODH1"
+uri = "file://artifacts/mobile/assets/avatars/ronin.png"
+type = "image"
+title = "ronin avatar"
+
+[[generated]]
+id = "hbEpc1fJ2UuQAJzlzgAqH"
+uri = "file://artifacts/mobile/assets/avatars/empress.png"
+type = "image"
+title = "empress avatar"
+
+[[generated]]
+id = "jDGERdzs4nuXrydv2TVID"
+uri = "file://artifacts/mobile/assets/scenes/rainbowRoad/portrait/L0_far.png"
+type = "image"
+title = "rainbow road far layer"
+
+[[generated]]
+id = "Yw_P2-9EOQcawAILy1nFG"
+uri = "file://artifacts/mobile/assets/scenes/flamingoCasino/portrait/L0_far.png"
+type = "image"
+title = "flamingo casino far"
+
+[[generated]]
+id = "pdLzUycuYapyt8XvmUXdh"
+uri = "file://artifacts/mobile/assets/scenes/waterfallCavern/portrait/L0_far.png"
+type = "image"
+title = "waterfall cavern far"
+
+[[generated]]
+id = "pEpkzZpBBqeV05pWU-6lP"
+uri = "file://artifacts/mobile/assets/avatars/gem-maverick.png"
+type = "image"
+title = "gem maverick avatar"
+
+[[generated]]
+id = "aqE8HSM5DCZh612iWxtNb"
+uri = "file://artifacts/mobile/assets/avatars/gem-viper.png"
+type = "image"
+title = "gem viper avatar"
+
+[[generated]]
+id = "pGlPcwAvvRgP7oq-SgADU"
+uri = "file://artifacts/mobile/assets/avatars/gem-ronin.png"
+type = "image"
+title = "gem ronin avatar"
+
+[[generated]]
+id = "uwE8DLdAdd8WSDbkLHDT1"
+uri = "file://artifacts/mobile/assets/avatars/gem-empress.png"
+type = "image"
+title = "gem empress avatar"
+
+[[generated]]
+id = "yZf95cU_greTGTzc9M4B7"
+uri = "file://artifacts/mobile/assets/scenes/rainbowRoad/landscape/L0_far.png"
+type = "image"
+title = "rainbow road landscape far"
+
+[[generated]]
+id = "PEkKCPml_rM-Qt4Qm--Gs"
+uri = "file://artifacts/mobile/assets/scenes/flamingoCasino/landscape/L0_far.png"
+type = "image"
+title = "flamingo casino landscape far"
+
+[[generated]]
+id = "9VmBanyA_aP8E7q5tyOKO"
+uri = "file://artifacts/mobile/assets/scenes/waterfallCavern/landscape/L0_far.png"
+type = "image"
+title = "waterfall cavern landscape far"
+
+[[outputs]]
+id = "6j7q1AHkrtpTjeIhc66dm"
+uri = "file://castle-royale-src.zip"
+type = "unspecified"
+title = "Castle Royale — Full Source Code"
