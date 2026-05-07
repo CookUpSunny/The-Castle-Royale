@@ -53,7 +53,9 @@ export default function ArenaPickerScreen() {
 
   const maxContentWidth = Math.min(width - 32, 460);
   const arenaCardWidth = Math.min(width * 0.88, 420);
-  const avatarCardWidth = (maxContentWidth - 16) / 3;
+  const avatarCardWidth = arenaCardWidth;
+  const avatarSnapInterval = avatarCardWidth + 14;
+  const avatarCarouselPad = (width - avatarCardWidth) / 2;
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
   const selectedAvatarData = AVATARS.find((a) => a.id === selectedAvatar);
@@ -85,8 +87,21 @@ export default function ArenaPickerScreen() {
           <Text style={[styles.sectionLabel, { color: colors.neonGold }]}>
             ✦  PICK YOUR CHARACTER
           </Text>
+        </View>
 
-          <View style={styles.avatarRow}>
+        {/* Full-width snap carousel */}
+        <View style={{ width }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={avatarSnapInterval}
+            snapToAlignment="center"
+            contentContainerStyle={{
+              paddingHorizontal: avatarCarouselPad,
+              gap: 14,
+            }}
+          >
             {AVATARS.map((av) => {
               const isSelected = selectedAvatar === av.id;
               return (
@@ -100,10 +115,10 @@ export default function ArenaPickerScreen() {
                       borderColor: isSelected ? av.color : 'rgba(255,255,255,0.10)',
                       borderWidth: isSelected ? 2.5 : 1,
                       shadowColor: av.color,
-                      shadowOpacity: isSelected ? 0.8 : 0,
-                      shadowRadius: 16,
+                      shadowOpacity: isSelected ? 0.85 : 0,
+                      shadowRadius: 20,
                       shadowOffset: { width: 0, height: 0 },
-                      elevation: isSelected ? 12 : 0,
+                      elevation: isSelected ? 14 : 0,
                       opacity: pressed ? 0.88 : 1,
                     },
                   ]}
@@ -114,37 +129,45 @@ export default function ArenaPickerScreen() {
                     resizeMode="cover"
                   />
                   <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.88)']}
-                    start={{ x: 0, y: 0.35 }}
+                    colors={['transparent', 'rgba(0,0,0,0.82)']}
+                    start={{ x: 0, y: 0.45 }}
                     end={{ x: 0, y: 1 }}
                     style={StyleSheet.absoluteFill}
                     pointerEvents="none"
                   />
-                  {isSelected && (
-                    <View style={[styles.selectedTick, { backgroundColor: av.color }]}>
-                      <Text style={styles.selectedTickText}>✓</Text>
+                  {isSelected ? (
+                    <View style={[styles.selectedBadge, { position: 'absolute', top: 10, right: 10 }]}>
+                      <Text style={styles.selectedBadgeText}>✓  SELECTED</Text>
                     </View>
-                  )}
+                  ) : null}
                   <View style={styles.avatarNameWrap}>
-                    <Text
-                      style={[styles.avatarName, { color: isSelected ? av.color : '#fff' }]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.65}
-                    >
+                    <Text style={[styles.avatarName, { color: isSelected ? av.color : '#fff' }]}>
                       {av.name}
+                    </Text>
+                    <Text style={[styles.avatarQuote, { color: 'rgba(255,255,255,0.60)' }]} numberOfLines={1}>
+                      "{av.quote}"
                     </Text>
                   </View>
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
+        </View>
 
-          {selectedAvatarData ? (
-            <Text style={[styles.avatarQuote, { color: colors.mutedForeground }]}>
-              "{selectedAvatarData.quote}"
-            </Text>
-          ) : null}
+        {/* Pagination dots */}
+        <View style={styles.dotsRow}>
+          {AVATARS.map((av) => (
+            <View
+              key={av.id}
+              style={[
+                styles.dot,
+                {
+                  backgroundColor: selectedAvatar === av.id ? av.color : 'rgba(255,255,255,0.22)',
+                  width: selectedAvatar === av.id ? 18 : 6,
+                },
+              ]}
+            />
+          ))}
         </View>
 
         {/* ── ARENA SELECTION ─────────────────────────────────────────── */}
@@ -264,13 +287,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 2,
   },
-  avatarRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   avatarCard: {
-    height: 168,
-    borderRadius: 14,
+    height: 240,
+    borderRadius: 18,
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
@@ -283,37 +302,38 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  selectedTick: {
-    position: 'absolute',
-    top: 7,
-    right: 7,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  selectedTickText: { color: '#000', fontSize: 11, fontWeight: '900' },
   avatarNameWrap: {
-    paddingHorizontal: 6,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
   },
   avatarName: {
-    fontSize: 11,
+    fontSize: 17,
     fontWeight: '900',
-    letterSpacing: 0.8,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.9)',
-    textShadowOffset: { width: 0, height: 0 },
+    letterSpacing: 1.5,
+    color: '#fff',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
   avatarQuote: {
     fontSize: 11,
     fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 10,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
   },
   arenaCard: {
     height: 200,
