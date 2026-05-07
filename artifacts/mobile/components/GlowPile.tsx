@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { type Card as CardType } from '@/contexts/GameContext';
+import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
 import Card from './Card';
 
@@ -17,12 +18,23 @@ interface GlowPileProps {
   lastEventType?: string;
 }
 
+const ARENA_ACCENT: Record<string, string> = {
+  classic:   '#f5a623',
+  cosmic:    '#a78bfa',
+  royal:     '#fbbf24',
+  lightning: '#38bdf8',
+};
+
 export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
   const colors = useColors();
-  const ring1Scale = useSharedValue(1);
-  const ring2Scale = useSharedValue(1);
-  const ring3Scale = useSharedValue(1);
-  const burnOpacity = useSharedValue(0);
+  const { arena } = useCosmetics();
+
+  const ring1Scale   = useSharedValue(1);
+  const ring2Scale   = useSharedValue(1);
+  const ring3Scale   = useSharedValue(1);
+  const burnOpacity  = useSharedValue(0);
+  const poolOpacity  = useSharedValue(0.55);
+
   const topCard: CardType | undefined = pile[pile.length - 1];
 
   useEffect(() => {
@@ -41,7 +53,12 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
       -1,
       false,
     );
-  }, [ring1Scale, ring2Scale, ring3Scale]);
+    poolOpacity.value = withRepeat(
+      withSequence(withTiming(0.75, { duration: 2600 }), withTiming(0.45, { duration: 2600 })),
+      -1,
+      true,
+    );
+  }, [ring1Scale, ring2Scale, ring3Scale, poolOpacity]);
 
   useEffect(() => {
     if (lastEventType === 'burn' || lastEventType === 'set_complete') {
@@ -55,15 +72,29 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
   const ring1Style = useAnimatedStyle(() => ({ transform: [{ scale: ring1Scale.value }] }));
   const ring2Style = useAnimatedStyle(() => ({ transform: [{ scale: ring2Scale.value }] }));
   const ring3Style = useAnimatedStyle(() => ({ transform: [{ scale: ring3Scale.value }] }));
-  const burnStyle = useAnimatedStyle(() => ({ opacity: burnOpacity.value }));
+  const burnStyle  = useAnimatedStyle(() => ({ opacity: burnOpacity.value }));
+  const poolStyle  = useAnimatedStyle(() => ({ opacity: poolOpacity.value }));
 
-  let glowColor = '#f5a623';
-  if (topCard?.value === 2) glowColor = '#c084fc';
+  const arenaAccent = ARENA_ACCENT[arena] ?? '#f5a623';
+
+  let glowColor = arenaAccent;
+  if (topCard?.value === 2)  glowColor = '#c084fc';
   if (topCard?.value === 10) glowColor = '#ff7f00';
 
   return (
     <View style={styles.wrap}>
       <View style={styles.center}>
+
+        {/* ── Ambient table pool — sits behind everything ── */}
+        <Animated.View style={[styles.tablePool, poolStyle]} pointerEvents="none">
+          <LinearGradient
+            colors={[`${glowColor}55`, `${glowColor}22`, `${glowColor}00`]}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0.5, y: 0.0 }}
+            end={{ x: 0.5, y: 1.0 }}
+          />
+        </Animated.View>
+
         <Animated.View style={[styles.ringOuter, ring3Style]}>
           <LinearGradient
             colors={[`${glowColor}00`, `${glowColor}30`, `${glowColor}00`]}
@@ -121,6 +152,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  tablePool: {
+    position: 'absolute',
+    width: 230,
+    height: 72,
+    borderRadius: 36,
+    bottom: -8,
+    overflow: 'hidden',
+    zIndex: 0,
   },
   ringFill: {
     flex: 1,
