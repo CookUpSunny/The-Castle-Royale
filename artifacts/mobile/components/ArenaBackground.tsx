@@ -19,7 +19,7 @@ interface ArenaBackgroundProps {
   arenaOverride?: ArenaId;
 }
 
-export const ARENA_IMAGES: Record<ArenaId, number> = {
+export const ARENA_IMAGES: Partial<Record<ArenaId, number>> = {
   classic:   require('@/assets/arenas/flamingo_floor.png') as number,
   cosmic:    require('@/assets/arenas/cosmic_sanctum.png') as number,
   royal:     require('@/assets/arenas/olympus_throne.png') as number,
@@ -44,6 +44,7 @@ export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps)
   const { arena } = useCosmetics();
   const which = arenaOverride ?? arena;
 
+  if (which === 'greenTable') return <GreenTableArena />;
   if (which === 'cosmic')    return <CosmicArena />;
   if (which === 'royal')     return <RoyalArena />;
   if (which === 'lightning') return <LightningArena />;
@@ -57,6 +58,13 @@ export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps)
 // ---------------------------------------------------------------------------
 
 const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, string]> = {
+  greenTable: [
+    'transparent',
+    'rgba(20,90,40,0.14)',
+    'rgba(20,90,40,0.24)',
+    'rgba(20,90,40,0.14)',
+    'transparent',
+  ],
   classic: [
     'transparent',
     'rgba(200,50,120,0.18)',
@@ -129,6 +137,138 @@ function TableEdgeBlend({ arenaId }: { arenaId: ArenaId }) {
         colors={['transparent', blendColors[2], 'transparent']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Casino Green Table (default arena — pure-code, no photo)
+// A rich casino-green felt with a warm overhead spotlight, subtle wood-rail
+// border glow, and a slow-breathing radial pulse that makes the table feel alive.
+// ---------------------------------------------------------------------------
+
+function GreenTableArena() {
+  const pulse = useSharedValue(0);
+  const shimmer = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0, { duration: 3200, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+      false,
+    );
+    shimmer.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 5500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 5500, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(pulse);
+      cancelAnimation(shimmer);
+    };
+  }, [pulse, shimmer]);
+
+  const spotStyle = useAnimatedStyle(() => ({
+    opacity: 0.55 + pulse.value * 0.20,
+  }));
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: 0.08 + shimmer.value * 0.10,
+    transform: [{ translateX: (shimmer.value - 0.5) * 30 }],
+  }));
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Base felt green — deep saturated casino green */}
+      <LinearGradient
+        colors={['#0a2e14', '#0d3b1a', '#0a2e14']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Felt texture: faint horizontal weave lines via subtle gradient bands */}
+      <LinearGradient
+        colors={[
+          'rgba(255,255,255,0.00)',
+          'rgba(255,255,255,0.015)',
+          'rgba(255,255,255,0.00)',
+          'rgba(255,255,255,0.015)',
+          'rgba(255,255,255,0.00)',
+        ]}
+        locations={[0, 0.25, 0.5, 0.75, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Overhead spotlight — warm cream glow from above center */}
+      <Animated.View style={[StyleSheet.absoluteFill, spotStyle]} pointerEvents="none">
+        <LinearGradient
+          colors={['rgba(255,245,200,0.28)', 'rgba(255,235,160,0.12)', 'transparent']}
+          locations={[0, 0.35, 0.7]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* Radial-ish oval spotlight in the center — simulated with two crossed gradients */}
+        <LinearGradient
+          colors={['transparent', 'rgba(255,245,200,0.10)', 'transparent']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
+      {/* Slow diagonal shimmer — like light catching the felt weave */}
+      <Animated.View style={[StyleSheet.absoluteFill, shimmerStyle]} pointerEvents="none">
+        <LinearGradient
+          colors={['transparent', 'rgba(255,255,255,0.07)', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
+      {/* Wood rail glow — warm amber border around all four edges */}
+      <LinearGradient
+        colors={['rgba(120,60,10,0.32)', 'transparent']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.18 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['rgba(120,60,10,0.32)', 'transparent']}
+        start={{ x: 0.5, y: 1 }}
+        end={{ x: 0.5, y: 0.82 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['rgba(120,60,10,0.24)', 'transparent']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 0.12, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['rgba(120,60,10,0.24)', 'transparent']}
+        start={{ x: 1, y: 0.5 }}
+        end={{ x: 0.88, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Dark vignette at corners to focus the eye on the center */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.45)', 'transparent', 'rgba(0,0,0,0.35)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
     </View>

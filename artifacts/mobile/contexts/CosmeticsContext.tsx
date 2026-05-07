@@ -26,7 +26,7 @@ export type CardSkinId =
   | 'cyber-punk'
   | 'vintage-casino';
 
-export type ArenaId = 'classic' | 'cosmic' | 'royal' | 'lightning';
+export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning';
 
 export interface CardSkin {
   id: CardSkinId;
@@ -57,6 +57,12 @@ export const CARD_SKINS: CardSkin[] = [
 ];
 
 export const ARENAS: Arena[] = [
+  {
+    id: 'greenTable',
+    name: 'Casino Green',
+    premium: false,
+    description: 'The classic casino table — rich felt green under warm spotlight glow. Clean, timeless, and all business. No distractions. Just cards.',
+  },
   {
     id: 'classic',
     name: 'The Flamingo Floor',
@@ -109,11 +115,11 @@ const STORAGE_CARD_KEY = 'cosmetics.cardSkin';
 const STORAGE_ARENA_KEY = 'cosmetics.arena';
 
 const isArenaId = (v: string | null): v is ArenaId =>
-  v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning';
+  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning';
 
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [cardSkin, setCardSkinState] = useState<CardSkinId>('neon-glow');
-  const [arena, setArenaState] = useState<ArenaId>('classic');
+  const [arena, setArenaState] = useState<ArenaId>('greenTable');
   const scene: SceneId = 'rainbowRoad';
 
   useEffect(() => {
