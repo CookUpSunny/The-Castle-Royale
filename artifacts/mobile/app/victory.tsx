@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import BackButton from '@/components/BackButton';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -80,7 +81,8 @@ export default function VictoryScreen() {
         ]}
       />
 
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 40, paddingBottom: insets.bottom + 40 }]}>
+      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
+        <BackButton label="← HOME" onPress={handleLobby} />
 
         <Animated.View style={[styles.resultSection, mainStyle]}>
           <Text style={[styles.resultEmoji, { color: isWin ? colors.neonGold : colors.neonPurple }]}>

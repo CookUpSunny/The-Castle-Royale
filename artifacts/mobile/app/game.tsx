@@ -25,6 +25,7 @@ import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
 import { FELT_TINT } from '@/lib/sceneAssets';
 import ActionButtons from '@/components/ActionButtons';
+import BackButton from '@/components/BackButton';
 import SceneBackground from '@/components/SceneBackground';
 import CardComponent, { CardBack } from '@/components/Card';
 import EmoteBubble from '@/components/EmoteBubble';
@@ -445,7 +446,11 @@ export default function GameScreen() {
         />
       </View>
 
-      <View style={[styles.gameLayout, { paddingTop: insets.top + webTopPad + 12, paddingBottom: insets.bottom || 12 }]}>
+      <View style={[styles.gameLayout, { paddingTop: insets.top + webTopPad + 6, paddingBottom: insets.bottom || 12 }]}>
+
+        <View style={styles.topNavRow}>
+          <BackButton label="← EXIT" onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })} />
+        </View>
 
         <View style={styles.headerRow}>
           <View style={styles.playerSlot}>
@@ -528,7 +533,7 @@ export default function GameScreen() {
             onPress={() => setPlayerMenuOpen(false)}
             style={StyleSheet.absoluteFill}
           />
-          <View style={[styles.playerMenu, { top: insets.top + webTopPad + 78, left: 16 }]}>
+          <View style={[styles.playerMenu, { top: insets.top + webTopPad + 96, left: 16 }]}>
             {editingName ? (
               <View style={styles.nameEditRow}>
                 <TextInput
@@ -668,6 +673,7 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   gameLayout: { flex: 1 },
+  topNavRow: { paddingHorizontal: 14, paddingBottom: 2 },
   tableFelt: {
     overflow: 'hidden',
   },

@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { PortalSpinner } from '@/components/PortalSpinner';
+import BackButton from '@/components/BackButton';
 
 type Mode = 'menu' | 'host' | 'join';
 
@@ -155,9 +156,7 @@ export default function PrivateRoomScreen() {
 
       <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 28, paddingBottom: insets.bottom + 28 }]}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => { goBackToMenu(); router.replace('/'); }} hitSlop={12}>
-            <Text style={[styles.backText, { color: colors.mutedForeground }]}>‹  HOME</Text>
-          </Pressable>
+          <BackButton label="← HOME" onPress={() => { goBackToMenu(); router.replace('/'); }} />
           <View style={{ flex: 1 }} />
         </View>
 
@@ -316,7 +315,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   inner: { flex: 1, alignItems: 'center', paddingHorizontal: 24 },
   headerRow: { width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  backText: { fontSize: 13, fontWeight: '700', letterSpacing: 2 },
   title: { fontSize: 36, fontWeight: '900', letterSpacing: 8, marginTop: 8 },
   titleSub: { fontSize: 18, fontWeight: '700', letterSpacing: 6, marginTop: -4, marginBottom: 24 },
   subtitle: { fontSize: 13, letterSpacing: 1.5, textAlign: 'center', marginBottom: 24 },

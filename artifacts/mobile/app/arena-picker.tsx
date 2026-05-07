@@ -15,6 +15,7 @@ import { ARENAS, type ArenaId, useCosmetics } from '@/contexts/CosmeticsContext'
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import ArenaBackground from '@/components/ArenaBackground';
+import BackButton from '@/components/BackButton';
 
 export default function ArenaPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode: string }>();
@@ -54,9 +55,7 @@ export default function ArenaPickerScreen() {
       />
 
       <View style={[styles.header, { paddingTop: insets.top + webTopPad + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <Text style={[styles.backText, { color: colors.mutedForeground }]}>← BACK</Text>
-        </Pressable>
+        <BackButton label="← BACK" onPress={() => router.back()} />
         <Text style={[styles.title, { color: colors.foreground }]}>CHOOSE YOUR ARENA</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           {mode === 'bot' ? 'Quick Play · Bot' : 'Ranked Match'}
@@ -163,12 +162,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 14,
   },
-  backBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-    marginBottom: 10,
-  },
-  backText: { fontSize: 11, fontWeight: '700', letterSpacing: 2 },
   title: { fontSize: 20, fontWeight: '900', letterSpacing: 6, textAlign: 'center' },
   subtitle: { fontSize: 11, letterSpacing: 2, marginTop: 5, textAlign: 'center' },
   scrollContent: {

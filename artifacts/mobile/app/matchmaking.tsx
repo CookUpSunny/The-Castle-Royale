@@ -1,11 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { PortalSpinner } from '@/components/PortalSpinner';
+import BackButton from '@/components/BackButton';
 
 export default function MatchmakingScreen() {
   const colors = useColors();
@@ -38,7 +39,9 @@ export default function MatchmakingScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient colors={['#200040', '#0a0018', '#07000f']} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 40, paddingBottom: insets.bottom + 40 }]}>
+      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
+        <BackButton label="← HOME" onPress={() => { cancelQueue(); router.replace('/'); }} />
+
         <Text style={[styles.title, { color: colors.foreground }]}>FINDING</Text>
         <Text style={[styles.titleSub, { color: colors.neonGold }]}>OPPONENT</Text>
 
@@ -47,12 +50,7 @@ export default function MatchmakingScreen() {
         <Text style={[styles.timer, { color: colors.foreground }]}>{fmt(queueSeconds)}</Text>
         <Text style={[styles.statusText, { color: colors.mutedForeground }]}>Searching for a worthy challenger...</Text>
 
-        <Pressable
-          onPress={() => { cancelQueue(); router.replace('/'); }}
-          style={[styles.cancelBtn, { borderColor: colors.border }]}
-        >
-          <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>CANCEL</Text>
-        </Pressable>
+        <View />
       </View>
     </View>
   );
@@ -65,6 +63,4 @@ const styles = StyleSheet.create({
   titleSub: { fontSize: 18, fontWeight: '700', letterSpacing: 6, marginTop: -6 },
   timer: { fontSize: 48, fontWeight: '300', letterSpacing: 4 },
   statusText: { fontSize: 13, letterSpacing: 1, textAlign: 'center' },
-  cancelBtn: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 10, borderWidth: 1 },
-  cancelText: { fontSize: 14, fontWeight: '700', letterSpacing: 3 },
 });
