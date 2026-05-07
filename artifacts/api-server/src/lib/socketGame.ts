@@ -1063,6 +1063,7 @@ export function initSocketGame(httpServer: HttpServer): void {
               // Bot games: tear down immediately — no point holding state for a bot.
               // Clear DB active-game linkage before deleting gameParticipants.
               clearActiveGameForParticipants(gameId);
+              cleanupGameSpectators(io, gameId);
               games.delete(gameId);
               gameParticipants.delete(gameId);
               playerToGame.delete(pid);
