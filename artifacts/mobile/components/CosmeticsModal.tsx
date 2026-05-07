@@ -22,7 +22,7 @@ import { useColors } from '@/hooks/useColors';
  * Toggle to `true` locally to preview the spectate feature without
  * needing a real premium account. Set back to `false` before shipping.
  */
-const DEV_PREMIUM = true;
+const DEV_PREMIUM = false;
 
 interface CosmeticsModalProps {
   visible: boolean;

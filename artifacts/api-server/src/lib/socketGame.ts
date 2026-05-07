@@ -802,6 +802,8 @@ export function initSocketGame(httpServer: HttpServer): void {
       gameSpectators.get(gameId)!.add(socket.id);
       spectatorToGame.set(socket.id, gameId);
       socket.emit('spectator_update', getSpectatorView(state));
+      // Push updated spectatorCount to active players so their badge refreshes immediately.
+      emitGameView(io, state, 'game_update');
       logger.info({ sid: socket.id, gameId }, 'Spectator joined');
     });
 
@@ -810,6 +812,9 @@ export function initSocketGame(httpServer: HttpServer): void {
       if (gameId) {
         gameSpectators.get(gameId)?.delete(socket.id);
         spectatorToGame.delete(socket.id);
+        // Push updated spectatorCount to active players so their badge refreshes immediately.
+        const state = games.get(gameId);
+        if (state) emitGameView(io, state, 'game_update');
       }
     });
 
