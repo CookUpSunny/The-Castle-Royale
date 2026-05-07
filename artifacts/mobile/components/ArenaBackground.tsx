@@ -65,9 +65,25 @@ const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, str
   ],
 };
 
+const ARENA_FALLBACK_COLORS: Record<ArenaId, readonly [string, string, string]> = {
+  greenTable: ['#0a2e14', '#0d3b1a', '#0a2e14'],
+  classic:    ['#3d0a28', '#5c1040', '#8a1050'],
+  cosmic:     ['#0d0520', '#1a0840', '#100530'],
+  royal:      ['#1e1200', '#3a2200', '#2a1a00'],
+  lightning:  ['#031a1a', '#062e28', '#041f1c'],
+};
+
 function ArenaPhotoBase({ arenaId }: { arenaId: ArenaId }) {
+  const fallback = ARENA_FALLBACK_COLORS[arenaId];
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Fallback gradient — always visible; photo renders on top when available */}
+      <LinearGradient
+        colors={[...fallback]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
       <Image
         source={ARENA_IMAGES[arenaId]}
         style={StyleSheet.absoluteFill}
