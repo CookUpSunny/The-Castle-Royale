@@ -11,6 +11,8 @@ export const playersTable = pgTable("players", {
   losses: integer("losses").default(0).notNull(),
   winStreak: integer("win_streak").default(0).notNull(),
   elo: integer("elo").default(1000).notNull(),
+  /** ID of the game this player is currently in, or null when not in a game. Cleared when the game ends. */
+  activeGameId: text("active_game_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

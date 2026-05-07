@@ -34,6 +34,14 @@ const queue: QueueEntry[] = [];
 const games = new Map<string, GameState>();
 const playerToGame = new Map<string, string>();
 const socketToPlayer = new Map<string, string>();
+/**
+ * Tracks the most-recently-seen socket ID for each player.
+ * Used to distinguish a stale (old) socket's delayed disconnect event from a
+ * real disconnection on the player's current socket.  When a player reconnects,
+ * their new socket ID is written here; any subsequent disconnect event from an
+ * older socket ID is ignored so it cannot trigger a spurious teardown.
+ */
+const playerToCurrentSocketId = new Map<string, string>();
 /** Maps anonymous playerId → Game Center player ID (set on register/join events). */
 const playerToGameCenterId = new Map<string, string>();
 /** Stores the game center IDs for both participants of a finished game so stats can be updated. */
@@ -68,11 +76,66 @@ function calcElo(winnerElo: number, loserElo: number): [number, number] {
 const ANONYMOUS_ELO = 1000;
 
 /**
+ * Record which game an authenticated player is currently in.
+ * Best-effort — a failure here must not crash the game flow.
+ */
+async function setActiveGameInDb(gameCenterId: string, gameId: string): Promise<void> {
+  try {
+    await db
+      .update(playersTable)
+      .set({ activeGameId: gameId })
+      .where(eq(playersTable.gameCenterId, gameCenterId));
+  } catch (err) {
+    logger.error({ err, gameCenterId, gameId }, 'Failed to set activeGameId in DB');
+  }
+}
+
+/**
+ * Clear the active-game record for an authenticated player (game ended/abandoned).
+ * Best-effort.
+ */
+async function clearActiveGameInDb(gameCenterId: string): Promise<void> {
+  try {
+    await db
+      .update(playersTable)
+      .set({ activeGameId: null })
+      .where(eq(playersTable.gameCenterId, gameCenterId));
+  } catch (err) {
+    logger.error({ err, gameCenterId }, 'Failed to clear activeGameId in DB');
+  }
+}
+
+/**
+ * Set activeGameId in DB for every authenticated participant of a new game.
+ */
+function setActiveGameForParticipants(gameId: string, participants: QueueEntry[]): void {
+  for (const p of participants) {
+    const gcId = p.gameCenterId ?? playerToGameCenterId.get(p.playerId);
+    if (gcId && !isBotId(p.playerId)) void setActiveGameInDb(gcId, gameId);
+  }
+}
+
+/**
+ * Clear activeGameId in DB for every authenticated participant of an ended game.
+ * Must be called before gameParticipants.delete(gameId).
+ */
+function clearActiveGameForParticipants(gameId: string): void {
+  const participants = gameParticipants.get(gameId);
+  if (!participants) return;
+  for (const p of participants) {
+    if (p.gameCenterId && !isBotId(p.playerId)) void clearActiveGameInDb(p.gameCenterId);
+  }
+}
+
+/**
  * Award coins/stats in the DB for every authenticated participant after a game.
  * Players without a Game Center ID are silently skipped; the other player still
  * receives their update (e.g. authenticated user beats a bot or anonymous opponent).
  */
 async function updatePlayerStats(gameId: string, winnerId: string): Promise<void> {
+  // Clear active-game linkage first (before gameParticipants is deleted below).
+  clearActiveGameForParticipants(gameId);
+
   const participants = gameParticipants.get(gameId);
   gameParticipants.delete(gameId);
   if (!participants || participants.length < 2) return;
@@ -171,6 +234,44 @@ function scheduleBotEmote(io: Server, gameId: string, botId: string): void {
   }, delay);
 }
 
+/**
+ * Grace-period disconnect timers: maps playerId → setTimeout handle.
+ * When a player disconnects mid-game we wait RECONNECT_GRACE_MS before
+ * actually tearing the game down, giving them a chance to reconnect.
+ */
+const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** How long (ms) to keep a game alive after a player disconnects. */
+const RECONNECT_GRACE_MS = 60_000;
+
+/** Tell the OTHER player in a game that their opponent is temporarily away. */
+function notifyOpponentReconnecting(io: Server, gameId: string, disconnectedPlayerId: string): void {
+  const state = games.get(gameId);
+  if (!state) return;
+  const otherId = state.playerOrder.find((id) => id !== disconnectedPlayerId);
+  if (!otherId || isBotId(otherId)) return;
+  for (const [sid, p] of socketToPlayer.entries()) {
+    if (p === otherId) {
+      io.to(sid).emit('opponent_reconnecting');
+      break;
+    }
+  }
+}
+
+/** Tell the OTHER player that the reconnecting player is back. */
+function notifyOpponentReconnected(io: Server, gameId: string, reconnectedPlayerId: string): void {
+  const state = games.get(gameId);
+  if (!state) return;
+  const otherId = state.playerOrder.find((id) => id !== reconnectedPlayerId);
+  if (!otherId || isBotId(otherId)) return;
+  for (const [sid, p] of socketToPlayer.entries()) {
+    if (p === otherId) {
+      io.to(sid).emit('opponent_reconnected');
+      break;
+    }
+  }
+}
+
 /** Open invite-only rooms keyed by their 6-character code. */
 const rooms = new Map<string, PrivateRoom>();
 /** Index from playerId to the room they're hosting. */
@@ -247,6 +348,8 @@ function cleanupGameSpectators(io: Server, gameId: string): void {
 function notifyAndTeardownGame(io: Server, gameId: string, exceptPlayerId?: string): void {
   const state = games.get(gameId);
   if (!state) return;
+  // Clear DB active-game links before deleting gameParticipants.
+  clearActiveGameForParticipants(gameId);
   for (const id of state.playerOrder) {
     if (id === exceptPlayerId) continue;
     if (isBotId(id)) continue;
@@ -427,7 +530,12 @@ export function initSocketGame(httpServer: HttpServer): void {
     socket.on('join_queue', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
       const { playerId, playerName, gameCenterId } = data;
       socketToPlayer.set(socket.id, playerId);
+      playerToCurrentSocketId.set(playerId, socket.id);
       if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
+
+      // Cancel any lingering disconnect timer from a previous game session.
+      const existingTimer = disconnectTimers.get(playerId);
+      if (existingTimer !== undefined) { clearTimeout(existingTimer); disconnectTimers.delete(playerId); }
 
       const existing = queue.findIndex((e) => e.playerId === playerId);
       if (existing >= 0) queue.splice(existing, 1);
@@ -445,6 +553,7 @@ export function initSocketGame(httpServer: HttpServer): void {
         playerToGame.set(p1.playerId, state.gameId);
         playerToGame.set(p2.playerId, state.gameId);
         registerParticipants(state.gameId, [p1, p2]);
+        setActiveGameForParticipants(state.gameId, [p1, p2]);
 
         for (const p of [p1, p2]) {
           const view = getGameView(state, p.playerId);
@@ -458,7 +567,12 @@ export function initSocketGame(httpServer: HttpServer): void {
     socket.on('start_bot_game', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
       const { playerId, playerName, gameCenterId } = data;
       socketToPlayer.set(socket.id, playerId);
+      playerToCurrentSocketId.set(playerId, socket.id);
       if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
+
+      // Cancel any lingering disconnect timer from a previous game session.
+      const existingTimer = disconnectTimers.get(playerId);
+      if (existingTimer !== undefined) { clearTimeout(existingTimer); disconnectTimers.delete(playerId); }
 
       removeFromQueue(playerId);
 
@@ -472,13 +586,15 @@ export function initSocketGame(httpServer: HttpServer): void {
 
       const state = dealGame([playerId, botId], [playerName, botName]);
 
+      const humanEntry = { socketId: socket.id, playerId, playerName, gameCenterId };
       games.set(state.gameId, state);
       playerToGame.set(playerId, state.gameId);
       playerToGame.set(botId, state.gameId);
       registerParticipants(state.gameId, [
-        { socketId: socket.id, playerId, playerName, gameCenterId },
+        humanEntry,
         { socketId: '', playerId: botId, playerName: botName },
       ]);
+      setActiveGameForParticipants(state.gameId, [humanEntry]);
 
       const view = getGameView(state, playerId);
       socket.emit('game_start', view);
@@ -500,6 +616,7 @@ export function initSocketGame(httpServer: HttpServer): void {
     socket.on('create_room', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
       const { playerId, playerName, gameCenterId } = data;
       socketToPlayer.set(socket.id, playerId);
+      playerToCurrentSocketId.set(playerId, socket.id);
       if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
 
       reapStaleRooms();
@@ -526,7 +643,12 @@ export function initSocketGame(httpServer: HttpServer): void {
       const { playerId, playerName, gameCenterId } = data;
       const code = (data.code ?? '').toUpperCase().trim();
       socketToPlayer.set(socket.id, playerId);
+      playerToCurrentSocketId.set(playerId, socket.id);
       if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
+
+      // Cancel any lingering disconnect timer from a previous game session.
+      const existingTimer = disconnectTimers.get(playerId);
+      if (existingTimer !== undefined) { clearTimeout(existingTimer); disconnectTimers.delete(playerId); }
 
       reapStaleRooms();
 
@@ -556,13 +678,12 @@ export function initSocketGame(httpServer: HttpServer): void {
         [room.creator.playerName, playerName],
       );
 
+      const joinerEntry = { socketId: socket.id, playerId, playerName, gameCenterId };
       games.set(state.gameId, state);
       playerToGame.set(room.creator.playerId, state.gameId);
       playerToGame.set(playerId, state.gameId);
-      registerParticipants(state.gameId, [
-        room.creator,
-        { socketId: socket.id, playerId, playerName, gameCenterId },
-      ]);
+      registerParticipants(state.gameId, [room.creator, joinerEntry]);
+      setActiveGameForParticipants(state.gameId, [room.creator, joinerEntry]);
 
       let hostSocketId: string | null = null;
       for (const [sid, p] of socketToPlayer.entries()) {
@@ -755,10 +876,93 @@ export function initSocketGame(httpServer: HttpServer): void {
       }
     });
 
-    socket.on('register', (data: { playerId: string; gameCenterId?: string }) => {
+    socket.on('register', async (data: { playerId: string; gameCenterId?: string }) => {
       if (!data?.playerId) return;
-      socketToPlayer.set(socket.id, data.playerId);
-      if (data.gameCenterId) playerToGameCenterId.set(data.playerId, data.gameCenterId);
+      const pid = data.playerId;
+      const inboundGcId = data.gameCenterId;
+
+      // ── Security: verify identity ──────────────────────────────────────────
+      // If we already have a gameCenterId stored for this playerId (the player
+      // was previously authenticated in this server session), the reconnecting
+      // client MUST present the exact same gameCenterId.  Omitting it entirely
+      // or providing a different one is treated as an identity mismatch — we
+      // register the socket so the client can start a fresh session, but we
+      // NEVER restore game state that belongs to the stored authenticated identity.
+      const storedGcId = playerToGameCenterId.get(pid);
+      if (storedGcId && inboundGcId !== storedGcId) {
+        logger.warn({ pid, storedGcId, hasInbound: !!inboundGcId }, 'gameCenterId mismatch on register — rejecting reconnect');
+        socketToPlayer.set(socket.id, pid);
+        return;
+      }
+
+      // ── Update mappings ────────────────────────────────────────────────────
+      // Remove any stale socketToPlayer entries that belong to this player
+      // from prior connections. emitGameView and similar functions iterate
+      // socketToPlayer and break on first match; stale entries cause them to
+      // target the wrong (disconnected) socket instead of the live one.
+      for (const [oldSid, mappedPid] of socketToPlayer.entries()) {
+        if (mappedPid === pid && oldSid !== socket.id) {
+          socketToPlayer.delete(oldSid);
+        }
+      }
+      socketToPlayer.set(socket.id, pid);
+      playerToCurrentSocketId.set(pid, socket.id);
+      if (inboundGcId) playerToGameCenterId.set(pid, inboundGcId);
+
+      // Determine the effective gameCenterId (inbound wins over stored).
+      const effectiveGcId = inboundGcId ?? storedGcId;
+
+      // ── Cancel any pending grace-period timer ──────────────────────────────
+      const hadTimer = disconnectTimers.has(pid);
+      const timer = disconnectTimers.get(pid);
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        disconnectTimers.delete(pid);
+      }
+
+      // ── Resolve active gameId from in-memory map (primary source) ──────────
+      let gameId = playerToGame.get(pid);
+
+      // ── DB fallback: for authenticated players whose in-memory state is gone
+      // (e.g. server recovered from a partial restart or state was never set) ──
+      if (!gameId && effectiveGcId) {
+        try {
+          const [row] = await db
+            .select({ activeGameId: playersTable.activeGameId })
+            .from(playersTable)
+            .where(eq(playersTable.gameCenterId, effectiveGcId))
+            .limit(1);
+          if (row?.activeGameId && games.has(row.activeGameId)) {
+            // Game is still alive in memory — re-establish the mapping.
+            const resolvedGameId = row.activeGameId;
+            gameId = resolvedGameId;
+            playerToGame.set(pid, resolvedGameId);
+            logger.info({ pid, gameId }, 'Restored playerToGame from DB activeGameId');
+          }
+        } catch (err) {
+          logger.error({ err, pid }, 'DB lookup for activeGameId failed during register');
+        }
+      }
+
+      // ── Restore game state if there is an active game ─────────────────────
+      if (gameId) {
+        const state = games.get(gameId);
+        if (state && state.playerOrder.includes(pid)) {
+          logger.info(
+            { pid, gameId, hadTimer },
+            hadTimer
+              ? 'Player reconnected within grace period — restoring game'
+              : 'Player re-registered with active game — restoring',
+          );
+          const view = getGameView(state, pid);
+          socket.emit('game_restored', view);
+          // Only tell the opponent the player is back if we previously told them
+          // the player was away (i.e. a grace-period reconnect).
+          if (hadTimer) {
+            notifyOpponentReconnected(io, gameId, pid);
+          }
+        }
+      }
     });
 
     socket.on('get_active_games', () => {
@@ -833,25 +1037,52 @@ export function initSocketGame(httpServer: HttpServer): void {
       const pid = socketToPlayer.get(socket.id);
       logger.info({ sid: socket.id, pid }, 'Socket disconnected');
 
+      // Always clean up the reverse mapping for this specific socket.
+      socketToPlayer.delete(socket.id);
+
       if (pid) {
+        // ── Stale-socket guard ──────────────────────────────────────────────
+        // On mobile, the old socket's disconnect event can arrive late (after
+        // the ping timeout) even if the player has already reconnected on a new
+        // socket. If this disconnecting socket is NOT the player's current one,
+        // ignore all game logic — the player is still live on their new socket.
+        const currentSid = playerToCurrentSocketId.get(pid);
+        if (currentSid && currentSid !== socket.id) {
+          logger.info({ sid: socket.id, currentSid, pid }, 'Stale socket disconnected — ignoring game logic');
+          return;
+        }
+
         const gameId = playerToGame.get(pid);
         if (gameId) {
           const state = games.get(gameId);
           if (state) {
             const otherId = state.playerOrder.find((id) => id !== pid);
-            if (otherId && !isBotId(otherId)) {
-              for (const [sid, p] of socketToPlayer.entries()) {
-                if (p === otherId) {
-                  io.to(sid).emit('opponent_disconnected');
-                  break;
+            const opponentIsBot = otherId ? isBotId(otherId) : true;
+
+            if (opponentIsBot) {
+              // Bot games: tear down immediately — no point holding state for a bot.
+              // Clear DB active-game linkage before deleting gameParticipants.
+              clearActiveGameForParticipants(gameId);
+              games.delete(gameId);
+              gameParticipants.delete(gameId);
+              playerToGame.delete(pid);
+              if (otherId) playerToGame.delete(otherId);
+            } else {
+              // Human vs human: start the grace period.
+              // Notify the opponent that their adversary is temporarily away.
+              notifyOpponentReconnecting(io, gameId, pid);
+
+              const timer = setTimeout(() => {
+                disconnectTimers.delete(pid);
+                // Only tear down if the player still hasn't rejoined this game.
+                if (playerToGame.get(pid) === gameId) {
+                  logger.info({ pid, gameId }, 'Grace period expired — tearing down game');
+                  notifyAndTeardownGame(io, gameId, pid);
+                  playerToGame.delete(pid);
                 }
-              }
+              }, RECONNECT_GRACE_MS);
+              disconnectTimers.set(pid, timer);
             }
-            cleanupGameSpectators(io, gameId);
-            games.delete(gameId);
-            gameParticipants.delete(gameId);
-            playerToGame.delete(pid);
-            if (otherId) playerToGame.delete(otherId);
           }
         }
         const qi = queue.findIndex((e) => e.playerId === pid);
@@ -869,7 +1100,6 @@ export function initSocketGame(httpServer: HttpServer): void {
           const spectatedState = games.get(spectatedGameId);
           if (spectatedState) emitGameView(io, spectatedState, 'game_update');
         }
-        socketToPlayer.delete(socket.id);
       }
     });
   });

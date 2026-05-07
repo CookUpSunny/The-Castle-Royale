@@ -223,7 +223,10 @@ export default function GameScreen() {
   // Switch to the cinematic landscape layout whenever the device is wider than tall.
   // Lobby/setup/portrait stays unchanged so existing flows are unaffected.
   const isLandscape = width > height;
-  const { gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, opponentDisconnected, sendEmote, myEmoteBubble, opponentEmoteBubble } = useGame();
+  const { 
+    gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
+    opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
+  } = useGame();
   const { startMusic, stopMusic, isMuted, toggleMute } = useMusicPlayer();
 
   // Start the playlist when the game screen mounts; fade out + stop on unmount.
@@ -598,6 +601,15 @@ export default function GameScreen() {
         />
       )}
 
+      {opponentReconnecting && !opponentDisconnected && (
+        <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.neonGold }]}>
+          <Text style={[styles.disconnectText, { color: colors.neonGold }]}>Opponent reconnecting…</Text>
+          <Pressable onPress={() => { leaveGame(); router.replace('/'); }}>
+            <Text style={[styles.disconnectLeave, { color: colors.mutedForeground }]}>Give up</Text>
+          </Pressable>
+        </View>
+      )}
+
       {opponentDisconnected && (
         <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.accent }]}>
           <Text style={[styles.disconnectText, { color: colors.accent }]}>Opponent disconnected</Text>
@@ -612,7 +624,6 @@ export default function GameScreen() {
           key={`me_${myEmote.key}`}
           emote={myEmote.emote}
           side="left"
-          onComplete={() => setMyEmote(null)}
         />
       ) : null}
       {opponentEmote ? (
@@ -620,7 +631,6 @@ export default function GameScreen() {
           key={`op_${opponentEmote.key}`}
           emote={opponentEmote.emote}
           side="right"
-          onComplete={() => setOpponentEmote(null)}
         />
       ) : null}
       {/* Fire burst + ripple — radial scale, NO translateX/Y shake */}

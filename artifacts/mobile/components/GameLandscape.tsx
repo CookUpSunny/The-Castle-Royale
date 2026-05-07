@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
@@ -248,7 +248,10 @@ export default function GameLandscape(): React.JSX.Element | null {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { gameView, playerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, opponentDisconnected, sendEmote, myEmoteBubble, opponentEmoteBubble } = useGame();
+  const { 
+    gameView, playerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
+    opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
+  } = useGame();
   const { arena } = useCosmetics();
   const { isMuted, toggleMute } = useMusicPlayer();
   const [myEmote, setMyEmote] = useState<{ emote: string; key: number } | null>(null);
@@ -544,6 +547,15 @@ export default function GameLandscape(): React.JSX.Element | null {
 
       <EmotePicker onSend={sendEmote} />
 
+      {opponentReconnecting && !opponentDisconnected && (
+        <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.neonGold }]}>
+          <Text style={[styles.disconnectText, { color: colors.neonGold }]}>Opponent reconnecting…</Text>
+          <Pressable onPress={() => { leaveGame(); router.replace('/'); }}>
+            <Text style={[styles.disconnectLeave, { color: colors.mutedForeground }]}>Give up</Text>
+          </Pressable>
+        </View>
+      )}
+
       {opponentDisconnected && (
         <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.accent }]}>
           <Text style={[styles.disconnectText, { color: colors.accent }]}>Opponent disconnected</Text>
@@ -558,7 +570,6 @@ export default function GameLandscape(): React.JSX.Element | null {
           key={`me_${myEmote.key}`}
           emote={myEmote.emote}
           side="left"
-          onComplete={() => setMyEmote(null)}
         />
       ) : null}
       {opponentEmote ? (
@@ -566,7 +577,6 @@ export default function GameLandscape(): React.JSX.Element | null {
           key={`op_${opponentEmote.key}`}
           emote={opponentEmote.emote}
           side="right"
-          onComplete={() => setOpponentEmote(null)}
         />
       ) : null}
 

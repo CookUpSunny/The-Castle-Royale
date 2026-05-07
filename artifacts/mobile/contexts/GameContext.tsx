@@ -88,6 +88,8 @@ interface GameContextType {
   queueSeconds: number;
   connectionStatus: 'connected' | 'disconnected' | 'connecting';
   opponentDisconnected: boolean;
+  /** True while the opponent has temporarily lost connection but is within the grace period. */
+  opponentReconnecting: boolean;
   joinQueue: () => void;
   quickPlayBot: () => void;
   cancelQueue: () => void;
@@ -177,6 +179,7 @@ export function GameProvider({
   const [queueSeconds, setQueueSeconds] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  const [opponentReconnecting, setOpponentReconnecting] = useState(false);
   const [hostedRoomCode, setHostedRoomCode] = useState<string | null>(null);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [myEmoteBubble, setMyEmoteBubble] = useState<{ emote: string; key: number } | null>(null);
@@ -284,10 +287,28 @@ export function GameProvider({
       setIsInQueue(false);
       if (queueTimerRef.current) clearInterval(queueTimerRef.current);
       setOpponentDisconnected(false);
+      setOpponentReconnecting(false);
       setHostedRoomCode(null);
       setRoomError(null);
       clearEmoteBubbleTimers();
       setGameView(view);
+    });
+
+    socket.on('game_restored', (view: GameView) => {
+      setOpponentDisconnected(false);
+      setOpponentReconnecting(false);
+      clearEmoteBubbleTimers();
+      setGameView(view);
+    });
+
+    socket.on('opponent_reconnecting', () => {
+      setOpponentReconnecting(true);
+      setOpponentDisconnected(false);
+    });
+
+    socket.on('opponent_reconnected', () => {
+      setOpponentReconnecting(false);
+      setOpponentDisconnected(false);
     });
 
     socket.on('room_created', (data: { code: string }) => {
@@ -309,6 +330,7 @@ export function GameProvider({
 
     socket.on('opponent_disconnected', () => {
       setOpponentDisconnected(true);
+      setOpponentReconnecting(false);
     });
 
     socket.on('play_error', (data: { message: string }) => {
@@ -479,6 +501,7 @@ export function GameProvider({
   const clearGame = useCallback(() => {
     setGameView(null);
     setOpponentDisconnected(false);
+    setOpponentReconnecting(false);
     clearEmoteBubbleTimers();
   }, [clearEmoteBubbleTimers]);
 
@@ -491,6 +514,7 @@ export function GameProvider({
     }
     setGameView(null);
     setOpponentDisconnected(false);
+    setOpponentReconnecting(false);
     clearEmoteBubbleTimers();
   }, [gameView, clearEmoteBubbleTimers]);
 
@@ -505,6 +529,7 @@ export function GameProvider({
         queueSeconds,
         connectionStatus,
         opponentDisconnected,
+        opponentReconnecting,
         joinQueue,
         quickPlayBot,
         cancelQueue,
