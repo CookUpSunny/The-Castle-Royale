@@ -38,6 +38,10 @@ const socketToPlayer = new Map<string, string>();
 const playerToGameCenterId = new Map<string, string>();
 /** Stores the game center IDs for both participants of a finished game so stats can be updated. */
 const gameParticipants = new Map<string, { playerId: string; gameCenterId?: string }[]>();
+/** Maps gameId → Set of spectator socket IDs watching that game. */
+const gameSpectators = new Map<string, Set<string>>();
+/** Maps spectator socketId → gameId they are watching. */
+const spectatorToGame = new Map<string, string>();
 
 // Allow-list of emotes the client can send.
 const ALLOWED_EMOTES = new Set<string>([
@@ -204,6 +208,42 @@ function botThinkTime(): number {
   return BOT_THINK_MIN_MS + Math.floor(Math.random() * (BOT_THINK_MAX_MS - BOT_THINK_MIN_MS));
 }
 
+/** Build a spectator-safe view of the game — no hand card values exposed. */
+function getSpectatorView(state: GameState, extra?: Record<string, unknown>): Record<string, unknown> {
+  const [p1id, p2id] = state.playerOrder;
+  const p1 = state.players[p1id!]!;
+  const p2 = state.players[p2id!]!;
+  const spectatorCount = gameSpectators.get(state.gameId)?.size ?? 0;
+  return {
+    gameId: state.gameId,
+    player1Name: p1.name,
+    player1HandCount: p1.hand.length,
+    player1FaceUp: state.phase === 'setup' ? [] : p1.faceUp,
+    player1FaceDownCount: p1.faceDown.length,
+    player2Name: p2.name,
+    player2HandCount: p2.hand.length,
+    player2FaceUp: state.phase === 'setup' ? [] : p2.faceUp,
+    player2FaceDownCount: p2.faceDown.length,
+    discardPile: state.discardPile,
+    deckCount: state.deck.length,
+    currentPlayerName: state.players[state.currentPlayerId]?.name ?? '',
+    phase: state.phase,
+    spectatorCount,
+    ...extra,
+  };
+}
+
+/** Notify spectators the game ended, remove them from tracking maps. */
+function cleanupGameSpectators(io: Server, gameId: string): void {
+  const spectators = gameSpectators.get(gameId);
+  if (!spectators) return;
+  for (const sid of spectators) {
+    io.to(sid).emit('spectator_game_over');
+    spectatorToGame.delete(sid);
+  }
+  gameSpectators.delete(gameId);
+}
+
 function notifyAndTeardownGame(io: Server, gameId: string, exceptPlayerId?: string): void {
   const state = games.get(gameId);
   if (!state) return;
@@ -220,6 +260,7 @@ function notifyAndTeardownGame(io: Server, gameId: string, exceptPlayerId?: stri
   for (const id of state.playerOrder) playerToGame.delete(id);
   games.delete(gameId);
   gameParticipants.delete(gameId);
+  cleanupGameSpectators(io, gameId);
 }
 
 function removeFromQueue(playerId: string): void {
@@ -233,14 +274,23 @@ function emitGameView(
   event: string,
   extra?: Record<string, unknown>,
 ): void {
+  const spectatorCount = gameSpectators.get(state.gameId)?.size ?? 0;
   for (const pid of state.playerOrder) {
     if (isBotId(pid)) continue;
     const view = getGameView(state, pid);
     for (const [sid, p] of socketToPlayer.entries()) {
       if (p === pid) {
-        io.to(sid).emit(event, { ...view, ...extra });
+        io.to(sid).emit(event, { ...view, spectatorCount, ...extra });
         break;
       }
+    }
+  }
+  // Push spectator-safe view to all spectators watching this game.
+  const spectators = gameSpectators.get(state.gameId);
+  if (spectators && spectators.size > 0) {
+    const sv = getSpectatorView(state, extra);
+    for (const sid of spectators) {
+      io.to(sid).emit('spectator_update', sv);
     }
   }
 }
@@ -578,6 +628,7 @@ export function initSocketGame(httpServer: HttpServer): void {
 
       if (outcome.result.gameOver) {
         void updatePlayerStats(data.gameId, pid);
+        cleanupGameSpectators(io, data.gameId);
         games.delete(data.gameId);
         for (const id of outcome.newState.playerOrder) playerToGame.delete(id);
         logger.info({ gameId: data.gameId, winner: pid }, 'Game over');
@@ -710,6 +761,58 @@ export function initSocketGame(httpServer: HttpServer): void {
       if (data.gameCenterId) playerToGameCenterId.set(data.playerId, data.gameCenterId);
     });
 
+    socket.on('get_active_games', () => {
+      const active: Array<{
+        gameId: string;
+        player1Name: string;
+        player2Name: string;
+        pileSize: number;
+        spectatorCount: number;
+      }> = [];
+      for (const [gameId, state] of games.entries()) {
+        if (state.phase !== 'playing') continue;
+        const [p1id, p2id] = state.playerOrder;
+        if (!p1id || !p2id || isBotId(p1id) || isBotId(p2id)) continue;
+        const p1 = state.players[p1id]!;
+        const p2 = state.players[p2id]!;
+        active.push({
+          gameId,
+          player1Name: p1.name,
+          player2Name: p2.name,
+          pileSize: state.discardPile.length,
+          spectatorCount: gameSpectators.get(gameId)?.size ?? 0,
+        });
+      }
+      socket.emit('active_games', active);
+    });
+
+    socket.on('spectate_game', (data: { gameId: string }) => {
+      const gameId = String(data?.gameId ?? '');
+      const state = games.get(gameId);
+      if (!state || state.phase !== 'playing') {
+        socket.emit('spectate_error', { message: 'Game not found or not in progress.' });
+        return;
+      }
+      const prevGameId = spectatorToGame.get(socket.id);
+      if (prevGameId && prevGameId !== gameId) {
+        gameSpectators.get(prevGameId)?.delete(socket.id);
+        spectatorToGame.delete(socket.id);
+      }
+      if (!gameSpectators.has(gameId)) gameSpectators.set(gameId, new Set());
+      gameSpectators.get(gameId)!.add(socket.id);
+      spectatorToGame.set(socket.id, gameId);
+      socket.emit('spectator_update', getSpectatorView(state));
+      logger.info({ sid: socket.id, gameId }, 'Spectator joined');
+    });
+
+    socket.on('leave_spectate', () => {
+      const gameId = spectatorToGame.get(socket.id);
+      if (gameId) {
+        gameSpectators.get(gameId)?.delete(socket.id);
+        spectatorToGame.delete(socket.id);
+      }
+    });
+
     socket.on('leave_game', (data: { gameId: string }) => {
       const pid = socketToPlayer.get(socket.id);
       if (!pid) return;
@@ -751,6 +854,12 @@ export function initSocketGame(httpServer: HttpServer): void {
         // Mobile clients routinely lose the WebSocket while the user switches
         // apps to share the room code. The room is GC'd by reapStaleRooms()
         // once it exceeds ROOM_TTL_MS.
+        // Cleanup spectator state if this socket was watching a game.
+        const spectatedGameId = spectatorToGame.get(socket.id);
+        if (spectatedGameId) {
+          gameSpectators.get(spectatedGameId)?.delete(socket.id);
+          spectatorToGame.delete(socket.id);
+        }
         socketToPlayer.delete(socket.id);
       }
     });

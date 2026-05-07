@@ -46,6 +46,36 @@ export interface GameView {
   opponentReady?: boolean;
   /** True when this player owes a starter play after picking up the pile. They must commit one card (any value, no specials) to restart the pile. */
   mustPlayStarter?: boolean;
+  /** Number of spectators watching this game (injected server-side). */
+  spectatorCount?: number;
+}
+
+/** View of a live game sent to spectators — no hand card values are exposed. */
+export interface SpectatorView {
+  gameId: string;
+  player1Name: string;
+  player1HandCount: number;
+  player1FaceUp: Card[];
+  player1FaceDownCount: number;
+  player2Name: string;
+  player2HandCount: number;
+  player2FaceUp: Card[];
+  player2FaceDownCount: number;
+  discardPile: Card[];
+  deckCount: number;
+  currentPlayerName: string;
+  phase: 'setup' | 'playing' | 'finished';
+  spectatorCount: number;
+  lastEvent?: LastEvent;
+}
+
+/** Summary of an active PvP game shown in the spectate list. */
+export interface ActiveGame {
+  gameId: string;
+  player1Name: string;
+  player2Name: string;
+  pileSize: number;
+  spectatorCount: number;
 }
 
 interface GameContextType {
@@ -86,6 +116,13 @@ interface GameContextType {
   myEmoteBubble: { emote: string; key: number } | null;
   /** Floating emote bubble for the opponent. */
   opponentEmoteBubble: { emote: string; key: number } | null;
+  /** Current spectator view — non-null only while spectating a live game. */
+  spectatorView: SpectatorView | null;
+  /** Active PvP games available to spectate (populated by refreshActiveGames). */
+  activeGames: ActiveGame[];
+  spectateGame: (gameId: string) => void;
+  leaveSpectate: () => void;
+  refreshActiveGames: () => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -132,6 +169,8 @@ export function GameProvider({
   const [roomError, setRoomError] = useState<string | null>(null);
   const [myEmoteBubble, setMyEmoteBubble] = useState<{ emote: string; key: number } | null>(null);
   const [opponentEmoteBubble, setOpponentEmoteBubble] = useState<{ emote: string; key: number } | null>(null);
+  const [spectatorView, setSpectatorView] = useState<SpectatorView | null>(null);
+  const [activeGames, setActiveGames] = useState<ActiveGame[]>([]);
   const emoteCounterRef = useRef(0);
   const myEmoteBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opponentEmoteBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -285,6 +324,18 @@ export function GameProvider({
       }
     });
 
+    socket.on('spectator_update', (view: SpectatorView) => {
+      setSpectatorView(view);
+    });
+
+    socket.on('spectator_game_over', () => {
+      setSpectatorView(null);
+    });
+
+    socket.on('active_games', (games: ActiveGame[]) => {
+      setActiveGames(games);
+    });
+
     return () => {
       socket.disconnect();
       if (queueTimerRef.current) clearInterval(queueTimerRef.current);
@@ -398,6 +449,21 @@ export function GameProvider({
     socketRef.current.emit('send_emote', { gameId: gameView.gameId, emote });
   }, [gameView]);
 
+  const spectateGame = useCallback((gameId: string) => {
+    if (!socketRef.current || connectionStatus !== 'connected') return;
+    socketRef.current.emit('spectate_game', { gameId });
+  }, [connectionStatus]);
+
+  const leaveSpectate = useCallback(() => {
+    socketRef.current?.emit('leave_spectate');
+    setSpectatorView(null);
+  }, []);
+
+  const refreshActiveGames = useCallback(() => {
+    if (!socketRef.current || connectionStatus !== 'connected') return;
+    socketRef.current.emit('get_active_games');
+  }, [connectionStatus]);
+
   const clearGame = useCallback(() => {
     setGameView(null);
     setOpponentDisconnected(false);
@@ -447,6 +513,11 @@ export function GameProvider({
         sendEmote,
         myEmoteBubble,
         opponentEmoteBubble,
+        spectatorView,
+        activeGames,
+        spectateGame,
+        leaveSpectate,
+        refreshActiveGames,
       }}
     >
       {children}

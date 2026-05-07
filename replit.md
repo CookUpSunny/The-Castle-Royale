@@ -1,6 +1,6 @@
 # Castle Royale
 
-An anime-style real-time multiplayer card game (Castle/Palace variant) playable on mobile via Expo Go, with bot opponents, private rooms, cosmetics, cinematic scene backgrounds, and Apple Game Center integration.
+An anime-style real-time multiplayer card game (Castle/Palace variant) playable on mobile via Expo Go, with bot opponents, private rooms, cosmetics, cinematic scene backgrounds, Apple Game Center integration, and spectator mode.
 
 ## Run & Operate
 
@@ -24,9 +24,9 @@ An anime-style real-time multiplayer card game (Castle/Palace variant) playable 
 ## Where things live
 
 - `artifacts/mobile/` — Expo mobile app
-  - `app/` — Expo Router screens (lobby, matchmaking, game, private-room, victory)
-  - `components/` — UI components (GameLandscape, Card, SceneBackground, etc.)
-  - `contexts/` — GameContext (socket), GameCenterContext (GC auth + profile), CosmeticsContext, MusicContext
+  - `app/` — Expo Router screens (lobby, matchmaking, game, private-room, victory, **spectate**)
+  - `components/` — UI components (GameLandscape, Card, SceneBackground, GlowPile, CosmeticsModal, etc.)
+  - `contexts/` — GameContext (socket + spectator state), GameCenterContext, CosmeticsContext, MusicContext
   - `lib/` — sfx.ts, scenePacks.ts, gameEngine types, visualPipeline
   - `assets/` — casino art, scene backgrounds, avatars, audio SFX
 - `artifacts/api-server/src/lib/` — gameEngine.ts, socketGame.ts, botPlayer.ts
@@ -38,6 +38,8 @@ An anime-style real-time multiplayer card game (Castle/Palace variant) playable 
 
 - Game runs entirely over Socket.io (not REST); the OpenAPI spec covers health + player REST only
 - `getGameView()` strips opponent hand cards for security (only count is sent)
+- `getSpectatorView()` strips ALL hand card values — spectators see only counts, face-up cards, and pile
+- Spectator state lives in server maps: `gameSpectators` (gameId→Set<socketId>) and `spectatorToGame` (socketId→gameId)
 - Socket.io path is `/api/socket.io` so it routes through the shared reverse proxy
 - `EXPO_PUBLIC_DOMAIN` → main Replit dev domain; used to build absolute API URL for Expo Go native
 - Music and SFX use `expo-av`; audio is best-effort (never crashes the game)
@@ -51,8 +53,9 @@ An anime-style real-time multiplayer card game (Castle/Palace variant) playable 
 - **Lobby** — pick a name, see connection status, access cosmetics; iOS shows "Sign in with Game Center"; Android shows anonymous-mode banner
 - **Quick Play** — instant game vs AI bot opponent
 - **Private Room** — create/join with 6-character invite code
-- **Game** — full Castle card game with setup phase, face-down reveals, emotes, music
-- **Cosmetics** — 10 card skins (5 unlocked), 4 arenas, 4 character avatars
+- **Game** — full Castle card game with setup phase, face-down reveals, emotes, music, fire burst on burns
+- **Cosmetics** — 10 card skins (5 unlocked), 4 arenas, 4 character avatars; SPECTATE tab (premium-gated, DEV_PREMIUM flag)
+- **Spectate** — watch live PvP matches with orbit camera (±12° rotateY oscillation), fire glow + ripple on burns, 3× Heavy haptic at 0/200/700 ms; spectator count badge shows in-game
 - **Victory** — win/loss screen with stats
 - **Player Profiles** — coins, wins, losses, win-streak, ELO persisted in Postgres; updated after every game
 
@@ -67,6 +70,9 @@ _Populate as you build._
 - Socket.io WebSocket shows disconnected in web preview (Expo dev domain routing); works correctly on native via Expo Go
 - Never change `path: '/api/socket.io'` in both socketGame.ts and GameContext — they must match
 - Game Center only works in a custom EAS build (not Expo Go) — the app degrades to anonymous mode on Expo Go
+- `DEV_PREMIUM = false` in CosmeticsModal.tsx — set to `true` to preview the SPECTATE tab locally
+- Spectate mode only shows PvP matches (not bot games) — `get_active_games` filters for real players only
+- Pre-existing TypeScript errors in EmoteBubble (onComplete prop), SceneBackground, SplashCards, useColors — not from Task #9
 - Run `pnpm install` after editing package.json files
 
 ## Pointers

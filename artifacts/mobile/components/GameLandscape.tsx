@@ -248,24 +248,17 @@ export default function GameLandscape(): React.JSX.Element | null {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { gameView, playerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, opponentDisconnected, sendEmote, lastEmote } = useGame();
+  const { gameView, playerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, opponentDisconnected, sendEmote, myEmoteBubble, opponentEmoteBubble } = useGame();
   const { arena } = useCosmetics();
   const { isMuted, toggleMute } = useMusicPlayer();
   const [myEmote, setMyEmote] = useState<{ emote: string; key: number } | null>(null);
   const [opponentEmote, setOpponentEmote] = useState<{ emote: string; key: number } | null>(null);
-  // Keep myPlayerId in a ref so the emote effect only fires when a new emote
-  // arrives — not on every gameView update (which happens on every card play).
-  const myPlayerIdRef = useRef<string | undefined>(undefined);
-  myPlayerIdRef.current = gameView?.myPlayerId;
-
   useEffect(() => {
-    if (!lastEmote) return;
-    if (lastEmote.playerId === myPlayerIdRef.current) {
-      setMyEmote({ emote: lastEmote.emote, key: lastEmote.key });
-    } else {
-      setOpponentEmote({ emote: lastEmote.emote, key: lastEmote.key });
-    }
-  }, [lastEmote]);
+    if (myEmoteBubble) setMyEmote(myEmoteBubble);
+  }, [myEmoteBubble]);
+  useEffect(() => {
+    if (opponentEmoteBubble) setOpponentEmote(opponentEmoteBubble);
+  }, [opponentEmoteBubble]);
   // Tap-your-own-name-plate popover (Exit Game lives here).
   const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
   const [lastEventType, setLastEventType] = useState<string | undefined>();
@@ -284,7 +277,14 @@ export default function GameLandscape(): React.JSX.Element | null {
   const lastRevealKeyRef = React.useRef<string | null>(initialRevealKey);
   const lastBurstKeyRef = React.useRef<string | null>(initialBurstKey);
   const lastHandledEventRef = React.useRef<unknown>(initialEvent ?? null);
-  const shakeX = useSharedValue(0);
+  const fireScale = useSharedValue(0.3);
+  const fireOpacity = useSharedValue(0);
+  const ring1Scale = useSharedValue(0.3);
+  const ring1Opacity = useSharedValue(0);
+  const ring2Scale = useSharedValue(0.3);
+  const ring2Opacity = useSharedValue(0);
+  const ring3Scale = useSharedValue(0.3);
+  const ring3Opacity = useSharedValue(0);
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
@@ -342,20 +342,37 @@ export default function GameLandscape(): React.JSX.Element | null {
       }
     }
     if (ev.type === 'burn' || ev.type === 'set_complete') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      shakeX.value = withSequence(
-        withTiming(-8, { duration: 60 }),
-        withTiming(8, { duration: 60 }),
-        withTiming(-6, { duration: 60 }),
-        withTiming(6, { duration: 60 }),
-        withTiming(0, { duration: 60 }),
-      );
+      // 3× Heavy haptic at 0, 200, 700 ms — no camera shake
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 700);
+      // Fire burst (radial scale — NO translateX/Y shake)
+      fireScale.value = 0.3;
+      fireOpacity.value = 0.9;
+      fireScale.value = withTiming(2.5, { duration: 850 });
+      fireOpacity.value = withTiming(0, { duration: 850 });
+      ring1Scale.value = 0.3; ring1Opacity.value = 0.8;
+      ring1Scale.value = withTiming(2.0, { duration: 700 });
+      ring1Opacity.value = withTiming(0, { duration: 700 });
+      setTimeout(() => {
+        ring2Scale.value = 0.3; ring2Opacity.value = 0.7;
+        ring2Scale.value = withTiming(2.0, { duration: 700 });
+        ring2Opacity.value = withTiming(0, { duration: 700 });
+      }, 120);
+      setTimeout(() => {
+        ring3Scale.value = 0.3; ring3Opacity.value = 0.6;
+        ring3Scale.value = withTiming(2.0, { duration: 700 });
+        ring3Opacity.value = withTiming(0, { duration: 700 });
+      }, 240);
     } else if (ev.type === 'pickup') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     }
   }, [gameView?.lastEvent]);
 
-  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
+  const fireStyle = useAnimatedStyle(() => ({ transform: [{ scale: fireScale.value }], opacity: fireOpacity.value }));
+  const ring1Style = useAnimatedStyle(() => ({ transform: [{ scale: ring1Scale.value }], opacity: ring1Opacity.value }));
+  const ring2Style = useAnimatedStyle(() => ({ transform: [{ scale: ring2Scale.value }], opacity: ring2Opacity.value }));
+  const ring3Style = useAnimatedStyle(() => ({ transform: [{ scale: ring3Scale.value }], opacity: ring3Opacity.value }));
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
 
@@ -363,7 +380,7 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const {
     myHand, myFaceUp, myFaceDownCount, myFaceDownIds, opponentHandCount, opponentFaceUp, opponentFaceDownCount,
-    opponentName, discardPile, deckCount, isMyTurn, canFastPlay,
+    opponentName, discardPile, deckCount, isMyTurn, canFastPlay, spectatorCount,
   } = gameView;
 
   const activeZone = myHand.length > 0 ? myHand : myFaceUp;
@@ -386,9 +403,13 @@ export default function GameLandscape(): React.JSX.Element | null {
   const sideColW = Math.max(160, Math.min(220, width * 0.16));
 
   return (
-    <Animated.View style={[styles.container, { backgroundColor: colors.background }, shakeStyle]}>
+    <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
-
+      {(spectatorCount ?? 0) > 0 && (
+        <View style={styles.spectatorBadge} pointerEvents="none">
+          <Text style={styles.spectatorBadgeText}>👁 {spectatorCount} watching</Text>
+        </View>
+      )}
       <View
         style={[
           styles.layout,
@@ -595,6 +616,19 @@ export default function GameLandscape(): React.JSX.Element | null {
           </View>
         </>
       )}
+      {/* Fire burst + ripple — radial scale, NO translateX/Y shake */}
+      <Animated.View style={[styles.fireOverlay, fireStyle]} pointerEvents="none">
+        <LinearGradient colors={['#ff7f0000', '#ff7f00cc', '#ff000090']} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+      <Animated.View style={[styles.ringOverlay, ring1Style]} pointerEvents="none">
+        <LinearGradient colors={['transparent', '#ff6b00a0', 'transparent']} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+      <Animated.View style={[styles.ringOverlay, ring2Style]} pointerEvents="none">
+        <LinearGradient colors={['transparent', '#ff4d0070', 'transparent']} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+      <Animated.View style={[styles.ringOverlay, ring3Style]} pointerEvents="none">
+        <LinearGradient colors={['transparent', '#ff000050', 'transparent']} style={StyleSheet.absoluteFill} />
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -762,6 +796,37 @@ const styles = StyleSheet.create({
   placeholderText: { fontSize: 14, fontWeight: '900', letterSpacing: 3 },
   placeholderSub: { fontSize: 9, fontWeight: '600', letterSpacing: 2 },
 
+  spectatorBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#1a053590',
+    borderWidth: 1,
+    borderColor: '#5b1a8c',
+    zIndex: 40,
+  },
+  spectatorBadgeText: { fontSize: 11, fontWeight: '700', color: '#e0c8ff', letterSpacing: 0.5 },
+  fireOverlay: {
+    position: 'absolute',
+    top: '30%',
+    left: '25%',
+    right: '25%',
+    bottom: '30%',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  ringOverlay: {
+    position: 'absolute',
+    top: '20%',
+    left: '15%',
+    right: '15%',
+    bottom: '20%',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
   disconnectBanner: {
     position: 'absolute',
     bottom: 12,
