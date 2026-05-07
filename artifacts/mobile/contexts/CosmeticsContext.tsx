@@ -165,7 +165,11 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [cardSkin, setCardSkinState] = useState<CardSkinId>('neon-glow');
   const [arena, setArenaState] = useState<ArenaId>('greenTable');
   const [avatarId, setAvatarState] = useState<AvatarId>('eagles');
-  const scene: SceneId = 'flamingoCasino';
+
+  // Derive the scene from the arena so the background imagery matches the
+  // arena the player selected. 'lightning' maps to the waterfall-cavern scene;
+  // every other arena uses the flamingo-casino scene.
+  const scene: SceneId = arena === 'lightning' ? 'waterfallCavern' : 'flamingoCasino';
 
   useEffect(() => {
     (async () => {
@@ -197,8 +201,8 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   // Decode hero backdrop/table PNGs, arena photo, and all avatar sprites ahead
   // of `/game` so the match doesn't hitch on first paint.
   useEffect(() => {
-    void warmGameVisualCache('flamingoCasino', arena);
-  }, [arena]);
+    void warmGameVisualCache(scene, arena);
+  }, [scene, arena]);
 
   const setCardSkin = useCallback((id: CardSkinId) => {
     if (!UNLOCKED_SKIN_IDS.has(id)) return; // Refuse to equip locked skins.
