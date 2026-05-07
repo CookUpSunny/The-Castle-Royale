@@ -138,11 +138,11 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // Decode hero backdrop/table PNGs + all avatar sprites ahead of `/game`
-  // so the match doesn't hitch on first paint.
+  // Decode hero backdrop/table PNGs, arena photo, and all avatar sprites ahead
+  // of `/game` so the match doesn't hitch on first paint.
   useEffect(() => {
-    void warmGameVisualCache('rainbowRoad');
-  }, []);
+    void warmGameVisualCache('rainbowRoad', arena);
+  }, [arena]);
 
   const setCardSkin = useCallback((id: CardSkinId) => {
     if (!UNLOCKED_SKIN_IDS.has(id)) return; // Refuse to equip locked skins.
