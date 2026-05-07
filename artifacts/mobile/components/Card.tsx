@@ -304,18 +304,13 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
   const animStyle = useAnimatedStyle(() => {
     const playable = playableShared.value;
     const glow = glowShared.value;
-    const op = playable ? shimmer.value : (glow !== 'transparent' ? 0.9 : 0);
+    const op = playable ? 0.55 + shimmer.value * 0.45 : (glow !== 'transparent' ? 0.9 : 0);
     return {
       transform: [{ scale: scale.value }],
       shadowOpacity: op,
-      shadowRadius: playable ? 8 + shimmer.value * 14 : 8,
+      shadowRadius: playable ? 14 + shimmer.value * 20 : 8,
     };
   });
-
-  const bloomStyle = useAnimatedStyle(() => ({
-    opacity: playableShared.value ? shimmer.value * 0.55 : 0,
-    transform: [{ scale: 1 + shimmer.value * 0.12 }],
-  }));
 
   const multiBadgeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: multiPulse.value }],
@@ -360,30 +355,13 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
           shadowColor: glowColor,
           shadowOffset: { width: 0, height: 0 },
           shadowRadius: 8,
-          elevation: glowColor !== 'transparent' ? 12 : 2,
+          elevation: glowColor !== 'transparent' ? 20 : 2,
           borderRadius: 6,
         },
         animStyle,
         style,
       ]}
     >
-      {isPlayable && (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            {
-              position: 'absolute',
-              top: -6,
-              left: -6,
-              right: -6,
-              bottom: -6,
-              borderRadius: 10,
-              backgroundColor: glowColor,
-            },
-            bloomStyle,
-          ]}
-        />
-      )}
       <Pressable
         onPress={onPress}
         onLongPress={onLongPress}
