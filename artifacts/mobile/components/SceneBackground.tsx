@@ -23,7 +23,6 @@ function variantFromDimensions(w: number, h: number): SceneVariant {
 const SCREEN_BLEND_LAYERS: ReadonlySet<SceneLayerId> = new Set(['L1_mid', 'L3_fx']);
 
 function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] {
-  if (sceneId === 'rainbowRoad') return ['#020013', '#090028', '#02000f'];
   if (sceneId === 'waterfallCavern') return ['#01130e', '#032b1f', '#000a07'];
   return ['#120010', '#22002a', '#07000f'];
 }
@@ -49,7 +48,6 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
 
       <LinearGradient colors={[...arenaTint]} style={StyleSheet.absoluteFill} />
 
-      {sceneId === 'rainbowRoad' ? <RainbowRoadAmbience /> : null}
       {sceneId === 'flamingoCasino' ? <FlamingoAmbience /> : null}
       {sceneId === 'waterfallCavern' ? <WaterfallAmbience /> : null}
 
@@ -134,30 +132,6 @@ function StaticLayer({
       <View style={[StyleSheet.absoluteFill, { transform: [{ scale }] }]}>
         <Image source={source} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="center" transition={0} />
       </View>
-    </View>
-  );
-}
-
-function RainbowRoadAmbience() {
-  return (
-    <View style={[StyleSheet.absoluteFill, { opacity: 0.40 }]} pointerEvents="none">
-      <LinearGradient
-        colors={[
-          'rgba(0,229,255,0.10)',
-          'rgba(192,132,252,0.10)',
-          'rgba(255,215,0,0.08)',
-          'rgba(255,127,0,0.08)',
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(255,255,255,0.08)', 'transparent']}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={StyleSheet.absoluteFill}
-      />
     </View>
   );
 }

@@ -120,7 +120,7 @@ const isArenaId = (v: string | null): v is ArenaId =>
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [cardSkin, setCardSkinState] = useState<CardSkinId>('neon-glow');
   const [arena, setArenaState] = useState<ArenaId>('greenTable');
-  const scene: SceneId = 'rainbowRoad';
+  const scene: SceneId = 'flamingoCasino';
 
   useEffect(() => {
     (async () => {
@@ -150,7 +150,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   // Decode hero backdrop/table PNGs, arena photo, and all avatar sprites ahead
   // of `/game` so the match doesn't hitch on first paint.
   useEffect(() => {
-    void warmGameVisualCache('rainbowRoad', arena);
+    void warmGameVisualCache('flamingoCasino', arena);
   }, [arena]);
 
   const setCardSkin = useCallback((id: CardSkinId) => {

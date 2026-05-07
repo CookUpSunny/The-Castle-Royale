@@ -20,10 +20,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
-import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
-import { FELT_TINT } from '@/lib/sceneAssets';
 import ActionButtons from '@/components/ActionButtons';
 import BackButton from '@/components/BackButton';
 import SceneBackground from '@/components/SceneBackground';
@@ -230,8 +228,6 @@ export default function GameScreen() {
     gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
     opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
   } = useGame();
-  const { arena } = useCosmetics();
-  const feltTint = FELT_TINT[arena];
   const { startMusic, stopMusic, isMuted, toggleMute } = useMusicPlayer();
 
   // Start the playlist when the game screen mounts; fade out + stop on unmount.
@@ -423,29 +419,6 @@ export default function GameScreen() {
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
-      {/* Table felt blend — full-screen so there are no hard rectangle edges.
-          A multi-stop vertical gradient fades from transparent at the top and
-          bottom toward a soft purple tint in the middle third, matching the
-          felt-green approach common in casino games.  A second horizontal pass
-          creates a subtle oval shape that reinforces the "table surface" feel.
-          Because both gradients are transparent at their extremes the arena
-          photo underneath bleeds through seamlessly at all borders. */}
-      <View style={[StyleSheet.absoluteFill, styles.tableFelt]} pointerEvents="none">
-        <LinearGradient
-          colors={feltTint.vertical}
-          locations={[0, 0.14, 0.28, 0.72, 0.86, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={feltTint.horizontal}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-
       <View style={[styles.gameLayout, { paddingTop: insets.top + webTopPad + 6, paddingBottom: insets.bottom || 12 }]}>
 
         <View style={styles.topNavRow}>
@@ -674,10 +647,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   gameLayout: { flex: 1 },
   topNavRow: { paddingHorizontal: 14, paddingBottom: 2 },
-  tableFelt: {
-    overflow: 'hidden',
-  },
-
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

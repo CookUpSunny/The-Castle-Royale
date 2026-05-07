@@ -15,8 +15,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
-import { useCosmetics } from '@/contexts/CosmeticsContext';
-import { FELT_TINT } from '@/lib/sceneAssets';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
 import ActionButtons from '@/components/ActionButtons';
@@ -254,8 +252,6 @@ export default function GameLandscape(): React.JSX.Element | null {
     gameView, playerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
     opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
   } = useGame();
-  const { arena } = useCosmetics();
-  const feltTint = FELT_TINT[arena];
   const { isMuted, toggleMute } = useMusicPlayer();
   const [myEmote, setMyEmote] = useState<{ emote: string; key: number } | null>(null);
   const [opponentEmote, setOpponentEmote] = useState<{ emote: string; key: number } | null>(null);
@@ -429,26 +425,6 @@ export default function GameLandscape(): React.JSX.Element | null {
         onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })}
         style={{ position: 'absolute', top: insets.top + webTopPad + 8, left: insets.left + 14, zIndex: 55 }}
       />
-      {/* Table felt blend — matches whichever arena the player picked.
-          Identical two-pass gradient approach used in portrait game.tsx:
-          a vertical pass creates the centre-tinted oval, a horizontal pass
-          reinforces the oval shape. Both are transparent at all edges so
-          the arena photo underneath bleeds through seamlessly. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <LinearGradient
-          colors={feltTint.vertical}
-          locations={[0, 0.14, 0.28, 0.72, 0.86, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={feltTint.horizontal}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
       <View
         style={[
           styles.layout,
