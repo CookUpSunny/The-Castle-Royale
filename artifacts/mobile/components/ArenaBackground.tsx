@@ -45,11 +45,18 @@ export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps)
 
 function ClassicArena() {
   return (
-    <LinearGradient
-      colors={['#0d001a', '#1a0530', '#07000f']}
-      style={StyleSheet.absoluteFill}
-      pointerEvents="none"
-    />
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <LinearGradient
+        colors={['#1a0020', '#4a0040', '#1a000a']}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['rgba(255,20,160,0.22)', 'transparent', 'rgba(255,80,180,0.18)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
   );
 }
 
@@ -61,11 +68,11 @@ function RoyalArena() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <LinearGradient
-        colors={['#1a0a05', '#3a1a08', '#1a0a05']}
+        colors={['#c8b8e0', '#f5f0e8', '#e8dfc0']}
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient
-        colors={['transparent', 'rgba(251,191,36,0.18)', 'transparent']}
+        colors={['rgba(255,240,180,0.55)', 'transparent', 'rgba(251,191,36,0.30)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -270,16 +277,16 @@ function LightningArena() {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {/* 1. Sky base */}
+      {/* 1. Cave base — deep teal/emerald depths */}
       <LinearGradient
-        colors={['#030012', '#0b0535', '#050125', '#020010']}
+        colors={['#010d08', '#022a1a', '#011a10', '#010a06']}
         locations={[0, 0.35, 0.7, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Subtle horizontal purple-grey band across the upper horizon */}
+      {/* Subtle horizontal teal glow band */}
       <LinearGradient
-        colors={['rgba(80,60,160,0.22)', 'transparent']}
+        colors={['rgba(20,180,120,0.22)', 'transparent']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={[StyleSheet.absoluteFill, { height: '45%' }]}

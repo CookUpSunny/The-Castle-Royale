@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CardBack } from '@/components/Card';
 import ArenaBackground from '@/components/ArenaBackground';
@@ -298,7 +298,7 @@ function CosmeticRow({ name, description, badge, locked, selected, onPress, prev
             </View>
           ) : null}
         </View>
-        <Text style={[styles.itemDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
+        <Text style={[styles.itemDesc, { color: colors.mutedForeground }]} numberOfLines={4}>
           {description}
         </Text>
         <View style={styles.statusRow}>
@@ -315,10 +315,17 @@ function CosmeticRow({ name, description, badge, locked, selected, onPress, prev
   );
 }
 
+const ARENA_IMAGES: Record<ArenaId, ImageSourcePropType> = {
+  classic:   require('../assets/arenas/flamingo_floor.png'),
+  cosmic:    require('../assets/arenas/cosmic_sanctum.png'),
+  royal:     require('../assets/arenas/olympus_throne.png'),
+  lightning: require('../assets/arenas/oasis_cave.png'),
+};
+
 function ArenaPreview({ arenaId }: { arenaId: ArenaId }) {
   return (
     <View style={styles.arenaPreviewBox}>
-      <ArenaBackground arenaOverride={arenaId} />
+      <Image source={ARENA_IMAGES[arenaId]} style={styles.arenaPreviewImage} resizeMode="cover" />
     </View>
   );
 }
@@ -414,6 +421,10 @@ const styles = StyleSheet.create({
     borderColor: '#3a1a5e',
   },
   arenaPreviewBox: {
+    width: '100%',
+    height: '100%',
+  },
+  arenaPreviewImage: {
     width: '100%',
     height: '100%',
   },
