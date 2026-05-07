@@ -418,11 +418,6 @@ export default function GameScreen() {
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
-      {(spectatorCount ?? 0) > 0 && (
-        <View style={styles.spectatorBadge} pointerEvents="none">
-          <Text style={styles.spectatorBadgeText}>👁 {spectatorCount} watching</Text>
-        </View>
-      )}
       {/* Table felt blend — full-screen so there are no hard rectangle edges.
           A multi-stop vertical gradient fades from transparent at the top and
           bottom toward a soft purple tint in the middle third, matching the
