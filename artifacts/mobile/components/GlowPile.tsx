@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withTiming,
@@ -76,8 +77,41 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
           true,
         ),
       );
+      ring1Scale.value = withSequence(
+        withTiming(1.25, { duration: 120 }),
+        withTiming(1.0, { duration: 700 }),
+        withRepeat(
+          withSequence(withTiming(1.12, { duration: 1800 }), withTiming(1.0, { duration: 1800 })),
+          -1,
+          false,
+        ),
+      );
+      ring2Scale.value = withDelay(
+        60,
+        withSequence(
+          withTiming(1.35, { duration: 150 }),
+          withTiming(1.0, { duration: 700 }),
+          withRepeat(
+            withSequence(withTiming(1.18, { duration: 2400 }), withTiming(1.0, { duration: 2400 })),
+            -1,
+            false,
+          ),
+        ),
+      );
+      ring3Scale.value = withDelay(
+        120,
+        withSequence(
+          withTiming(1.45, { duration: 180 }),
+          withTiming(1.0, { duration: 700 }),
+          withRepeat(
+            withSequence(withTiming(1.25, { duration: 3000 }), withTiming(1.0, { duration: 3000 })),
+            -1,
+            false,
+          ),
+        ),
+      );
     }
-  }, [lastEventType, burnOpacity, poolOpacity]);
+  }, [lastEventType, burnOpacity, poolOpacity, ring1Scale, ring2Scale, ring3Scale]);
 
   const ring1Style = useAnimatedStyle(() => ({ transform: [{ scale: ring1Scale.value }] }));
   const ring2Style = useAnimatedStyle(() => ({ transform: [{ scale: ring2Scale.value }] }));
