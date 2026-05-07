@@ -418,9 +418,37 @@ export default function GameScreen() {
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
-      <View style={[styles.tableFelt, { top: SCREEN_H * 0.18, height: SCREEN_H * 0.55 }]} pointerEvents="none">
+      {(spectatorCount ?? 0) > 0 && (
+        <View style={styles.spectatorBadge} pointerEvents="none">
+          <Text style={styles.spectatorBadgeText}>👁 {spectatorCount} watching</Text>
+        </View>
+      )}
+      {/* Table felt blend — full-screen so there are no hard rectangle edges.
+          A multi-stop vertical gradient fades from transparent at the top and
+          bottom toward a soft purple tint in the middle third, matching the
+          felt-green approach common in casino games.  A second horizontal pass
+          creates a subtle oval shape that reinforces the "table surface" feel.
+          Because both gradients are transparent at their extremes the arena
+          photo underneath bleeds through seamlessly at all borders. */}
+      <View style={[StyleSheet.absoluteFill, styles.tableFelt]} pointerEvents="none">
         <LinearGradient
-          colors={['#2a0d4a30', '#5b1a8c40', '#2a0d4a30']}
+          colors={[
+            'transparent',
+            '#2a0d4a12',
+            '#5b1a8c28',
+            '#5b1a8c28',
+            '#2a0d4a12',
+            'transparent',
+          ]}
+          locations={[0, 0.14, 0.28, 0.72, 0.86, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={['transparent', '#3a1a5e18', 'transparent']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}
         />
       </View>
@@ -649,12 +677,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   gameLayout: { flex: 1 },
   tableFelt: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    borderRadius: 24,
     overflow: 'hidden',
-    marginHorizontal: 8,
   },
 
   headerRow: {

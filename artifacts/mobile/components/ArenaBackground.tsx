@@ -51,6 +51,43 @@ export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps)
 }
 
 // ---------------------------------------------------------------------------
+// Per-arena blend colours for the table-edge gradient
+// Warm tones for classic (Flamingo) and royal (Olympus); deep cool tones for
+// cosmic (Cosmic Sanctum) and lightning (Oasis Cave).
+// ---------------------------------------------------------------------------
+
+const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, string]> = {
+  classic: [
+    'transparent',
+    'rgba(200,50,120,0.18)',
+    'rgba(200,50,120,0.30)',
+    'rgba(200,50,120,0.18)',
+    'transparent',
+  ],
+  royal: [
+    'transparent',
+    'rgba(180,110,10,0.18)',
+    'rgba(180,110,10,0.28)',
+    'rgba(180,110,10,0.18)',
+    'transparent',
+  ],
+  cosmic: [
+    'transparent',
+    'rgba(60,30,180,0.20)',
+    'rgba(60,30,180,0.32)',
+    'rgba(60,30,180,0.20)',
+    'transparent',
+  ],
+  lightning: [
+    'transparent',
+    'rgba(10,140,130,0.16)',
+    'rgba(10,140,130,0.26)',
+    'rgba(10,140,130,0.16)',
+    'transparent',
+  ],
+};
+
+// ---------------------------------------------------------------------------
 // Shared photo base layer
 // ---------------------------------------------------------------------------
 
@@ -68,6 +105,36 @@ function ArenaPhotoBase({ arenaId }: { arenaId: ArenaId }) {
   );
 }
 
+/**
+ * Smooth gradient bridge between the arena photo and the card-table overlay.
+ * Two perpendicular LinearGradients combine to simulate a soft oval vignette
+ * that pre-tints the center zone with arena-appropriate colour before the
+ * semi-transparent table felt is composited on top.  The result makes the
+ * two layers feel like a single continuous surface.
+ */
+function TableEdgeBlend({ arenaId }: { arenaId: ArenaId }) {
+  const blendColors = ARENA_BLEND[arenaId];
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Vertical component: fades in around the vertical centre */}
+      <LinearGradient
+        colors={[...blendColors]}
+        locations={[0, 0.22, 0.5, 0.78, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {/* Horizontal component: softens the side edges for an oval feel */}
+      <LinearGradient
+        colors={['transparent', blendColors[2], 'transparent']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Classic (Flamingo Floor)
 // ---------------------------------------------------------------------------
@@ -76,6 +143,7 @@ function ClassicArena() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <ArenaPhotoBase arenaId="classic" />
+      <TableEdgeBlend arenaId="classic" />
       <LinearGradient
         colors={['rgba(255,20,160,0.18)', 'transparent', 'rgba(255,80,180,0.14)']}
         start={{ x: 0, y: 0 }}
@@ -94,6 +162,7 @@ function RoyalArena() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <ArenaPhotoBase arenaId="royal" />
+      <TableEdgeBlend arenaId="royal" />
       <LinearGradient
         colors={['rgba(255,240,180,0.35)', 'transparent', 'rgba(251,191,36,0.20)']}
         start={{ x: 0, y: 0 }}
@@ -126,6 +195,7 @@ function CosmicArena() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <ArenaPhotoBase arenaId="cosmic" />
+      <TableEdgeBlend arenaId="cosmic" />
       <NebulaGlow />
       {stars.map((s, i) => (
         <TwinkleStar
@@ -288,6 +358,7 @@ function LightningArena() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <ArenaPhotoBase arenaId="lightning" />
+      <TableEdgeBlend arenaId="lightning" />
 
       {/* Subtle teal glow band to complement the oasis atmosphere */}
       <LinearGradient
