@@ -170,7 +170,7 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
 
         <Animated.View style={[styles.burnFlash, burnStyle]} pointerEvents="none">
           <LinearGradient
-            colors={['#ff7f00cc', '#ff000080', 'transparent']}
+            colors={[`${glowColor}cc`, `${glowColor}80`, 'transparent']}
             style={StyleSheet.absoluteFill}
           />
         </Animated.View>
