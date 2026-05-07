@@ -20,8 +20,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
+import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
+import { FELT_TINT } from '@/lib/sceneAssets';
 import ActionButtons from '@/components/ActionButtons';
 import SceneBackground from '@/components/SceneBackground';
 import CardComponent, { CardBack } from '@/components/Card';
@@ -227,6 +229,8 @@ export default function GameScreen() {
     gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
     opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
   } = useGame();
+  const { arena } = useCosmetics();
+  const feltTint = FELT_TINT[arena];
   const { startMusic, stopMusic, isMuted, toggleMute } = useMusicPlayer();
 
   // Start the playlist when the game screen mounts; fade out + stop on unmount.
@@ -427,21 +431,14 @@ export default function GameScreen() {
           photo underneath bleeds through seamlessly at all borders. */}
       <View style={[StyleSheet.absoluteFill, styles.tableFelt]} pointerEvents="none">
         <LinearGradient
-          colors={[
-            'transparent',
-            '#2a0d4a12',
-            '#5b1a8c28',
-            '#5b1a8c28',
-            '#2a0d4a12',
-            'transparent',
-          ]}
+          colors={feltTint.vertical}
           locations={[0, 0.14, 0.28, 0.72, 0.86, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
         <LinearGradient
-          colors={['transparent', '#3a1a5e18', 'transparent']}
+          colors={feltTint.horizontal}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}
