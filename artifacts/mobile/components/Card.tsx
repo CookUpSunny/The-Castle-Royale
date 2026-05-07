@@ -12,8 +12,16 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { type Card as CardType, getCardLabel, getSuitSymbol, isRedSuit } from '@/contexts/GameContext';
-import { type CardSkinId, useCosmetics } from '@/contexts/CosmeticsContext';
+import { type CardSkinId, type ArenaId, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
+
+const ARENA_FELT_SHADOW: Record<ArenaId, string> = {
+  greenTable: '#082008',
+  classic:    '#6a2e00',
+  cosmic:     '#200850',
+  royal:      '#503800',
+  lightning:  '#003040',
+};
 
 interface CardProps {
   card?: CardType;
@@ -93,6 +101,8 @@ const SKIN_THEMES: Record<CardSkinId, SkinTheme> = {
 function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
   const dims = SIZES[size];
   const theme = SKIN_THEMES[skin];
+  const { arena } = useCosmetics();
+  const feltShadowColor = ARENA_FELT_SHADOW[arena] ?? '#0a0a0a';
 
   // Slow border-glow pulse — applied to every skin so the deck always feels
   // alive. Intensity varies a bit so light skins (Pearl) don't look bloomed.
@@ -126,6 +136,19 @@ function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
   }, [theme.hasStars, size, dims.width, dims.height]);
 
   return (
+    <View
+      style={[
+        {
+          borderRadius: 6,
+          shadowColor: feltShadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.55,
+          shadowRadius: 6,
+          elevation: 6,
+        },
+        style,
+      ]}
+    >
     <Animated.View
       style={[
         styles.cardBase,
@@ -142,7 +165,6 @@ function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
           elevation: 8,
         },
         glowStyle,
-        style,
       ]}
     >
       {/* Optional accent blob — gives skins like Inferno / Cyber a richer feel. */}
@@ -185,6 +207,7 @@ function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
         <CardStar key={i} {...s} />
       ))}
     </Animated.View>
+    </View>
   );
 }
 
@@ -240,6 +263,7 @@ function CardStar({ left, top, size, delay, bright }: CosmicStarSpec) {
 
 export default function Card({ card, faceDown, size = 'md', onPress, onLongPress, isPlayable, disabled, multiplicity, style }: CardProps) {
   const colors = useColors();
+  const { arena } = useCosmetics();
   const dims = SIZES[size];
 
   // ── ALL hooks must be called unconditionally before any early return ──────
@@ -348,7 +372,22 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
   if (isSpecial2) borderColor = colors.neonPurple;
   if (isSpecial10) borderColor = colors.neonOrange;
 
+  const feltShadowColor = ARENA_FELT_SHADOW[arena] ?? '#0a0a0a';
+
   return (
+    <View
+      style={[
+        {
+          borderRadius: 6,
+          shadowColor: feltShadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.5,
+          shadowRadius: 6,
+          elevation: 5,
+        },
+        style,
+      ]}
+    >
     <Animated.View
       style={[
         {
@@ -359,7 +398,6 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
           borderRadius: 6,
         },
         animStyle,
-        style,
       ]}
     >
       <Pressable
@@ -416,6 +454,7 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
         ) : null}
       </Pressable>
     </Animated.View>
+    </View>
   );
 }
 

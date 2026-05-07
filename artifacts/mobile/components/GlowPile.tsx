@@ -25,6 +25,7 @@ const ARENA_ACCENT: Record<string, string> = {
   lightning: '#38bdf8',
 };
 
+
 export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
   const colors = useColors();
   const { arena } = useCosmetics();
