@@ -14,7 +14,7 @@ export default function ModeSelectScreen() {
 
   const goPrivate = () => {
     if (connectionStatus !== 'connected') return;
-    router.push('/private-room');
+    router.push('/arena-picker?mode=private');
   };
 
   const goBot = () => {

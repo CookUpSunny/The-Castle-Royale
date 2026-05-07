@@ -26,40 +26,39 @@ const SUITS: { glyph: string; color: string }[] = [
 ];
 
 /**
- * Floating + flipping playing card. Rotates around the Y axis (3-D flip) and
- * gently bobs up and down. Each card gets its own timing offset so the group
- * looks alive instead of marching in lockstep.
+ * Floating + continuously spinning playing card.
+ * Each card rotates around its Z axis at a leisurely pace (≈60 % of a "fast"
+ * flip speed, i.e. ~4 000–5 500 ms per full revolution) and gently bobs up
+ * and down on a separate staggered timeline so the group looks alive without
+ * glitching. rotateY / perspective has been removed entirely — it caused the
+ * "half-glitch" artifact on some React-Native versions.
  */
 function FloatingCard({
   glyph,
   color,
-  delay,
-  flipDuration,
+  spinDuration,
   bobDuration,
   bobAmplitude,
   offsetX,
-  rotateZ,
+  spinOffset,
 }: {
   glyph: string;
   color: string;
-  delay: number;
-  flipDuration: number;
+  spinDuration: number;
   bobDuration: number;
   bobAmplitude: number;
   offsetX: number;
-  rotateZ: number;
+  spinOffset: number;
 }) {
-  const flip = useSharedValue(0);
+  const spin = useSharedValue(spinOffset);
   const bob = useSharedValue(0);
 
   useEffect(() => {
-    flip.value = withTiming(0, { duration: delay }, () => {
-      flip.value = withRepeat(
-        withTiming(360, { duration: flipDuration, easing: Easing.linear }),
-        -1,
-        false,
-      );
-    });
+    spin.value = withRepeat(
+      withTiming(spinOffset + 360, { duration: spinDuration, easing: Easing.linear }),
+      -1,
+      false,
+    );
     bob.value = withRepeat(
       withSequence(
         withTiming(-bobAmplitude, { duration: bobDuration, easing: Easing.inOut(Easing.sin) }),
@@ -75,9 +74,7 @@ function FloatingCard({
     transform: [
       { translateX: offsetX },
       { translateY: bob.value },
-      { perspective: 800 },
-      { rotateZ: `${rotateZ}deg` },
-      { rotateY: `${flip.value}deg` },
+      { rotateZ: `${spin.value}deg` },
     ],
   }));
 
@@ -103,18 +100,11 @@ export default function GameLoadingScreen() {
   const { stopMusic, startMusic } = useMusicPlayer();
   const { gameView } = useGame();
 
-  // Pulse the "ENTERING THE ARENA..." text.
   const captionOpacity = useSharedValue(0.5);
 
-  // One-shot navigation guard. Even if this screen accidentally remounts, we
-  // only ever advance to /game once.
   const navigatedRef = useRef(false);
-  // Once the minimum animation time has elapsed, we're allowed to advance as
-  // soon as gameView is available. Triggers a re-render so the gameView effect
-  // can pick it up.
   const [animationDone, setAnimationDone] = useState(false);
 
-  // Mount: fade splash out, start the animation timer, set a hard ceiling.
   useEffect(() => {
     captionOpacity.value = withRepeat(
       withSequence(
@@ -129,8 +119,6 @@ export default function GameLoadingScreen() {
 
     const minT = setTimeout(() => setAnimationDone(true), LOADING_MS);
 
-    // Hard ceiling: if the game still hasn't arrived after MAX_WAIT_MS,
-    // advance anyway. /game has its own loading state so this is safe.
     const maxT = setTimeout(() => {
       if (navigatedRef.current) return;
       navigatedRef.current = true;
@@ -145,8 +133,6 @@ export default function GameLoadingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Advance when BOTH the minimum animation time has elapsed AND the server
-  // has delivered a gameView. Prevents landing on /game with no state.
   useEffect(() => {
     if (!animationDone || !gameView || navigatedRef.current) return;
     navigatedRef.current = true;
@@ -168,52 +154,47 @@ export default function GameLoadingScreen() {
         <FloatingCard
           glyph={SUITS[0].glyph}
           color={SUITS[0].color}
-          delay={0}
-          flipDuration={2400}
+          spinDuration={4200}
           bobDuration={1400}
           bobAmplitude={14}
           offsetX={-110}
-          rotateZ={-12}
+          spinOffset={0}
         />
         <FloatingCard
           glyph={SUITS[1].glyph}
           color={SUITS[1].color}
-          delay={120}
-          flipDuration={2000}
+          spinDuration={5000}
           bobDuration={1100}
           bobAmplitude={10}
           offsetX={-50}
-          rotateZ={-4}
+          spinOffset={72}
         />
         <FloatingCard
           glyph={SUITS[2].glyph}
           color={SUITS[2].color}
-          delay={240}
-          flipDuration={2700}
+          spinDuration={4600}
           bobDuration={1600}
           bobAmplitude={18}
           offsetX={10}
-          rotateZ={3}
+          spinOffset={144}
         />
         <FloatingCard
           glyph={SUITS[3].glyph}
           color={SUITS[3].color}
-          delay={360}
-          flipDuration={2200}
+          spinDuration={3900}
           bobDuration={1300}
           bobAmplitude={12}
           offsetX={70}
-          rotateZ={9}
+          spinOffset={216}
         />
         <FloatingCard
           glyph={SUITS[4].glyph}
           color={SUITS[4].color}
-          delay={480}
-          flipDuration={2500}
+          spinDuration={4800}
           bobDuration={1500}
           bobAmplitude={16}
           offsetX={130}
-          rotateZ={14}
+          spinOffset={288}
         />
       </View>
 

@@ -1,8 +1,9 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Image,
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -40,19 +41,35 @@ export default function ArenaPickerScreen() {
     if (isInQueue) router.replace('/matchmaking');
   }, [isInQueue]);
 
-  const handleConfirm = () => {
-    if (connectionStatus !== 'connected') return;
+  const doEnterArena = () => {
     setArena(selectedArena);
     setAvatar(selectedAvatar);
     if (mode === 'bot') {
       quickPlayBot();
-      // Navigate to the loading screen immediately. The bot game will be ready
-      // by the time the loading animation finishes (~2.5 s).
       router.replace('/game-loading?mode=bot');
+    } else if (mode === 'private') {
+      router.replace('/private-room');
     } else {
       joinQueue();
-      // isInQueue effect above will navigate to /matchmaking, which then
-      // navigates to /game-loading once a match is found.
+    }
+  };
+
+  const handleConfirm = () => {
+    if (connectionStatus !== 'connected') return;
+    const avatarName = selectedAvatarData?.name ?? 'Your character';
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`${avatarName} enters the arena. Ready?`)) {
+        doEnterArena();
+      }
+    } else {
+      Alert.alert(
+        'Ready to Battle?',
+        `${avatarName} will enter the arena. You can't change your loadout mid-match.`,
+        [
+          { text: 'Not yet', style: 'cancel' },
+          { text: 'ENTER THE ARENA', onPress: doEnterArena },
+        ],
+      );
     }
   };
 
@@ -76,7 +93,7 @@ export default function ArenaPickerScreen() {
         <BackButton label="← BACK" onPress={() => router.back()} />
         <Text style={[styles.title, { color: colors.foreground }]}>YOUR LOADOUT</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          {mode === 'bot' ? 'Quick Play · Bot' : 'Ranked Match'}
+          {mode === 'bot' ? 'Quick Play · Bot' : mode === 'private' ? 'Private Room · Pick Your Look' : 'Ranked Match'}
         </Text>
       </View>
 
@@ -131,7 +148,8 @@ export default function ArenaPickerScreen() {
                   <Image
                     source={av.portrait}
                     style={styles.avatarImage}
-                    resizeMode="cover"
+                    contentFit="contain"
+                    contentPosition="top center"
                   />
                   <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.82)']}

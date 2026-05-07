@@ -6,7 +6,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
-  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -123,28 +122,6 @@ function OpponentArea({ handCount, faceUp, faceDownCount }: { handCount: number;
   // warning to the player that the opponent is almost out of cards.
   const opponentInFinalPhase = handCount === 0 && faceUp.length > 0;
 
-  const pulse = useSharedValue(0.3);
-  useEffect(() => {
-    if (!opponentInFinalPhase) {
-      cancelAnimation(pulse);
-      pulse.value = 0;
-      return;
-    }
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(0.9, { duration: 700, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0.2, { duration: 900, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-    );
-    return () => cancelAnimation(pulse);
-  }, [pulse, opponentInFinalPhase]);
-
-  const auraStyle = useAnimatedStyle(() => ({
-    shadowOpacity: pulse.value,
-    borderColor: `rgba(251, 146, 60, ${pulse.value})`,
-  }));
-
   return (
     <View style={styles.opponentArea}>
       {handCount > 0 && (
@@ -163,46 +140,25 @@ function OpponentArea({ handCount, faceUp, faceDownCount }: { handCount: number;
         </View>
       )}
 
-      {/* Face-up card group — wrapped in a pulsing orange aura during the final phase. */}
       <View style={styles.opponentBoardRow}>
         <View style={styles.boardCol}>
           {Array.from({ length: faceDownCount }).map((_, i) => (
             <CardBack key={i} size="sm" style={{ marginLeft: i === 0 ? 0 : -22 }} />
           ))}
         </View>
-        <Animated.View
-          style={[
-            styles.boardCol,
-            opponentInFinalPhase && {
-              borderRadius: 8,
-              borderWidth: 2,
-              paddingHorizontal: 4,
-              paddingVertical: 2,
-              shadowColor: '#f97316',
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 0 },
-              elevation: 8,
-            },
-            opponentInFinalPhase ? auraStyle : undefined,
-          ]}
-        >
+        <View style={styles.boardCol}>
           {faceUp.map((card, i) => (
             <CardComponent key={card.id} card={card} size="sm" style={{ marginLeft: i === 0 ? 0 : -18 }} />
           ))}
-        </Animated.View>
+        </View>
       </View>
 
-      {/* Status pill — turns orange with a ⚠ warning in the final phase. */}
-      <View style={[styles.tagPill, { borderColor: opponentInFinalPhase ? '#f97316' : '#3a1a5e' }]}>
-        {opponentInFinalPhase ? (
-          <Text style={[styles.tagPillText, { color: '#fb923c', fontWeight: '900' }]}>
-            ⚠ FINAL PHASE · {faceUp.length} FACE-UP
-          </Text>
-        ) : (
-          <Text style={[styles.tagPillText, { color: colors.mutedForeground }]}>
-            {faceUp.length} FACE-UP · {faceDownCount} FACE-DOWN
-          </Text>
-        )}
+      <View style={[styles.tagPill, { borderColor: '#3a1a5e' }]}>
+        <Text style={[styles.tagPillText, { color: opponentInFinalPhase ? colors.neonGold : colors.mutedForeground }]}>
+          {opponentInFinalPhase
+            ? `✦ FINAL · ${faceUp.length} FACE-UP`
+            : `${faceUp.length} FACE-UP · ${faceDownCount} FACE-DOWN`}
+        </Text>
       </View>
     </View>
   );

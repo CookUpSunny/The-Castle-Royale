@@ -6,6 +6,7 @@ import Animated, {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withTiming,
@@ -216,9 +217,7 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
 
   return (
     <View style={styles.container}>
-      {/* Pulsing warning aura — appears when playing from face-up cards to signal the final phase. */}
-      {showFaceUp && <FaceUpAura />}
-      <Text style={[styles.label, { color: showFaceUp ? '#fb923c' : colors.neonGold }]}>{activeLabel}</Text>
+      <Text style={[styles.label, { color: colors.neonGold }]}>{activeLabel}</Text>
 
       {/* Multi-play chips: one per duplicate group. Disabled (greyed out) when not your turn or not playable.
           In starter mode every duplicate group is legal (no pile-match), so chips light up for free.
@@ -273,81 +272,166 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
         </Text>
       )}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        scrollEnabled={activeCards.length > 6 || faceDownCount > 6}
-      >
-        {activeCards.map((card, i) => {
-              // In starter mode any card is legal — pile is empty and the
-              // server will accept whatever single card we send.
-              const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
-              const multiplicity = valueCounts.get(card.value) ?? 1;
-              return (
-                <HandCard
-                  key={card.id}
-                  card={card}
-                  isPlayable={isPlayable}
-                  isMyTurn={isMyTurn}
-                  multiplicity={multiplicity}
-                  onTap={handleTap}
-                  onLongPress={handleLongPress}
-                  overlap={i === 0 ? 0 : overlap}
-                  isStarterPick={card.id === starterPickId}
-                />
-              );
-            })}
-      </ScrollView>
+      {showFaceUp ? (
+        /* Face-up final phase — cards are stationary and centered, same
+           treatment as the face-down stage so the player can tap clearly. */
+        <View style={styles.faceUpRow}>
+          {activeCards.map((card, i) => {
+            const isPlayable = canPlayCardFn(card, discardPile);
+            const multiplicity = valueCounts.get(card.value) ?? 1;
+            return (
+              <FaceUpCardSlot
+                key={card.id}
+                card={card}
+                index={i}
+                isPlayable={isPlayable}
+                isMyTurn={isMyTurn}
+                multiplicity={multiplicity}
+                onTap={handleTap}
+                onLongPress={handleLongPress}
+              />
+            );
+          })}
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          scrollEnabled={activeCards.length > 6 || faceDownCount > 6}
+        >
+          {activeCards.map((card, i) => {
+            const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
+            const multiplicity = valueCounts.get(card.value) ?? 1;
+            return (
+              <HandCard
+                key={card.id}
+                card={card}
+                isPlayable={isPlayable}
+                isMyTurn={isMyTurn}
+                multiplicity={multiplicity}
+                onTap={handleTap}
+                onLongPress={handleLongPress}
+                overlap={i === 0 ? 0 : overlap}
+                isStarterPick={card.id === starterPickId}
+              />
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
 
 /**
- * Pulsing orange glow overlay. Renders as an absolutely-positioned border that
- * breathes slowly to alert the player (and remind the opponent on their POV)
- * that the final face-up phase is active.
+ * A single face-up card rendered stationary with a pulsing gold aura —
+ * matching the cinematic treatment of the face-down stage so the final
+ * face-up phase feels just as intentional and easy to tap.
  */
-function FaceUpAura() {
-  const pulse = useSharedValue(0.3);
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(0.95, { duration: 750, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0.25, { duration: 950, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-    );
-    return () => cancelAnimation(pulse);
-  }, [pulse]);
+function FaceUpCardSlot({
+  card,
+  index,
+  isPlayable,
+  isMyTurn,
+  multiplicity,
+  onTap,
+  onLongPress,
+}: {
+  card: CardType;
+  index: number;
+  isPlayable: boolean;
+  isMyTurn: boolean;
+  multiplicity: number;
+  onTap: (card: CardType) => void;
+  onLongPress: (card: CardType) => void;
+}) {
+  const colors = useColors();
+  const glow = useSharedValue(0.3);
 
-  const style = useAnimatedStyle(() => ({
-    shadowOpacity: pulse.value,
-    borderColor: `rgba(249, 115, 22, ${pulse.value})`,
+  useEffect(() => {
+    glow.value = withDelay(
+      index * 180,
+      withRepeat(
+        withSequence(
+          withTiming(0.9, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.3, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+      ),
+    );
+    return () => cancelAnimation(glow);
+  }, [index, glow]);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glow.value * (isPlayable && isMyTurn ? 1 : 0.3),
+    shadowOpacity: glow.value,
   }));
 
+  const handlePress = useCallback(() => {
+    if (!isMyTurn || !isPlayable) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    onTap(card);
+  }, [card, isMyTurn, isPlayable, onTap]);
+
+  const handleLongPress = useCallback(() => {
+    if (!isMyTurn || !isPlayable || multiplicity < 2) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    onLongPress(card);
+  }, [card, isMyTurn, isPlayable, multiplicity, onLongPress]);
+
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        StyleSheet.absoluteFillObject,
-        {
-          borderRadius: 12,
-          borderWidth: 2,
-          shadowColor: '#f97316',
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 0 },
-          elevation: 8,
-        },
-        style,
-      ]}
-    />
+    <View style={faceUpStyles.cardSlot}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          faceUpStyles.glowAura,
+          { backgroundColor: colors.neonGold, shadowColor: colors.neonGold },
+          glowStyle,
+        ]}
+      />
+      <CardComponent
+        card={card}
+        size="lg"
+        onPress={isMyTurn && isPlayable ? handlePress : undefined}
+        onLongPress={isMyTurn && isPlayable && multiplicity >= 2 ? handleLongPress : undefined}
+        isPlayable={isMyTurn && isPlayable}
+        multiplicity={multiplicity}
+      />
+    </View>
   );
 }
+
+const faceUpStyles = StyleSheet.create({
+  cardSlot: {
+    width: 72,
+    height: 102,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  glowAura: {
+    position: 'absolute',
+    width: 60,
+    height: 86,
+    borderRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 4,
+  },
+  faceUpRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
   },
   label: {
     textAlign: 'center',
