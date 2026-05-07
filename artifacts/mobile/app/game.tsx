@@ -333,10 +333,12 @@ export default function GameScreen() {
       }
 
       if (gameView.lastEvent.type === 'burn' || gameView.lastEvent.type === 'set_complete') {
-        // 3× Heavy haptic at 0, 200, 700 ms — no camera shake
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 700);
+        // 3× Heavy haptic at 0, 200, 700 ms — iOS only (Android ignores impact style)
+        if (Platform.OS === 'ios') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
+          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 700);
+        }
         // Fire burst (radial scale — NO translateX/Y shake)
         fireScale.value = 0.3;
         fireOpacity.value = 0.9;

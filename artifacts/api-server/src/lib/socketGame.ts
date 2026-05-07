@@ -865,6 +865,9 @@ export function initSocketGame(httpServer: HttpServer): void {
         if (spectatedGameId) {
           gameSpectators.get(spectatedGameId)?.delete(socket.id);
           spectatorToGame.delete(socket.id);
+          // Notify active players so their "👁 N watching" badge updates immediately.
+          const spectatedState = games.get(spectatedGameId);
+          if (spectatedState) emitGameView(io, spectatedState, 'game_update');
         }
         socketToPlayer.delete(socket.id);
       }
