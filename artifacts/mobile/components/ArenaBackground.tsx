@@ -10,6 +10,7 @@ interface ArenaBackgroundProps {
 }
 
 export const ARENA_IMAGES: Partial<Record<ArenaId, number>> = {
+  greenTable: require('@/assets/arenas/casino_green.png') as number,
   classic:   require('@/assets/arenas/flamingo_floor.png') as number,
   cosmic:    require('@/assets/arenas/cosmic_sanctum.png') as number,
   royal:     require('@/assets/arenas/olympus_throne.png') as number,
@@ -66,6 +67,7 @@ const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, str
 };
 
 const ARENA_PHOTO_LABELS: Partial<Record<ArenaId, string>> = {
+  greenTable: 'CASINO GREEN',
   classic:   'FLAMINGO FLOOR',
   cosmic:    'COSMIC SANCTUM',
   royal:     'OLYMPUS THRONE',
@@ -132,90 +134,16 @@ function TableEdgeBlend({ arenaId }: { arenaId: ArenaId }) {
 }
 
 // ---------------------------------------------------------------------------
-// Casino Green Table (default arena — pure-code, no photo, fully static)
+// Casino Green Table
 // ---------------------------------------------------------------------------
 
 function GreenTableArena() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="greenTable" />
+      <TableEdgeBlend arenaId="greenTable" />
       <LinearGradient
-        colors={['#0a2e14', '#0d3b1a', '#0a2e14']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Felt texture: faint horizontal weave lines */}
-      <LinearGradient
-        colors={[
-          'rgba(255,255,255,0.00)',
-          'rgba(255,255,255,0.015)',
-          'rgba(255,255,255,0.00)',
-          'rgba(255,255,255,0.015)',
-          'rgba(255,255,255,0.00)',
-        ]}
-        locations={[0, 0.25, 0.5, 0.75, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Overhead spotlight — warm cream glow from above center */}
-      <View style={[StyleSheet.absoluteFill, { opacity: 0.65 }]} pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(255,245,200,0.28)', 'rgba(255,235,160,0.12)', 'transparent']}
-          locations={[0, 0.35, 0.7]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={['transparent', 'rgba(255,245,200,0.10)', 'transparent']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-
-      {/* Diagonal shimmer — static mid-point */}
-      <View style={[StyleSheet.absoluteFill, { opacity: 0.13 }]} pointerEvents="none">
-        <LinearGradient
-          colors={['transparent', 'rgba(255,255,255,0.07)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-
-      {/* Wood rail glow */}
-      <LinearGradient
-        colors={['rgba(120,60,10,0.32)', 'transparent']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.18 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['rgba(120,60,10,0.32)', 'transparent']}
-        start={{ x: 0.5, y: 1 }}
-        end={{ x: 0.5, y: 0.82 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['rgba(120,60,10,0.24)', 'transparent']}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 0.12, y: 0.5 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['rgba(120,60,10,0.24)', 'transparent']}
-        start={{ x: 1, y: 0.5 }}
-        end={{ x: 0.88, y: 0.5 }}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Corner vignette */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.45)', 'transparent', 'rgba(0,0,0,0.35)']}
+        colors={['rgba(20,100,40,0.18)', 'transparent', 'rgba(180,140,0,0.12)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
