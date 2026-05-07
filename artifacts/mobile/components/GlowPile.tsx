@@ -67,8 +67,17 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
         withTiming(1, { duration: 150 }),
         withTiming(0, { duration: 700 }),
       );
+      poolOpacity.value = withSequence(
+        withTiming(1.0, { duration: 150 }),
+        withTiming(0.6, { duration: 700 }),
+        withRepeat(
+          withSequence(withTiming(0.75, { duration: 2600 }), withTiming(0.45, { duration: 2600 })),
+          -1,
+          true,
+        ),
+      );
     }
-  }, [lastEventType, burnOpacity]);
+  }, [lastEventType, burnOpacity, poolOpacity]);
 
   const ring1Style = useAnimatedStyle(() => ({ transform: [{ scale: ring1Scale.value }] }));
   const ring2Style = useAnimatedStyle(() => ({ transform: [{ scale: ring2Scale.value }] }));
