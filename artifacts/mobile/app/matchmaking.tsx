@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
@@ -13,8 +13,10 @@ export default function MatchmakingScreen() {
   const insets = useSafeAreaInsets();
   const { cancelQueue, queueSeconds, gameView, isInQueue } = useGame();
 
+  const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (gameView) {
+    if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
+      lastNavigatedGameIdRef.current = gameView.gameId;
       router.replace('/game');
     }
   }, [gameView]);

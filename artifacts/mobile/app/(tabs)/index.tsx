@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -23,7 +23,6 @@ import { useGame } from '@/contexts/GameContext';
 import { useGameCenter } from '@/contexts/GameCenterContext';
 import { useColors } from '@/hooks/useColors';
 import { useMusicPlayer } from '@/contexts/MusicContext';
-import CosmeticsModal from '@/components/CosmeticsModal';
 import SplashCards from '@/components/SplashCards';
 
 // ─── Outlined title text ──────────────────────────────────────────────────────
@@ -94,7 +93,7 @@ export default function LobbyScreen() {
   const { playSplashTrack, stopMusic } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
-  const [cosmeticsOpen, setCosmeticsOpen] = useState(false);
+  const lastNavigatedGameIdRef = useRef<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -130,7 +129,8 @@ export default function LobbyScreen() {
   }));
 
   useEffect(() => {
-    if (gameView) {
+    if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
+      lastNavigatedGameIdRef.current = gameView.gameId;
       router.replace('/game');
     }
   }, [gameView]);
@@ -301,22 +301,6 @@ export default function LobbyScreen() {
             </LinearGradient>
           </Pressable>
 
-          <Pressable
-            onPress={() => setCosmeticsOpen(true)}
-            style={({ pressed }) => [styles.goldPillOuter, styles.goldPillSmall, pressed && { opacity: 0.88 }]}
-          >
-            <LinearGradient
-              colors={['#e8d060', '#b89018', '#e8d060']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.goldPill}
-            >
-              <View style={styles.pillRow}>
-                <Text style={styles.pillIcon}>✦</Text>
-                <Text style={[styles.goldPillText, styles.goldPillTextSm]}>COSMETICS</Text>
-                <View style={styles.premiumDot} />
-              </View>
-            </LinearGradient>
-          </Pressable>
         </View>
 
         <View style={styles.statsRow}>
@@ -349,7 +333,6 @@ export default function LobbyScreen() {
           )}
         </View>
 
-        <CosmeticsModal visible={cosmeticsOpen} onClose={() => setCosmeticsOpen(false)} />
 
         <View style={styles.connectionDot}>
           <View style={[styles.dot, { backgroundColor: connectionStatus === 'connected' ? '#22c55e' : '#ef4444' }]} />
@@ -423,5 +406,4 @@ const styles = StyleSheet.create({
   connectionDot: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   connectionText: { fontSize: 10, fontWeight: '600', letterSpacing: 1.5 },
-  premiumDot: { width: 6, height: 6, borderRadius: 3, marginLeft: 6, backgroundColor: '#1a0e00' },
 });

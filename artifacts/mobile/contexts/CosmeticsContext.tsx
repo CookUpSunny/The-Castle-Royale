@@ -28,6 +28,44 @@ export type CardSkinId =
 
 export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning';
 
+export type AvatarId = 'eagles' | 'frog' | 'troll';
+
+export interface AvatarOption {
+  id: AvatarId;
+  name: string;
+  quote: string;
+  color: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  portrait: any;
+}
+
+export const AVATARS: AvatarOption[] = [
+  {
+    id: 'eagles',
+    name: 'The Eagles',
+    quote: 'We own this table.',
+    color: '#3b82f6',
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/eagles.png') as number,
+  },
+  {
+    id: 'frog',
+    name: 'Gentleman Frog',
+    quote: 'Gentlemen, place your bets.',
+    color: '#22c55e',
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/frog.png') as number,
+  },
+  {
+    id: 'troll',
+    name: 'Big Bet',
+    quote: 'Go big or go home!',
+    color: '#a855f7',
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/troll.png') as number,
+  },
+];
+
 export interface CardSkin {
   id: CardSkinId;
   name: string;
@@ -103,8 +141,10 @@ interface CosmeticsContextType {
   cardSkin: CardSkinId;
   arena: ArenaId;
   scene: SceneId;
+  avatarId: AvatarId;
   setCardSkin: (id: CardSkinId) => void;
   setArena: (id: ArenaId) => void;
+  setAvatar: (id: AvatarId) => void;
   /** True if the given skin can be equipped today. */
   isSkinUnlocked: (id: CardSkinId) => boolean;
 }
@@ -113,21 +153,27 @@ const CosmeticsContext = createContext<CosmeticsContextType | null>(null);
 
 const STORAGE_CARD_KEY = 'cosmetics.cardSkin';
 const STORAGE_ARENA_KEY = 'cosmetics.arena';
+const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 const isArenaId = (v: string | null): v is ArenaId =>
   v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning';
 
+const isAvatarId = (v: string | null): v is AvatarId =>
+  v === 'eagles' || v === 'frog' || v === 'troll';
+
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [cardSkin, setCardSkinState] = useState<CardSkinId>('neon-glow');
   const [arena, setArenaState] = useState<ArenaId>('greenTable');
+  const [avatarId, setAvatarState] = useState<AvatarId>('eagles');
   const scene: SceneId = 'flamingoCasino';
 
   useEffect(() => {
     (async () => {
       try {
-        const [storedCard, storedArena] = await Promise.all([
+        const [storedCard, storedArena, storedAvatar] = await Promise.all([
           AsyncStorage.getItem(STORAGE_CARD_KEY),
           AsyncStorage.getItem(STORAGE_ARENA_KEY),
+          AsyncStorage.getItem(STORAGE_AVATAR_KEY),
         ]);
         if (storedCard) {
           // Migrate legacy IDs (classic/cosmic/royal) → new IDs.
@@ -141,6 +187,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
           // Otherwise stay on the default (e.g. user had a locked skin somehow).
         }
         if (isArenaId(storedArena)) setArenaState(storedArena);
+        if (isAvatarId(storedAvatar)) setAvatarState(storedAvatar);
       } catch {
         // Persistence is best-effort.
       }
@@ -164,10 +211,15 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_ARENA_KEY, id).catch(() => {});
   }, []);
 
+  const setAvatar = useCallback((id: AvatarId) => {
+    setAvatarState(id);
+    AsyncStorage.setItem(STORAGE_AVATAR_KEY, id).catch(() => {});
+  }, []);
+
   const isSkinUnlocked = useCallback((id: CardSkinId) => UNLOCKED_SKIN_IDS.has(id), []);
 
   return (
-    <CosmeticsContext.Provider value={{ cardSkin, arena, scene, setCardSkin, setArena, isSkinUnlocked }}>
+    <CosmeticsContext.Provider value={{ cardSkin, arena, scene, avatarId, setCardSkin, setArena, setAvatar, isSkinUnlocked }}>
       {children}
     </CosmeticsContext.Provider>
   );

@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -11,7 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ARENAS, type ArenaId, useCosmetics } from '@/contexts/CosmeticsContext';
+import { ARENAS, AVATARS, type ArenaId, type AvatarId, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import ArenaBackground from '@/components/ArenaBackground';
@@ -19,15 +20,20 @@ import BackButton from '@/components/BackButton';
 
 export default function ArenaPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode: string }>();
-  const { arena, setArena } = useCosmetics();
+  const { arena, setArena, avatarId, setAvatar } = useCosmetics();
   const { quickPlayBot, joinQueue, connectionStatus, gameView, isInQueue } = useGame();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const [selected, setSelected] = useState<ArenaId>(arena);
+  const [selectedArena, setSelectedArena] = useState<ArenaId>(arena);
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarId>(avatarId);
 
+  const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (gameView) router.replace('/game');
+    if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
+      lastNavigatedGameIdRef.current = gameView.gameId;
+      router.replace('/game');
+    }
   }, [gameView]);
 
   useEffect(() => {
@@ -36,7 +42,8 @@ export default function ArenaPickerScreen() {
 
   const handleConfirm = () => {
     if (connectionStatus !== 'connected') return;
-    setArena(selected);
+    setArena(selectedArena);
+    setAvatar(selectedAvatar);
     if (mode === 'bot') {
       quickPlayBot();
     } else {
@@ -44,8 +51,12 @@ export default function ArenaPickerScreen() {
     }
   };
 
-  const cardWidth = Math.min(width * 0.88, 420);
+  const maxContentWidth = Math.min(width - 32, 460);
+  const arenaCardWidth = Math.min(width * 0.88, 420);
+  const avatarCardWidth = (maxContentWidth - 16) / 3;
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
+
+  const selectedAvatarData = AVATARS.find((a) => a.id === selectedAvatar);
 
   return (
     <View style={styles.container}>
@@ -56,7 +67,7 @@ export default function ArenaPickerScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + webTopPad + 8 }]}>
         <BackButton label="← BACK" onPress={() => router.back()} />
-        <Text style={[styles.title, { color: colors.foreground }]}>CHOOSE YOUR ARENA</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>YOUR LOADOUT</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           {mode === 'bot' ? 'Quick Play · Bot' : 'Ranked Match'}
         </Text>
@@ -69,18 +80,92 @@ export default function ArenaPickerScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── CHARACTER SELECTION ─────────────────────────────────────── */}
+        <View style={[styles.section, { width: maxContentWidth }]}>
+          <Text style={[styles.sectionLabel, { color: colors.neonGold }]}>
+            ✦  PICK YOUR CHARACTER
+          </Text>
+
+          <View style={styles.avatarRow}>
+            {AVATARS.map((av) => {
+              const isSelected = selectedAvatar === av.id;
+              return (
+                <Pressable
+                  key={av.id}
+                  onPress={() => setSelectedAvatar(av.id)}
+                  style={({ pressed }) => [
+                    styles.avatarCard,
+                    {
+                      width: avatarCardWidth,
+                      borderColor: isSelected ? av.color : 'rgba(255,255,255,0.10)',
+                      borderWidth: isSelected ? 2.5 : 1,
+                      shadowColor: av.color,
+                      shadowOpacity: isSelected ? 0.8 : 0,
+                      shadowRadius: 16,
+                      shadowOffset: { width: 0, height: 0 },
+                      elevation: isSelected ? 12 : 0,
+                      opacity: pressed ? 0.88 : 1,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={av.portrait}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.88)']}
+                    start={{ x: 0, y: 0.35 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="none"
+                  />
+                  {isSelected && (
+                    <View style={[styles.selectedTick, { backgroundColor: av.color }]}>
+                      <Text style={styles.selectedTickText}>✓</Text>
+                    </View>
+                  )}
+                  <View style={styles.avatarNameWrap}>
+                    <Text
+                      style={[styles.avatarName, { color: isSelected ? av.color : '#fff' }]}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.65}
+                    >
+                      {av.name}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {selectedAvatarData ? (
+            <Text style={[styles.avatarQuote, { color: colors.mutedForeground }]}>
+              "{selectedAvatarData.quote}"
+            </Text>
+          ) : null}
+        </View>
+
+        {/* ── ARENA SELECTION ─────────────────────────────────────────── */}
+        <View style={[styles.section, { width: maxContentWidth }]}>
+          <Text style={[styles.sectionLabel, { color: colors.neonGold }]}>
+            ✦  PICK YOUR ARENA
+          </Text>
+        </View>
+
         {ARENAS.map((arenaItem) => {
-          const isSelected = selected === arenaItem.id;
+          const isSelected = selectedArena === arenaItem.id;
           const isLocked = arenaItem.premium;
 
           return (
             <Pressable
               key={arenaItem.id}
-              onPress={() => { if (!isLocked) setSelected(arenaItem.id); }}
+              onPress={() => { if (!isLocked) setSelectedArena(arenaItem.id); }}
               style={({ pressed }) => [
-                styles.card,
+                styles.arenaCard,
                 {
-                  width: cardWidth,
+                  width: arenaCardWidth,
                   borderColor: isSelected ? '#ffd700' : 'rgba(255,255,255,0.10)',
                   borderWidth: isSelected ? 2.5 : 1,
                   opacity: isLocked ? 0.62 : pressed ? 0.88 : 1,
@@ -99,8 +184,8 @@ export default function ArenaPickerScreen() {
                 pointerEvents="none"
               />
 
-              <View style={styles.cardInner}>
-                <View style={styles.badgeRow}>
+              <View style={styles.arenaCardInner}>
+                <View style={styles.arenaBadgeRow}>
                   {isLocked ? (
                     <View style={styles.lockBadge}>
                       <Text style={styles.lockBadgeText}>🔒  PREMIUM</Text>
@@ -146,7 +231,7 @@ export default function ArenaPickerScreen() {
                 connectionStatus !== 'connected' && { color: '#5a5030' },
               ]}
             >
-              {connectionStatus === 'connected' ? 'PLAY ON THIS ARENA' : 'CONNECTING...'}
+              {connectionStatus === 'connected' ? 'ENTER THE ARENA' : 'CONNECTING...'}
             </Text>
           </LinearGradient>
         </Pressable>
@@ -169,18 +254,79 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     gap: 14,
   },
-  card: {
+  section: {
+    paddingHorizontal: 0,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 3,
+    marginBottom: 10,
+    marginLeft: 2,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  avatarCard: {
+    height: 168,
+    borderRadius: 14,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  avatarImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  selectedTick: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  selectedTickText: { color: '#000', fontSize: 11, fontWeight: '900' },
+  avatarNameWrap: {
+    paddingHorizontal: 6,
+    paddingBottom: 8,
+  },
+  avatarName: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
+  },
+  avatarQuote: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 10,
+    letterSpacing: 0.3,
+  },
+  arenaCard: {
     height: 200,
     borderRadius: 18,
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
-  cardInner: {
+  arenaCardInner: {
     padding: 16,
     justifyContent: 'space-between',
     flex: 1,
   },
-  badgeRow: {
+  arenaBadgeRow: {
     alignItems: 'flex-end',
   },
   lockBadge: {
