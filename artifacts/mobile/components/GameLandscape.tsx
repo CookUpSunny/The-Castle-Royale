@@ -385,7 +385,7 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const {
     myHand, myFaceUp, myFaceDownCount, myFaceDownIds, opponentHandCount, opponentFaceUp, opponentFaceDownCount,
-    opponentName, discardPile, deckCount, isMyTurn, canFastPlay, spectatorCount,
+    opponentName, discardPile, deckCount, isMyTurn, canFastPlay,
   } = gameView;
 
   const activeZone = myHand.length > 0 ? myHand : myFaceUp;
@@ -410,11 +410,6 @@ export default function GameLandscape(): React.JSX.Element | null {
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
-      {(spectatorCount ?? 0) > 0 && (
-        <View style={styles.spectatorBadge} pointerEvents="none">
-          <Text style={styles.spectatorBadgeText}>👁 {spectatorCount} watching</Text>
-        </View>
-      )}
       <View
         style={[
           styles.layout,
@@ -808,19 +803,6 @@ const styles = StyleSheet.create({
   placeholderText: { fontSize: 14, fontWeight: '900', letterSpacing: 3 },
   placeholderSub: { fontSize: 9, fontWeight: '600', letterSpacing: 2 },
 
-  spectatorBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#1a053590',
-    borderWidth: 1,
-    borderColor: '#5b1a8c',
-    zIndex: 40,
-  },
-  spectatorBadgeText: { fontSize: 11, fontWeight: '700', color: '#e0c8ff', letterSpacing: 0.5 },
   fireOverlay: {
     position: 'absolute',
     top: '30%',

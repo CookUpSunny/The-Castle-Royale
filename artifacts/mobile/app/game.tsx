@@ -388,7 +388,7 @@ export default function GameScreen() {
 
   const {
     myHand, myFaceUp, myFaceDownCount, myFaceDownIds, opponentHandCount, opponentFaceUp, opponentFaceDownCount,
-    opponentName, discardPile, deckCount, isMyTurn, canFastPlay, spectatorCount,
+    opponentName, discardPile, deckCount, isMyTurn, canFastPlay,
   } = gameView;
 
   // For BURN/RESET buttons we collect ALL cards of that value from the active zone (hand if non-empty, else face-up)
@@ -418,11 +418,6 @@ export default function GameScreen() {
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
-      {(spectatorCount ?? 0) > 0 && (
-        <View style={styles.spectatorBadge} pointerEvents="none">
-          <Text style={styles.spectatorBadgeText}>👁 {spectatorCount} watching</Text>
-        </View>
-      )}
       <View style={[styles.tableFelt, { top: SCREEN_H * 0.18, height: SCREEN_H * 0.55 }]} pointerEvents="none">
         <LinearGradient
           colors={['#2a0d4a30', '#5b1a8c40', '#2a0d4a30']}
@@ -951,19 +946,6 @@ const styles = StyleSheet.create({
     color: '#ff4d6d',
   },
 
-  spectatorBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#1a053590',
-    borderWidth: 1,
-    borderColor: '#5b1a8c',
-    zIndex: 40,
-  },
-  spectatorBadgeText: { fontSize: 11, fontWeight: '700', color: '#e0c8ff', letterSpacing: 0.5 },
   fireOverlay: {
     position: 'absolute',
     top: '30%',

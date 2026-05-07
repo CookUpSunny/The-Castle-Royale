@@ -1,7 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CardBack } from '@/components/Card';
@@ -15,7 +14,6 @@ import {
   type CardSkinId,
   useCosmetics,
 } from '@/contexts/CosmeticsContext';
-import { useGame, type ActiveGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 
 
@@ -25,26 +23,13 @@ interface CosmeticsModalProps {
 }
 
 /**
- * Full-screen cosmetics picker with three tabs: ARENAS, CARDS, and SPECTATE.
- * The SPECTATE tab shows a blurred live-game list for non-premium players;
- * premium players (isPremium from GameContext) can tap any match to watch.
+ * Full-screen cosmetics picker with two tabs: ARENAS and CARDS.
  */
 export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { cardSkin, arena, setCardSkin, setArena } = useCosmetics();
-  const { activeGames, spectateGame, refreshActiveGames, isPremium } = useGame();
-  const [tab, setTab] = useState<'arenas' | 'cards' | 'spectate'>('arenas');
-
-  // Refresh the game list when spectate tab opens, then every 5 s while active.
-  useEffect(() => {
-    if (tab !== 'spectate') return;
-    refreshActiveGames();
-    const interval = setInterval(() => {
-      refreshActiveGames();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [tab, refreshActiveGames]);
+  const [tab, setTab] = useState<'arenas' | 'cards'>('arenas');
 
   const pickArena = (id: ArenaId) => {
     Haptics.selectionAsync().catch(() => {});
@@ -57,13 +42,6 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
     }
     Haptics.selectionAsync().catch(() => {});
     setCardSkin(skin.id);
-  };
-
-  const handleSpectate = (game: ActiveGame) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    spectateGame(game.gameId);
-    onClose();
-    router.push('/spectate');
   };
 
   return (
@@ -86,7 +64,6 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
         <View style={styles.tabs}>
           <TabButton label="ARENAS" active={tab === 'arenas'} onPress={() => setTab('arenas')} />
           <TabButton label="CARDS" active={tab === 'cards'} onPress={() => setTab('cards')} />
-          <TabButton label="SPECTATE" active={tab === 'spectate'} onPress={() => setTab('spectate')} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
@@ -118,110 +95,12 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
               />
             ))}
 
-          {tab === 'spectate' && (
-            <View style={{ position: 'relative' }}>
-              <View style={{ opacity: isPremium ? 1 : 0.25, pointerEvents: isPremium ? 'auto' : 'none' }}>
-                <SpectateContent
-                  games={activeGames}
-                  onSpectate={handleSpectate}
-                  onRefresh={refreshActiveGames}
-                />
-              </View>
-              {!isPremium && <PremiumGate colors={colors} />}
-            </View>
-          )}
-
-          {tab !== 'spectate' && (
-            <Text style={[styles.footnote, { color: colors.mutedForeground }]}>
-              🔒 Locked decks unlock with the upcoming premium tier — full purchase flow coming soon.
-            </Text>
-          )}
+          <Text style={[styles.footnote, { color: colors.mutedForeground }]}>
+            🔒 Locked decks unlock with the upcoming premium tier — full purchase flow coming soon.
+          </Text>
         </ScrollView>
       </View>
     </Modal>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SPECTATE tab content
-// ─────────────────────────────────────────────────────────────────────────────
-
-function PremiumGate({ colors }: { colors: ReturnType<typeof useColors> }) {
-  return (
-    <View style={styles.premiumGateWrap}>
-      <Text style={styles.premiumGateIcon}>🔒</Text>
-      <Text style={[styles.premiumGateTitle, { color: colors.neonGold }]}>PREMIUM FEATURE</Text>
-      <Text style={[styles.premiumGateDesc, { color: colors.mutedForeground }]}>
-        Upgrade to Castle Royale Premium to watch live PvP matches in real time with an orbit camera view.
-      </Text>
-      <View style={[styles.premiumBadge, { borderColor: colors.neonGold, marginTop: 12 }]}>
-        <Text style={[styles.premiumText, { color: colors.neonGold }]}>👑 COMING SOON</Text>
-      </View>
-    </View>
-  );
-}
-
-function SpectateContent({
-  games,
-  onSpectate,
-  onRefresh,
-}: {
-  games: ActiveGame[];
-  onSpectate: (game: ActiveGame) => void;
-  onRefresh: () => void;
-}) {
-  const colors = useColors();
-
-  if (games.length === 0) {
-    return (
-      <View style={styles.noGamesWrap}>
-        <Text style={styles.noGamesIcon}>🎴</Text>
-        <Text style={[styles.noGamesText, { color: colors.mutedForeground }]}>
-          No live PvP matches right now
-        </Text>
-        <Pressable
-          onPress={onRefresh}
-          style={[styles.refreshBtn, { borderColor: colors.neonPurple }]}
-        >
-          <Text style={[styles.refreshText, { color: colors.neonPurple }]}>↻ Refresh</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  return (
-    <>
-      <View style={styles.spectateHeader}>
-        <Text style={[styles.spectateHeaderText, { color: colors.mutedForeground }]}>
-          {games.length} live {games.length === 1 ? 'match' : 'matches'}
-        </Text>
-        <Pressable onPress={onRefresh}>
-          <Text style={[styles.refreshText, { color: colors.neonPurple }]}>↻ Refresh</Text>
-        </Pressable>
-      </View>
-      {games.map((game) => (
-        <Pressable
-          key={game.gameId}
-          style={({ pressed }) => [
-            styles.gameRow,
-            { borderColor: '#3a1a5e', backgroundColor: '#1a053590' },
-            pressed && { opacity: 0.8 },
-          ]}
-          onPress={() => onSpectate(game)}
-        >
-          <View style={styles.gameRowLeft}>
-            <Text style={[styles.gameVsText, { color: colors.foreground }]} numberOfLines={1}>
-              {game.player1Name} <Text style={{ color: colors.neonPurple }}>VS</Text>{' '}
-              {game.player2Name}
-            </Text>
-            <Text style={[styles.gameMetaText, { color: colors.mutedForeground }]}>
-              👁 {game.spectatorCount} watching · 🃏 {game.turnCount} plays
-            </Text>
-          </View>
-          <Text style={[styles.watchBtn, { color: colors.neonGold }]}>WATCH →</Text>
-        </Pressable>
-      ))}
-    </>
   );
 }
 
@@ -492,90 +371,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingTop: 12,
     paddingHorizontal: 12,
-  },
-  premiumGateWrap: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  premiumGateIcon: { fontSize: 52 },
-  premiumGateTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: 3,
-    textAlign: 'center',
-  },
-  premiumGateDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  noGamesWrap: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 12,
-  },
-  noGamesIcon: { fontSize: 40 },
-  noGamesText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  refreshBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    marginTop: 4,
-  },
-  refreshText: {
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-  },
-  spectateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingBottom: 4,
-  },
-  spectateHeaderText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  gameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    padding: 14,
-    gap: 10,
-  },
-  gameRowLeft: {
-    flex: 1,
-    gap: 4,
-  },
-  gameVsText: {
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  gameMetaText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  watchBtn: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1.5,
   },
 });
 
