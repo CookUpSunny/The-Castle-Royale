@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
 import type { ArenaId } from '@/contexts/CosmeticsContext';
 
@@ -65,6 +65,13 @@ const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, str
   ],
 };
 
+const ARENA_PHOTO_LABELS: Partial<Record<ArenaId, string>> = {
+  classic:   'FLAMINGO FLOOR',
+  cosmic:    'COSMIC SANCTUM',
+  royal:     'OLYMPUS THRONE',
+  lightning: 'OASIS IN THE CAVE',
+};
+
 const ARENA_FALLBACK_COLORS: Record<ArenaId, readonly [string, string, string]> = {
   greenTable: ['#0a2e14', '#0d3b1a', '#0a2e14'],
   classic:    ['#3d0a28', '#5c1040', '#8a1050'],
@@ -75,6 +82,7 @@ const ARENA_FALLBACK_COLORS: Record<ArenaId, readonly [string, string, string]> 
 
 function ArenaPhotoBase({ arenaId }: { arenaId: ArenaId }) {
   const fallback = ARENA_FALLBACK_COLORS[arenaId];
+  const label = ARENA_PHOTO_LABELS[arenaId];
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {/* Fallback gradient — always visible; photo renders on top when available */}
@@ -91,6 +99,13 @@ function ArenaPhotoBase({ arenaId }: { arenaId: ArenaId }) {
         cachePolicy="memory-disk"
       />
       <View style={[StyleSheet.absoluteFill, styles.darkOverlay]} />
+      {/* Muted fallback label — tiny caps top-left; ensures arenas are identifiable
+          even when the photo asset is a transparent placeholder */}
+      {label ? (
+        <View style={styles.photoLabelContainer} pointerEvents="none">
+          <Text style={styles.photoLabel}>{label}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -331,5 +346,16 @@ function LightningArena() {
 const styles = StyleSheet.create({
   darkOverlay: {
     backgroundColor: 'rgba(0,0,0,0.48)',
+  },
+  photoLabelContainer: {
+    position: 'absolute',
+    top: 8,
+    left: 10,
+  },
+  photoLabel: {
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 2,
   },
 });

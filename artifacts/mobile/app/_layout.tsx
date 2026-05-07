@@ -41,7 +41,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: '#07000f' } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="arena-picker" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="matchmaking" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="matchmaking" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="private-room" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
       <Stack.Screen name="game" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="victory" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
