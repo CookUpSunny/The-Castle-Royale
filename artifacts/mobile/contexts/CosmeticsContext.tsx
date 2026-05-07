@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { SceneId } from '@/lib/scenePacks';
 
 import { warmGameVisualCache } from '@/lib/preloadGameAssets';
 
@@ -95,6 +96,7 @@ const LEGACY_SKIN_MAP: Record<string, CardSkinId> = {
 interface CosmeticsContextType {
   cardSkin: CardSkinId;
   arena: ArenaId;
+  scene: SceneId;
   setCardSkin: (id: CardSkinId) => void;
   setArena: (id: ArenaId) => void;
   /** True if the given skin can be equipped today. */
@@ -112,6 +114,7 @@ const isArenaId = (v: string | null): v is ArenaId =>
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [cardSkin, setCardSkinState] = useState<CardSkinId>('neon-glow');
   const [arena, setArenaState] = useState<ArenaId>('classic');
+  const scene: SceneId = 'rainbowRoad';
 
   useEffect(() => {
     (async () => {
@@ -158,7 +161,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const isSkinUnlocked = useCallback((id: CardSkinId) => UNLOCKED_SKIN_IDS.has(id), []);
 
   return (
-    <CosmeticsContext.Provider value={{ cardSkin, arena, setCardSkin, setArena, isSkinUnlocked }}>
+    <CosmeticsContext.Provider value={{ cardSkin, arena, scene, setCardSkin, setArena, isSkinUnlocked }}>
       {children}
     </CosmeticsContext.Provider>
   );

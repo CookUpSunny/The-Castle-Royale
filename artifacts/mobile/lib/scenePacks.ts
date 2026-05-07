@@ -77,7 +77,7 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   },
 };
 
-export function getScenePack(id: SceneId): ScenePack {
-  return SCENE_PACKS[id];
+export function getScenePack(id: SceneId | undefined | null): ScenePack {
+  return SCENE_PACKS[id as SceneId] ?? SCENE_PACKS.rainbowRoad;
 }
 
