@@ -18,11 +18,6 @@ import {
 import { useGame, type ActiveGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 
-/**
- * Toggle to `true` locally to preview the spectate feature without
- * needing a real premium account. Set back to `false` before shipping.
- */
-const DEV_PREMIUM = false;
 
 interface CosmeticsModalProps {
   visible: boolean;
@@ -31,13 +26,14 @@ interface CosmeticsModalProps {
 
 /**
  * Full-screen cosmetics picker with three tabs: ARENAS, CARDS, and SPECTATE.
- * The SPECTATE tab is premium-gated — set DEV_PREMIUM = true to test it locally.
+ * The SPECTATE tab shows a blurred live-game list for non-premium players;
+ * premium players (isPremium from GameContext) can tap any match to watch.
  */
 export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { cardSkin, arena, setCardSkin, setArena } = useCosmetics();
-  const { activeGames, spectateGame, refreshActiveGames } = useGame();
+  const { activeGames, spectateGame, refreshActiveGames, isPremium } = useGame();
   const [tab, setTab] = useState<'arenas' | 'cards' | 'spectate'>('arenas');
 
   // Refresh the game list when spectate tab opens, then every 5 s while active.
@@ -123,15 +119,16 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
             ))}
 
           {tab === 'spectate' && (
-            DEV_PREMIUM ? (
-              <SpectateContent
-                games={activeGames}
-                onSpectate={handleSpectate}
-                onRefresh={refreshActiveGames}
-              />
-            ) : (
-              <PremiumGate colors={colors} />
-            )
+            <View style={{ position: 'relative' }}>
+              <View style={{ opacity: isPremium ? 1 : 0.25, pointerEvents: isPremium ? 'auto' : 'none' }}>
+                <SpectateContent
+                  games={activeGames}
+                  onSpectate={handleSpectate}
+                  onRefresh={refreshActiveGames}
+                />
+              </View>
+              {!isPremium && <PremiumGate colors={colors} />}
+            </View>
           )}
 
           {tab !== 'spectate' && (
@@ -486,8 +483,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   premiumGateWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
-    paddingVertical: 40,
+    justifyContent: 'center',
     paddingHorizontal: 24,
     gap: 12,
   },

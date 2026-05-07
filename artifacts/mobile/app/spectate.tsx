@@ -22,9 +22,16 @@ export default function SpectateScreen() {
   const { spectatorView, leaveSpectate } = useGame();
 
   // ── Orbit camera ──────────────────────────────────────────────────────────
-  // Slow cinematic Y-axis sway ±12° — drone-over-coliseum effect.
+  // Full 360° Y-axis orbit (20 s / revolution) combined with a subtle ±12°
+  // X-axis tilt sway for a cinematic drone-over-coliseum feel.
+  const orbitAngle = useSharedValue(0);
   const tiltAngle = useSharedValue(0);
   useEffect(() => {
+    orbitAngle.value = withRepeat(
+      withTiming(360, { duration: 20000, easing: Easing.linear }),
+      -1,
+      false,
+    );
     tiltAngle.value = withRepeat(
       withSequence(
         withTiming(12, { duration: 10000, easing: Easing.inOut(Easing.sin) }),
@@ -33,7 +40,7 @@ export default function SpectateScreen() {
       -1,
       false,
     );
-  }, [tiltAngle]);
+  }, [orbitAngle, tiltAngle]);
 
   // ── Fire burst + ripple overlays for burn/set_complete events ──────────────
   const fireScale = useSharedValue(0.3);
@@ -108,7 +115,11 @@ export default function SpectateScreen() {
   // ── Animated styles ───────────────────────────────────────────────────────
   const orbitStyle = useAnimatedStyle(() => ({
     flex: 1,
-    transform: [{ perspective: 900 }, { rotateY: `${tiltAngle.value}deg` }],
+    transform: [
+      { perspective: 900 },
+      { rotateY: `${orbitAngle.value}deg` },
+      { rotateX: `${tiltAngle.value}deg` },
+    ],
   }));
   const fireStyle = useAnimatedStyle(() => ({
     transform: [{ scale: fireScale.value }],

@@ -124,9 +124,20 @@ interface GameContextType {
   spectateGame: (gameId: string) => void;
   leaveSpectate: () => void;
   refreshActiveGames: () => void;
+  /**
+   * Whether this player has premium access (spectate, future features).
+   * Toggle DEV_PREMIUM below to test the gated UX locally without a real purchase.
+   */
+  isPremium: boolean;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
+
+/**
+ * Flip to `true` to preview premium-gated features (spectate tab, etc.) locally.
+ * This flag will be replaced by a real entitlement check in Task #10.
+ */
+const DEV_PREMIUM = false;
 
 const generatePlayerId = (): string =>
   `p_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 9)}`;
@@ -519,6 +530,7 @@ export function GameProvider({
         spectateGame,
         leaveSpectate,
         refreshActiveGames,
+        isPremium: DEV_PREMIUM,
       }}
     >
       {children}
