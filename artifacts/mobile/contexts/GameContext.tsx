@@ -74,7 +74,8 @@ export interface ActiveGame {
   gameId: string;
   player1Name: string;
   player2Name: string;
-  pileSize: number;
+  /** Pile depth — used as a proxy for game progress (how many plays have occurred). */
+  turnCount: number;
   spectatorCount: number;
 }
 

@@ -22,14 +22,11 @@ export default function SpectateScreen() {
   const { spectatorView, leaveSpectate } = useGame();
 
   // ── Orbit camera ──────────────────────────────────────────────────────────
-  // Slow Y-axis tilt oscillating ±12° — cinematic coliseum drone effect.
+  // Continuous 360° Y-axis rotation — full orbit every 16 s, linear speed.
   const tiltAngle = useSharedValue(0);
   useEffect(() => {
     tiltAngle.value = withRepeat(
-      withSequence(
-        withTiming(12, { duration: 10000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(-12, { duration: 10000, easing: Easing.inOut(Easing.sin) }),
-      ),
+      withTiming(360, { duration: 16000, easing: Easing.linear }),
       -1,
       false,
     );

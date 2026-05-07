@@ -766,7 +766,7 @@ export function initSocketGame(httpServer: HttpServer): void {
         gameId: string;
         player1Name: string;
         player2Name: string;
-        pileSize: number;
+        turnCount: number;
         spectatorCount: number;
       }> = [];
       for (const [gameId, state] of games.entries()) {
@@ -779,7 +779,7 @@ export function initSocketGame(httpServer: HttpServer): void {
           gameId,
           player1Name: p1.name,
           player2Name: p2.name,
-          pileSize: state.discardPile.length,
+          turnCount: state.discardPile.length,
           spectatorCount: gameSpectators.get(gameId)?.size ?? 0,
         });
       }
@@ -842,6 +842,7 @@ export function initSocketGame(httpServer: HttpServer): void {
                 }
               }
             }
+            cleanupGameSpectators(io, gameId);
             games.delete(gameId);
             gameParticipants.delete(gameId);
             playerToGame.delete(pid);

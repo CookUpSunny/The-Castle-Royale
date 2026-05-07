@@ -22,7 +22,7 @@ import { useColors } from '@/hooks/useColors';
  * Toggle to `true` locally to preview the spectate feature without
  * needing a real premium account. Set back to `false` before shipping.
  */
-const DEV_PREMIUM = false;
+const DEV_PREMIUM = true;
 
 interface CosmeticsModalProps {
   visible: boolean;
@@ -40,11 +40,14 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
   const { activeGames, spectateGame, refreshActiveGames } = useGame();
   const [tab, setTab] = useState<'arenas' | 'cards' | 'spectate'>('arenas');
 
-  // Refresh the game list whenever the spectate tab is opened.
+  // Refresh the game list when spectate tab opens, then every 5 s while active.
   useEffect(() => {
-    if (tab === 'spectate') {
+    if (tab !== 'spectate') return;
+    refreshActiveGames();
+    const interval = setInterval(() => {
       refreshActiveGames();
-    }
+    }, 5000);
+    return () => clearInterval(interval);
   }, [tab, refreshActiveGames]);
 
   const pickArena = (id: ArenaId) => {
@@ -215,7 +218,7 @@ function SpectateContent({
               {game.player2Name}
             </Text>
             <Text style={[styles.gameMetaText, { color: colors.mutedForeground }]}>
-              👁 {game.spectatorCount} watching · 🃏 {game.pileSize} pile
+              👁 {game.spectatorCount} watching · 🃏 {game.turnCount} plays
             </Text>
           </View>
           <Text style={[styles.watchBtn, { color: colors.neonGold }]}>WATCH →</Text>
