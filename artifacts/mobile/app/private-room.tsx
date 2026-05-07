@@ -69,9 +69,15 @@ export default function PrivateRoomScreen() {
   const [isJoining, setIsJoining] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Once a game starts, jump to the game screen.
+  // Once a game starts, jump to the loading screen (which fades out splash music
+  // and then navigates to /game). Guarded by gameId to avoid re-navigation on
+  // every game_update tick.
+  const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (gameView) router.replace('/game');
+    if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
+      lastNavigatedGameIdRef.current = gameView.gameId;
+      router.replace('/game-loading');
+    }
   }, [gameView]);
 
   // Clear any stale error on mode change.

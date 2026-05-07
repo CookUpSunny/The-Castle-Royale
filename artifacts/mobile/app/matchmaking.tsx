@@ -17,7 +17,7 @@ export default function MatchmakingScreen() {
   useEffect(() => {
     if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
       lastNavigatedGameIdRef.current = gameView.gameId;
-      router.replace('/game');
+      router.replace('/game-loading');
     }
   }, [gameView]);
 

@@ -228,11 +228,11 @@ export default function GameScreen() {
     gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
     opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
   } = useGame();
-  const { startMusic, stopMusic, isMuted, toggleMute } = useMusicPlayer();
-
-  // Start the playlist when the game screen mounts; fade out + stop on unmount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { startMusic(); return () => { stopMusic(); }; }, []);
+  // Music is started by the game-loading screen *before* navigating here, so
+  // game.tsx no longer manages the music lifecycle. Even if /game remounts due
+  // to a stale router.replace('/game') call, music will not restart because
+  // startMusic() is a no-op when the match playlist is already active.
+  const { isMuted, toggleMute } = useMusicPlayer();
   // Track the latest emote per player so each side's bubble animates
   // independently (mine + opponent's can overlap).
   const [myEmote, setMyEmote] = useState<{ emote: string; key: number } | null>(null);

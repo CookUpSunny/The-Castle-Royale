@@ -90,16 +90,20 @@ export default function LobbyScreen() {
   const insets = useSafeAreaInsets();
   const { playerName, setPlayerName, isInQueue, connectionStatus, gameView } = useGame();
   const { isGameCenterAvailable, isAuthenticated, isLoading, profile, signIn } = useGameCenter();
-  const { playSplashTrack, stopMusic } = useMusicPlayer();
+  const { playSplashTrack } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
   const lastNavigatedGameIdRef = useRef<string | null>(null);
 
+  // Start splash music on focus. The MusicContext guards re-entry, so this is a
+  // no-op if splash is already playing — letting the lobby track carry through
+  // mode-select → arena-picker → matchmaking without restarting on each focus.
+  // We do NOT stop music on blur so it plays continuously across all pre-game
+  // screens; the game-loading screen explicitly stops it before the match.
   useFocusEffect(
     useCallback(() => {
       playSplashTrack();
-      return () => { stopMusic(); };
-    }, [playSplashTrack, stopMusic]),
+    }, [playSplashTrack]),
   );
 
   const playScale = useSharedValue(1);
@@ -131,7 +135,7 @@ export default function LobbyScreen() {
   useEffect(() => {
     if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
       lastNavigatedGameIdRef.current = gameView.gameId;
-      router.replace('/game');
+      router.replace('/game-loading');
     }
   }, [gameView]);
 
@@ -143,12 +147,11 @@ export default function LobbyScreen() {
 
   const handlePlay = () => {
     if (connectionStatus !== 'connected') return;
-    router.push('/arena-picker?mode=pvp');
+    router.push('/mode-select');
   };
 
-  const handleBotPlay = () => {
-    if (connectionStatus !== 'connected') return;
-    router.push('/arena-picker?mode=bot');
+  const handleHowToPlay = () => {
+    router.push('/how-to-play');
   };
 
   const handleNameSave = () => {
@@ -264,39 +267,17 @@ export default function LobbyScreen() {
           </Animated.View>
 
           <Pressable
-            onPress={handleBotPlay}
-            disabled={connectionStatus !== 'connected'}
+            onPress={handleHowToPlay}
             style={({ pressed }) => [styles.goldPillOuter, styles.goldPillSmall, pressed && { opacity: 0.88 }]}
           >
             <LinearGradient
-              colors={connectionStatus === 'connected'
-                ? ['#e8d060', '#b89018', '#e8d060']
-                : ['#2e2810', '#181408', '#2e2810']}
+              colors={['#e8d060', '#b89018', '#e8d060']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.goldPill}
             >
               <View style={styles.pillRow}>
-                <Text style={[styles.pillIcon, connectionStatus !== 'connected' && { color: '#5a5030' }]}>⚡</Text>
-                <Text style={[styles.goldPillText, styles.goldPillTextSm, connectionStatus !== 'connected' && { color: '#5a5030' }]}>QUICK PLAY · BOT</Text>
-              </View>
-            </LinearGradient>
-          </Pressable>
-
-          <Pressable
-            onPress={() => { if (connectionStatus === 'connected') router.push('/private-room'); }}
-            disabled={connectionStatus !== 'connected'}
-            style={({ pressed }) => [styles.goldPillOuter, styles.goldPillSmall, pressed && { opacity: 0.88 }]}
-          >
-            <LinearGradient
-              colors={connectionStatus === 'connected'
-                ? ['#e8d060', '#b89018', '#e8d060']
-                : ['#2e2810', '#181408', '#2e2810']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.goldPill}
-            >
-              <View style={styles.pillRow}>
-                <Text style={[styles.pillIcon, connectionStatus !== 'connected' && { color: '#5a5030' }]}>♛</Text>
-                <Text style={[styles.goldPillText, styles.goldPillTextSm, connectionStatus !== 'connected' && { color: '#5a5030' }]}>PRIVATE ROOM</Text>
+                <Text style={styles.pillIcon}>?</Text>
+                <Text style={[styles.goldPillText, styles.goldPillTextSm]}>HOW TO PLAY</Text>
               </View>
             </LinearGradient>
           </Pressable>

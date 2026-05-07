@@ -32,7 +32,7 @@ export default function ArenaPickerScreen() {
   useEffect(() => {
     if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
       lastNavigatedGameIdRef.current = gameView.gameId;
-      router.replace('/game');
+      router.replace('/game-loading');
     }
   }, [gameView]);
 
@@ -46,8 +46,13 @@ export default function ArenaPickerScreen() {
     setAvatar(selectedAvatar);
     if (mode === 'bot') {
       quickPlayBot();
+      // Navigate to the loading screen immediately. The bot game will be ready
+      // by the time the loading animation finishes (~2.5 s).
+      router.replace('/game-loading?mode=bot');
     } else {
       joinQueue();
+      // isInQueue effect above will navigate to /matchmaking, which then
+      // navigates to /game-loading once a match is found.
     }
   };
 

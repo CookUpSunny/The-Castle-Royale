@@ -45,13 +45,15 @@ function shuffleIndices(n: number): number[] {
   return arr;
 }
 
+type MusicMode = 'idle' | 'splash' | 'match';
+
 interface MusicContextValue {
   isMuted: boolean;
   isPlaying: boolean;
   toggleMute: () => void;
-  /** Start the looping splash-screen track (Sparks Fly). */
+  /** Start the looping splash-screen track (Sparks Fly). No-op if splash is already playing. */
   playSplashTrack: () => void;
-  /** Start the shuffled in-match playlist. */
+  /** Start the shuffled in-match playlist. No-op if match playlist is already playing. */
   startMusic: () => void;
   stopMusic: () => void;
 }
@@ -78,6 +80,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const fadeRef       = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef    = useRef(true);
   const prefLoadedRef = useRef(false);
+
+  // Current playback mode — guards against duplicate start calls that would
+  // restart the song (the bug that made the song restart on every card tap).
+  const modeRef = useRef<MusicMode>('idle');
 
   // Splash-mode flags
   const splashActiveRef        = useRef(false);
@@ -196,6 +202,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   }, [unloadCurrent, startFade]);
 
   const playSplashTrack = useCallback(() => {
+    // CRITICAL: no-op if splash is already playing. Prevents the song restart
+    // bug that fired on every focus change of the lobby.
+    if (modeRef.current === 'splash') return;
+    modeRef.current = 'splash';
     splashActiveRef.current = true;
     void playSplashTrackAsync();
   }, [playSplashTrackAsync]);
@@ -231,6 +241,11 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   }, [unloadCurrent]);
 
   const startMusic = useCallback(() => {
+    // CRITICAL: no-op if match playlist is already playing. This guards against
+    // remounts of the game screen (every card tap during setup used to remount
+    // /game and restart the song).
+    if (modeRef.current === 'match') return;
+    modeRef.current = 'match';
     splashActiveRef.current = false;
 
     // Fresh shuffle every match
@@ -246,6 +261,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   // ─── Stop (shared) ─────────────────────────────────────────────────────────
 
   const stopMusic = useCallback(() => {
+    modeRef.current = 'idle';
     splashActiveRef.current = false;
 
     clearFade();
