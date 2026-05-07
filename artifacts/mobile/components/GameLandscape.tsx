@@ -20,6 +20,7 @@ import { FELT_TINT } from '@/lib/sceneAssets';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
 import ActionButtons from '@/components/ActionButtons';
+import BackButton from '@/components/BackButton';
 import CardComponent, { CardBack } from '@/components/Card';
 import SceneBackground from '@/components/SceneBackground';
 import EmoteBubble from '@/components/EmoteBubble';
@@ -264,6 +265,17 @@ export default function GameLandscape(): React.JSX.Element | null {
   useEffect(() => {
     if (opponentEmoteBubble) setOpponentEmote(opponentEmoteBubble);
   }, [opponentEmoteBubble]);
+  const confirmLeave = (onConfirm: () => void) => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Bow out of this match? You will forfeit the game.')) onConfirm();
+    } else {
+      Alert.alert('Bow Out?', 'Leaving now forfeits the match. Your opponent will be notified.', [
+        { text: 'Stay', style: 'cancel' },
+        { text: 'Forfeit', style: 'destructive', onPress: onConfirm },
+      ]);
+    }
+  };
+
   // Tap-your-own-name-plate popover (Exit Game lives here).
   const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
   const [lastEventType, setLastEventType] = useState<string | undefined>();
@@ -412,6 +424,11 @@ export default function GameLandscape(): React.JSX.Element | null {
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
+      <BackButton
+        label="← EXIT"
+        onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })}
+        style={{ position: 'absolute', top: insets.top + webTopPad + 8, left: insets.left + 14, zIndex: 55 }}
+      />
       {/* Table felt blend — matches whichever arena the player picked.
           Identical two-pass gradient approach used in portrait game.tsx:
           a vertical pass creates the centre-tinted oval, a horizontal pass
@@ -627,15 +644,7 @@ export default function GameLandscape(): React.JSX.Element | null {
             <Pressable
               onPress={() => {
                 setPlayerMenuOpen(false);
-                const onConfirm = () => { leaveGame(); router.replace('/'); };
-                if (Platform.OS === 'web') {
-                  if (typeof window !== 'undefined' && window.confirm('Bow out of this match? You will forfeit the game.')) onConfirm();
-                } else {
-                  Alert.alert('Bow Out?', 'Leaving now forfeits the match. Your opponent will be notified.', [
-                    { text: 'Stay', style: 'cancel' },
-                    { text: 'Forfeit', style: 'destructive', onPress: onConfirm },
-                  ]);
-                }
+                confirmLeave(() => { leaveGame(); router.replace('/'); });
               }}
               style={styles.playerMenuItemLs}
             >

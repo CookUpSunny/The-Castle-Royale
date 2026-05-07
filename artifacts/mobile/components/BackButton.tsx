@@ -1,19 +1,20 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 
 interface BackButtonProps {
   label?: string;
   onPress: () => void;
+  style?: ViewStyle;
 }
 
-export default function BackButton({ label = '← BACK', onPress }: BackButtonProps) {
+export default function BackButton({ label = '← BACK', onPress, style }: BackButtonProps) {
   const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
       hitSlop={12}
-      style={({ pressed }) => [styles.btn, pressed && { opacity: 0.6 }]}
+      style={({ pressed }) => [styles.btn, style, pressed && { opacity: 0.6 }]}
     >
       <Text style={[styles.text, { color: colors.mutedForeground }]}>{label}</Text>
     </Pressable>
