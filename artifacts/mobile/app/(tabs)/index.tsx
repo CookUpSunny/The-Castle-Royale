@@ -89,7 +89,7 @@ function OutlinedTitle({
 export default function LobbyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { playerName, setPlayerName, joinQueue, quickPlayBot, isInQueue, connectionStatus, gameView } = useGame();
+  const { playerName, setPlayerName, isInQueue, connectionStatus, gameView } = useGame();
   const { isGameCenterAvailable, isAuthenticated, isLoading, profile, signIn } = useGameCenter();
   const { playSplashTrack, stopMusic } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
@@ -143,12 +143,12 @@ export default function LobbyScreen() {
 
   const handlePlay = () => {
     if (connectionStatus !== 'connected') return;
-    joinQueue();
+    router.push('/arena-picker?mode=pvp');
   };
 
   const handleBotPlay = () => {
     if (connectionStatus !== 'connected') return;
-    quickPlayBot();
+    router.push('/arena-picker?mode=bot');
   };
 
   const handleNameSave = () => {
