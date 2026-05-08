@@ -45,6 +45,8 @@ function HandCard({
   onTap,
   onLongPress,
   overlap,
+  index,
+  total,
   isStarterPick,
 }: {
   card: CardType;
@@ -54,8 +56,43 @@ function HandCard({
   onTap: (card: CardType) => void;
   onLongPress: (card: CardType) => void;
   overlap: number;
+  index: number;
+  total: number;
   isStarterPick?: boolean;
 }) {
+  const bounce = useSharedValue(0);
+
+  useEffect(() => {
+    if (isStarterPick) {
+      bounce.value = withRepeat(
+        withSequence(
+          withTiming(-5, { duration: 620, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 360, easing: Easing.in(Easing.quad) }),
+        ),
+        -1,
+      );
+    } else {
+      cancelAnimation(bounce);
+      bounce.value = withTiming(0, { duration: 180 });
+    }
+    return () => cancelAnimation(bounce);
+  }, [isStarterPick, bounce]);
+
+  // Fan curve: distribute rotation symmetrically from center.
+  // perCardDeg is capped so a large hand never exceeds ±12° total spread.
+  const center = (total - 1) / 2;
+  const perCardDeg = total > 1 ? Math.min(3.5, 24 / (total - 1)) : 0;
+  const fanAngle = (index - center) * perCardDeg;
+  // Edge cards arc upward (negative Y) — center is the lowest point.
+  const arcRise = Math.abs(index - center) * 4;
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: bounce.value - arcRise },
+      { rotateZ: `${fanAngle}deg` },
+    ],
+  }));
+
   const handlePress = useCallback(() => {
     if (!isMyTurn || !isPlayable) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -69,7 +106,7 @@ function HandCard({
   }, [card, isMyTurn, isPlayable, multiplicity, onLongPress]);
 
   return (
-    <View
+    <Animated.View
       style={[
         { marginLeft: overlap },
         isStarterPick && {
@@ -80,6 +117,7 @@ function HandCard({
           elevation: 18,
           borderRadius: 10,
         },
+        animStyle,
       ]}
     >
       <CardComponent
@@ -90,34 +128,9 @@ function HandCard({
         isPlayable={isMyTurn && isPlayable}
         multiplicity={multiplicity}
       />
-      {isStarterPick && (
-        <View style={starterStyles.recommendBadge}>
-          <Text style={starterStyles.recommendText}>RECOMMENDED</Text>
-        </View>
-      )}
-    </View>
+    </Animated.View>
   );
 }
-
-const starterStyles = StyleSheet.create({
-  recommendBadge: {
-    position: 'absolute',
-    top: -8,
-    alignSelf: 'center',
-    backgroundColor: '#fde047',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#a16207',
-  },
-  recommendText: {
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 1,
-    color: '#1a0535',
-  },
-});
 
 export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, discardPile, isMyTurn, onPlayCard, onPlayCards, mustPlayStarter }: PlayerHandProps) {
   const colors = useColors();
@@ -142,8 +155,8 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
     : `FACE-DOWN — TAP BLIND (${faceDownCount})`;
 
   // In starter mode the LOWEST-VALUE card from the active zone gets a gold
-  // glow + RECOMMENDED badge so the player knows the strategically-correct
-  // sacrifice without being forced into it.
+  // glow so the player knows the strategically-correct sacrifice without being
+  // forced into it. No text badge — the glow speaks for itself.
   const starterPickId: string | null = (() => {
     if (!mustPlayStarter || activeCards.length === 0) return null;
     const sorted = [...activeCards].sort((a, b) => a.value - b.value);
@@ -268,7 +281,7 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
       )}
       {mustPlayStarter && (
         <Text style={[styles.hint, { color: '#fde047' }]}>
-          Picked up the pile — tap any card (lowest recommended) or a chip to play doubles/triples
+          Picked up the pile — tap any card or a chip to play doubles/triples
         </Text>
       )}
 
@@ -313,6 +326,8 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
                 onTap={handleTap}
                 onLongPress={handleLongPress}
                 overlap={i === 0 ? 0 : overlap}
+                index={i}
+                total={activeCards.length}
                 isStarterPick={card.id === starterPickId}
               />
             );
@@ -422,7 +437,7 @@ const faceUpStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 4,
+    paddingBottom: 0,
   },
   faceUpRow: {
     flexDirection: 'row',
@@ -454,7 +469,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   multiChip: {
     paddingHorizontal: 10,
@@ -475,7 +490,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    alignItems: 'center',
-    paddingVertical: 4,
+    paddingTop: 20,
+    paddingBottom: 4,
+    alignItems: 'flex-end',
   },
 });

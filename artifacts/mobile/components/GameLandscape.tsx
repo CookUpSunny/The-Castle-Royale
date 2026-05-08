@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
 
   tableCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  playerHandSection: { paddingHorizontal: 4 },
+  playerHandSection: { paddingHorizontal: 4, marginBottom: 14, overflow: 'visible' },
 
   namePlate: {
     flexDirection: 'row',
