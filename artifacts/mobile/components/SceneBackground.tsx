@@ -27,6 +27,7 @@ function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] 
   if (sceneId === 'olympusThrone')   return ['#0d0a00', '#1a1400', '#0a0800'];
   if (sceneId === 'cosmicSanctum')   return ['#000008', '#050010', '#000005'];
   if (sceneId === 'flamingoFloor')   return ['#1a0008', '#2d0015', '#0f0006'];
+  // casinoGreen
   return ['#120010', '#22002a', '#07000f'];
 }
 
@@ -51,7 +52,7 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
 
       <LinearGradient colors={[...arenaTint]} style={StyleSheet.absoluteFill} />
 
-      {sceneId === 'flamingoCasino' ? <FlamingoAmbience /> : null}
+      {sceneId === 'casinoGreen' ? <FlamingoAmbience /> : null}
       {sceneId === 'waterfallCavern' ? <WaterfallAmbience /> : null}
       {sceneId === 'olympusThrone' ? <OlympusAmbience /> : null}
       {sceneId === 'cosmicSanctum' ? <CosmicAmbience /> : null}

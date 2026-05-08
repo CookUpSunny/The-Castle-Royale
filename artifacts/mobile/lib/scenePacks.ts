@@ -1,6 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export type SceneId = 'flamingoCasino' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum' | 'flamingoFloor';
+export type SceneId = 'casinoGreen' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum' | 'flamingoFloor';
 export type SceneVariant = 'portrait' | 'landscape';
 export type SceneLayerId = 'L0_far' | 'L1_mid' | 'L2_table' | 'L3_fx' | 'L4_vignette';
 
@@ -11,7 +11,7 @@ export interface SceneMeta {
 }
 
 export const SCENES_META: SceneMeta[] = [
-  { id: 'flamingoCasino', name: 'Casino Green', description: 'Rich felt green under warm spotlight glow' },
+  { id: 'casinoGreen', name: 'Casino Green', description: 'Rich felt green under warm spotlight glow' },
   { id: 'waterfallCavern', name: 'Waterfall Grotto', description: 'Serene cavern pool with mist and sun rays' },
   { id: 'olympusThrone', name: 'Olympus Throne', description: 'Marble arena above the clouds, gods watching from above' },
 ];
@@ -24,7 +24,7 @@ export interface ScenePack {
 }
 
 export const SCENE_PACKS: Record<SceneId, ScenePack> = {
-  flamingoCasino: {
+  casinoGreen: {
     layers: {
       portrait: {
         L0_far:   require('../assets/scenes/flamingoCasino/portrait/L0_far.png'),
@@ -112,6 +112,6 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
 };
 
 export function getScenePack(id: SceneId | undefined | null): ScenePack {
-  return SCENE_PACKS[id as SceneId] ?? SCENE_PACKS.flamingoCasino;
+  return SCENE_PACKS[id as SceneId] ?? SCENE_PACKS.casinoGreen;
 }
 

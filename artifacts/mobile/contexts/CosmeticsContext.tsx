@@ -173,7 +173,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     arena === 'royal'     ? 'olympusThrone'   :
     arena === 'cosmic'    ? 'cosmicSanctum'   :
     arena === 'classic'   ? 'flamingoFloor'   :
-    'flamingoCasino';
+    'casinoGreen';
 
   useEffect(() => {
     (async () => {
