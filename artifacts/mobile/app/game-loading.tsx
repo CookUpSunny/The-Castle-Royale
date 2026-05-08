@@ -100,6 +100,11 @@ export default function GameLoadingScreen() {
   const colors = useColors();
   const { stopMusic, startMusic } = useMusicPlayer();
   const { gameView } = useGame();
+  // Arena is read here (not in GameLandscape) because music starts on this
+  // loading screen — before the /game route mounts — so arena must be
+  // captured at the point of startMusic() call. By the time this screen
+  // appears the cosmetics context has already been hydrated from AsyncStorage
+  // on the lobby screen, so `arena` will always reflect the player's choice.
   const { arena } = useCosmetics();
 
   const captionOpacity = useSharedValue(0.5);

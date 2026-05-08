@@ -658,7 +658,10 @@ export default function GameLandscape(): React.JSX.Element | null {
               <Text style={styles.playerMenuIconLs}>🎵</Text>
               <View style={styles.volumeGaugeRow}>
                 {([0.25, 0.5, 0.75, 1.0] as const).map((level) => {
-                  const active = !isMuted && volumeLevel >= level;
+                  // Always show the stored level even when muted so the user
+                  // can see (and change) it without toggling sound on first.
+                  const selected = volumeLevel >= level;
+                  const dimmed   = selected && isMuted;
                   return (
                     <Pressable
                       key={level}
@@ -670,10 +673,15 @@ export default function GameLandscape(): React.JSX.Element | null {
                       }}
                       style={[
                         styles.volumeSegment,
-                        active ? styles.volumeSegmentActive : styles.volumeSegmentInactive,
+                        selected
+                          ? dimmed ? styles.volumeSegmentMuted : styles.volumeSegmentActive
+                          : styles.volumeSegmentInactive,
                       ]}
                     >
-                      <Text style={[styles.volumeSegmentLabel, { color: active ? '#e0c8ff' : '#4a2a6e' }]}>
+                      <Text style={[
+                        styles.volumeSegmentLabel,
+                        { color: selected ? (dimmed ? '#7a5a9e' : '#e0c8ff') : '#4a2a6e' },
+                      ]}>
                         {level === 0.25 ? '25' : level === 0.5 ? '50' : level === 0.75 ? '75' : '100'}
                       </Text>
                     </Pressable>
@@ -788,6 +796,10 @@ const styles = StyleSheet.create({
   volumeSegmentActive: {
     backgroundColor: '#5b1a8c',
     borderColor: '#b060ff',
+  },
+  volumeSegmentMuted: {
+    backgroundColor: '#2a1045',
+    borderColor: '#5a3a7e',
   },
   volumeSegmentInactive: {
     backgroundColor: '#1a0535',
