@@ -89,7 +89,7 @@ export default function LobbyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { playerName, setPlayerName, isInQueue, connectionStatus, gameView } = useGame();
-  const { isGameCenterAvailable, isAuthenticated, isLoading, profile, signIn } = useGameCenter();
+  const { isAuthenticated, profile } = useGameCenter();
   const { playSplashTrack } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
@@ -165,10 +165,6 @@ export default function LobbyScreen() {
 
   const displayCoins = profile?.coins ?? null;
   const displayElo = profile?.elo ?? null;
-  // Show GC sign-in button only when the native module is truly available (native iOS EAS build).
-  // Show the anonymous-mode banner on Android, web, AND Expo Go on iOS.
-  const showGameCenterButton = isGameCenterAvailable && !isAuthenticated && !isLoading;
-  const showGameCenterBanner = !isGameCenterAvailable;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -229,23 +225,6 @@ export default function LobbyScreen() {
         </View>
 
         <View style={styles.menuSection}>
-          {showGameCenterButton && (
-            <Pressable
-              onPress={() => { signIn(); }}
-              style={({ pressed }) => [styles.gcButton, pressed && { opacity: 0.78 }]}
-            >
-              <Text style={styles.gcButtonText}>Sign in with Game Center</Text>
-            </Pressable>
-          )}
-
-          {showGameCenterBanner && (
-            <View style={styles.gcBanner}>
-              <Text style={[styles.gcBannerText, { color: colors.mutedForeground }]}>
-                Game Center leaderboards are iOS-only. Playing anonymously.
-              </Text>
-            </View>
-          )}
-
           <Animated.View style={playStyle}>
             <Pressable
               onPress={handlePlay}
