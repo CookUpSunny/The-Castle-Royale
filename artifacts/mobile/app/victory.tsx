@@ -1,7 +1,8 @@
+import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/cinzel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import BackButton from '@/components/BackButton';
 import Animated, {
   useAnimatedStyle,
@@ -16,17 +17,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 
+const crownImage = require('../assets/crown-loss.png');
+
 export default function VictoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { clearGame, joinQueue } = useGame();
   const params = useLocalSearchParams<{ winner: string; myId: string; opponentName: string }>();
+  const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
 
   const isWin = params.winner === params.myId;
   const scale = useSharedValue(0.4);
   const opacity = useSharedValue(0);
   const rewardScale = useSharedValue(0);
   const glowPulse = useSharedValue(1);
+  const crownDrop = useSharedValue(-40);
+  const crownOpacity = useSharedValue(0);
 
   useEffect(() => {
     scale.value = withSpring(1, { damping: 12, stiffness: 100 });
@@ -37,6 +43,10 @@ export default function VictoryScreen() {
       -1,
       true,
     );
+    if (!isWin) {
+      crownDrop.value = withDelay(200, withSpring(0, { damping: 14, stiffness: 80 }));
+      crownOpacity.value = withDelay(200, withTiming(1, { duration: 500 }));
+    }
   }, []);
 
   const mainStyle = useAnimatedStyle(() => ({
@@ -52,6 +62,11 @@ export default function VictoryScreen() {
     transform: [{ scale: glowPulse.value }],
   }));
 
+  const crownStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: crownDrop.value }],
+    opacity: crownOpacity.value,
+  }));
+
   const handlePlayAgain = () => {
     clearGame();
     joinQueue();
@@ -65,10 +80,53 @@ export default function VictoryScreen() {
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
+  const cinzelBold = fontsLoaded ? 'Cinzel_700Bold' : undefined;
+  const cinzelRegular = fontsLoaded ? 'Cinzel_400Regular' : undefined;
+
+  if (!isWin) {
+    return (
+      <View style={[styles.container, styles.lossContainer]}>
+        <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
+          <BackButton label="← HOME" onPress={handleLobby} />
+
+          <Animated.View style={[styles.lossCenterBlock, mainStyle]}>
+            <Animated.Image
+              source={crownImage}
+              style={[styles.crownImage, crownStyle]}
+              resizeMode="contain"
+            />
+            <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>
+              YOU LOSE
+            </Text>
+            <Text style={[styles.lossSub, { fontFamily: cinzelRegular }]}>
+              {params.opponentName ?? 'Opponent'} claims victory
+            </Text>
+          </Animated.View>
+
+          <View style={styles.buttonSection}>
+            <Pressable
+              onPress={handlePlayAgain}
+              style={({ pressed }) => [styles.lossPrimaryBtn, pressed && { opacity: 0.8 }]}
+            >
+              <Text style={[styles.lossPrimaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleLobby}
+              style={styles.lossSecondaryBtn}
+            >
+              <Text style={[styles.lossSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={isWin ? ['#1a0a00', '#3d1a00', '#07000f'] : ['#0a0030', '#1a0045', '#07000f']}
+        colors={['#1a0a00', '#3d1a00', '#07000f']}
         style={StyleSheet.absoluteFill}
       />
 
@@ -76,7 +134,7 @@ export default function VictoryScreen() {
         style={[
           styles.glowBg,
           glowStyle,
-          { backgroundColor: isWin ? '#fbbf2420' : '#a855f720' },
+          { backgroundColor: '#fbbf2420' },
           Platform.OS === 'web' ? ({ filter: 'blur(60px)' } as object) : null,
         ]}
       />
@@ -85,32 +143,26 @@ export default function VictoryScreen() {
         <BackButton label="← HOME" onPress={handleLobby} />
 
         <Animated.View style={[styles.resultSection, mainStyle]}>
-          <Text style={[styles.resultEmoji, { color: isWin ? colors.neonGold : colors.neonPurple }]}>
-            {isWin ? '♛' : '♟'}
-          </Text>
-          <Text style={[styles.resultTitle, { color: isWin ? colors.neonGold : colors.foreground }]}>
-            {isWin ? 'YOU WIN!' : 'DEFEATED'}
-          </Text>
+          <Text style={[styles.resultEmoji, { color: colors.neonGold }]}>♛</Text>
+          <Text style={[styles.resultTitle, { color: colors.neonGold }]}>YOU WIN!</Text>
           <Text style={[styles.resultSub, { color: colors.mutedForeground }]}>
-            {isWin ? `${params.opponentName ?? 'Opponent'} has been outplayed` : `${params.opponentName ?? 'Opponent'} claims victory`}
+            {params.opponentName ?? 'Opponent'} has been outplayed
           </Text>
         </Animated.View>
 
-        {isWin && (
-          <Animated.View style={[styles.rewardSection, rewardStyle]}>
-            <View style={[styles.rewardCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.rewardTitle, { color: colors.mutedForeground }]}>REWARDS</Text>
-              <View style={styles.rewardRow}>
-                <Text style={[styles.rewardValue, { color: colors.accent }]}>+2,500</Text>
-                <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>COINS</Text>
-              </View>
-              <View style={styles.rewardRow}>
-                <Text style={[styles.rewardValue, { color: colors.electric }]}>+50</Text>
-                <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>GEMS</Text>
-              </View>
+        <Animated.View style={[styles.rewardSection, rewardStyle]}>
+          <View style={[styles.rewardCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.rewardTitle, { color: colors.mutedForeground }]}>REWARDS</Text>
+            <View style={styles.rewardRow}>
+              <Text style={[styles.rewardValue, { color: colors.accent }]}>+2,500</Text>
+              <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>COINS</Text>
             </View>
-          </Animated.View>
-        )}
+            <View style={styles.rewardRow}>
+              <Text style={[styles.rewardValue, { color: colors.electric }]}>+50</Text>
+              <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>GEMS</Text>
+            </View>
+          </View>
+        </Animated.View>
 
         <View style={styles.buttonSection}>
           <Pressable onPress={handlePlayAgain} style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}>
@@ -136,6 +188,7 @@ export default function VictoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  lossContainer: { backgroundColor: '#FFFFFF' },
   inner: { flex: 1, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32 },
   glowBg: {
     position: 'absolute',
@@ -146,6 +199,56 @@ const styles = StyleSheet.create({
     borderRadius: 150,
     opacity: 0.9,
   },
+
+  lossCenterBlock: { alignItems: 'center', flex: 1, justifyContent: 'center', gap: 8 },
+  crownImage: { width: 260, height: 260, marginBottom: 12 },
+  lossTitle: {
+    fontSize: 52,
+    fontWeight: '700',
+    letterSpacing: 8,
+    color: '#1a1a1a',
+    textAlign: 'center',
+  },
+  lossSub: {
+    fontSize: 14,
+    color: 'rgba(26,26,26,0.55)',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  lossPrimaryBtn: {
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  lossPrimaryBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 4,
+  },
+  lossSecondaryBtn: {
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(26,26,26,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lossSecondaryBtnText: {
+    color: 'rgba(26,26,26,0.6)',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 3,
+  },
+
   resultSection: { alignItems: 'center', marginTop: 20 },
   resultEmoji: { fontSize: 80, marginBottom: 8 },
   resultTitle: { fontSize: 52, fontWeight: '900', letterSpacing: 6, textAlign: 'center' },
