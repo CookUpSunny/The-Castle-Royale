@@ -24,6 +24,7 @@ const SCREEN_BLEND_LAYERS: ReadonlySet<SceneLayerId> = new Set(['L1_mid', 'L3_fx
 
 function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] {
   if (sceneId === 'waterfallCavern') return ['#01130e', '#032b1f', '#000a07'];
+  if (sceneId === 'olympusThrone')   return ['#0d0a00', '#1a1400', '#0a0800'];
   return ['#120010', '#22002a', '#07000f'];
 }
 
@@ -50,6 +51,7 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
 
       {sceneId === 'flamingoCasino' ? <FlamingoAmbience /> : null}
       {sceneId === 'waterfallCavern' ? <WaterfallAmbience /> : null}
+      {sceneId === 'olympusThrone' ? <OlympusAmbience /> : null}
 
       <CasinoTableFloor variant={variant} pack={pack} />
 
@@ -143,6 +145,19 @@ function FlamingoAmbience() {
         colors={['transparent', 'rgba(251,113,133,0.16)', 'rgba(251,191,36,0.10)', 'transparent']}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+function OlympusAmbience() {
+  return (
+    <View style={[StyleSheet.absoluteFill, { opacity: 0.30 }]} pointerEvents="none">
+      <LinearGradient
+        colors={['rgba(251,191,36,0.18)', 'rgba(255,255,255,0.06)', 'rgba(251,191,36,0.12)']}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
     </View>

@@ -161,9 +161,11 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [avatarId, setAvatarState] = useState<AvatarId>('eagles');
 
   // Derive the scene from the arena so the background imagery matches the
-  // arena the player selected. 'lightning' maps to the waterfall-cavern scene;
-  // every other arena uses the flamingo-casino scene.
-  const scene: SceneId = arena === 'lightning' ? 'waterfallCavern' : 'flamingoCasino';
+  // arena the player selected. Each arena now has its own scene.
+  const scene: SceneId =
+    arena === 'lightning' ? 'waterfallCavern' :
+    arena === 'royal'     ? 'olympusThrone'   :
+    'flamingoCasino';
 
   useEffect(() => {
     (async () => {

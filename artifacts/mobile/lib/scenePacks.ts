@@ -1,6 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export type SceneId = 'flamingoCasino' | 'waterfallCavern';
+export type SceneId = 'flamingoCasino' | 'waterfallCavern' | 'olympusThrone';
 export type SceneVariant = 'portrait' | 'landscape';
 export type SceneLayerId = 'L0_far' | 'L1_mid' | 'L2_table' | 'L3_fx' | 'L4_vignette';
 
@@ -11,8 +11,9 @@ export interface SceneMeta {
 }
 
 export const SCENES_META: SceneMeta[] = [
-  { id: 'flamingoCasino', name: 'Flamingo Floor', description: 'Warm pink neon casino vibes (Vegas-inspired)' },
+  { id: 'flamingoCasino', name: 'Casino Green', description: 'Rich felt green under warm spotlight glow' },
   { id: 'waterfallCavern', name: 'Waterfall Grotto', description: 'Serene cavern pool with mist and sun rays' },
+  { id: 'olympusThrone', name: 'Olympus Throne', description: 'Marble arena above the clouds, gods watching from above' },
 ];
 
 export interface ScenePack {
@@ -39,6 +40,23 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
       },
     },
     parallax: { L0_far: 0.03, L1_mid: 0.1, L2_table: 0.05, L3_fx: 0.2, L4_vignette: 0.0 },
+  },
+  olympusThrone: {
+    layers: {
+      portrait: {
+        L0_far:   require('../assets/scenes/olympusThrone/portrait/L0_far.png'),
+        L1_mid:   null,
+        L2_table: require('../assets/scenes/olympusThrone/portrait/L2_table.png'),
+        L3_fx:    null,
+      },
+      landscape: {
+        L0_far:   require('../assets/scenes/olympusThrone/landscape/L0_far.png'),
+        L1_mid:   null,
+        L2_table: require('../assets/scenes/olympusThrone/landscape/L2_table.png'),
+        L3_fx:    null,
+      },
+    },
+    parallax: { L0_far: 0.02, L1_mid: 0.08, L2_table: 0.04, L3_fx: 0.18, L4_vignette: 0.0 },
   },
   waterfallCavern: {
     layers: {
