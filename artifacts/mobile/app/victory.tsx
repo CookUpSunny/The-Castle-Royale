@@ -2,9 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/cinzel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import BackButton from '@/components/BackButton';
+import CardCurtain from '@/components/CardCurtain';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -137,13 +138,16 @@ export default function VictoryScreen() {
   const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
 
   const isWin = params.winner === params.myId;
+
   const scale = useSharedValue(0.4);
-  const opacity = useSharedValue(0);
+  const contentOpacity = useSharedValue(0);
   const glowPulse = useSharedValue(1);
 
-  useEffect(() => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 100 });
-    opacity.value = withTiming(1, { duration: 600 });
+  const [curtainSweeping, setCurtainSweeping] = useState(false);
+
+  const handleContentReady = useCallback(() => {
+    contentOpacity.value = withTiming(1, { duration: 400 });
+    scale.value = withDelay(100, withSpring(1, { damping: 12, stiffness: 100 }));
     if (isWin) {
       glowPulse.value = withRepeat(
         withSequence(withTiming(1.06, { duration: 1400 }), withTiming(0.97, { duration: 1400 })),
@@ -152,11 +156,16 @@ export default function VictoryScreen() {
       );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
-  }, []);
+    setTimeout(() => setCurtainSweeping(true), 200);
+  }, [isWin]);
 
   const mainStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    opacity: opacity.value,
+  }));
+
+  const innerContentStyle = useAnimatedStyle(() => ({
+    flex: 1,
+    opacity: contentOpacity.value,
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -182,33 +191,36 @@ export default function VictoryScreen() {
   if (!isWin) {
     return (
       <View style={[styles.container, styles.lossContainer]}>
-        <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
-          <BackButton label="← HOME" onPress={handleLobby} />
+        <Animated.View style={innerContentStyle}>
+          <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
+            <BackButton label="← HOME" onPress={handleLobby} />
 
-          <Animated.View style={[styles.lossCenterBlock, mainStyle]}>
-            <Animated.Image
-              source={crownLossImage}
-              style={styles.crownImage}
-              resizeMode="contain"
-            />
-            <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>YOU LOSE</Text>
-            <Text style={[styles.lossSub, { fontFamily: cinzelRegular }]}>
-              {params.opponentName ?? 'Opponent'} claims victory
-            </Text>
-          </Animated.View>
+            <Animated.View style={[styles.lossCenterBlock, mainStyle]}>
+              <Animated.Image
+                source={crownLossImage}
+                style={styles.crownImage}
+                resizeMode="contain"
+              />
+              <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>YOU LOSE</Text>
+              <Text style={[styles.lossSub, { fontFamily: cinzelRegular }]}>
+                {params.opponentName ?? 'Opponent'} claims victory
+              </Text>
+            </Animated.View>
 
-          <View style={styles.buttonSection}>
-            <Pressable
-              onPress={handlePlayAgain}
-              style={({ pressed }) => [styles.lossPrimaryBtn, pressed && { opacity: 0.8 }]}
-            >
-              <Text style={[styles.lossPrimaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
-            </Pressable>
-            <Pressable onPress={handleLobby} style={styles.lossSecondaryBtn}>
-              <Text style={[styles.lossSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
-            </Pressable>
+            <View style={styles.buttonSection}>
+              <Pressable
+                onPress={handlePlayAgain}
+                style={({ pressed }) => [styles.lossPrimaryBtn, pressed && { opacity: 0.8 }]}
+              >
+                <Text style={[styles.lossPrimaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
+              </Pressable>
+              <Pressable onPress={handleLobby} style={styles.lossSecondaryBtn}>
+                <Text style={[styles.lossSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </Animated.View>
+        <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} />
       </View>
     );
   }
@@ -220,47 +232,50 @@ export default function VictoryScreen() {
 
   return (
     <View style={[styles.container, styles.winContainer]}>
-      <Fireworks width={width} height={height} />
+      <Animated.View style={innerContentStyle}>
+        <Fireworks width={width} height={height} />
 
-      <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
-        <BackButton label="← HOME" onPress={handleLobby} />
+        <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
+          <BackButton label="← HOME" onPress={handleLobby} />
 
-        <Animated.View style={[styles.winCenterBlock, mainStyle]}>
-          <Animated.View style={[styles.winImageWrap, glowStyle]}>
-            <Animated.Image
-              source={crownWinImage}
-              style={{ width: imageSize, height: imageSize }}
-              resizeMode="contain"
-            />
+          <Animated.View style={[styles.winCenterBlock, mainStyle]}>
+            <Animated.View style={[styles.winImageWrap, glowStyle]}>
+              <Animated.Image
+                source={crownWinImage}
+                style={{ width: imageSize, height: imageSize }}
+                resizeMode="contain"
+              />
+            </Animated.View>
+
+            <Text style={[styles.winTitle, { fontFamily: cinzelBold }]}>YOU WIN</Text>
+            <Text style={[styles.winSub, { fontFamily: cinzelRegular }]}>
+              {params.opponentName ?? 'Opponent'} has been outplayed
+            </Text>
           </Animated.View>
 
-          <Text style={[styles.winTitle, { fontFamily: cinzelBold }]}>YOU WIN</Text>
-          <Text style={[styles.winSub, { fontFamily: cinzelRegular }]}>
-            {params.opponentName ?? 'Opponent'} has been outplayed
-          </Text>
-        </Animated.View>
-
-        <View style={styles.buttonSection}>
-          <Pressable
-            onPress={handlePlayAgain}
-            style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}
-          >
-            <LinearGradient
-              colors={['#fbbf24', '#f59e0b', '#d97706']}
-              style={styles.primaryBtnInner}
+          <View style={styles.buttonSection}>
+            <Pressable
+              onPress={handlePlayAgain}
+              style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}
             >
-              <Text style={[styles.primaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
-            </LinearGradient>
-          </Pressable>
+              <LinearGradient
+                colors={['#fbbf24', '#f59e0b', '#d97706']}
+                style={styles.primaryBtnInner}
+              >
+                <Text style={[styles.primaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
+              </LinearGradient>
+            </Pressable>
 
-          <Pressable
-            onPress={handleLobby}
-            style={styles.winSecondaryBtn}
-          >
-            <Text style={[styles.winSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
-          </Pressable>
+            <Pressable
+              onPress={handleLobby}
+              style={styles.winSecondaryBtn}
+            >
+              <Text style={[styles.winSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </Animated.View>
+      <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} />
     </View>
   );
 }
