@@ -2,23 +2,27 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
+import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
 import ActionButtons from '@/components/ActionButtons';
 import BackButton from '@/components/BackButton';
 import CardComponent, { CardBack } from '@/components/Card';
+import DrawPileStack, { type DrawPileHandle } from '@/components/DrawPileStack';
 import SceneBackground from '@/components/SceneBackground';
 import EmoteBubble from '@/components/EmoteBubble';
 import EmotePicker from '@/components/EmotePicker';
@@ -26,13 +30,6 @@ import FaceDownReveal from '@/components/FaceDownReveal';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import GlowPile from '@/components/GlowPile';
 import PlayerHand from '@/components/PlayerHand';
-
-// AI-generated anime casino art bundled with the app.
-// Metro requires static require() paths inside the artifact root, so the
-// originals from attached_assets/casino/ are copied into ./assets/casino/.
-const TABLE_BG = require('../assets/casino/table_backdrop_neon.png');
-const HERO_POV = require('../assets/casino/hero_player_pov.png');
-const OPPONENT_ART = require('../assets/casino/opponent_silver.png');
 
 function canPlayCard(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -164,18 +161,6 @@ function OpponentArea({ handCount, faceUp, faceDownCount }: { handCount: number;
   );
 }
 
-function DeckBadge({ count }: { count: number }) {
-  const colors = useColors();
-  return (
-    <View style={styles.deckBadgeWrap}>
-      <View style={styles.deckGlassBubble}>
-        <Text style={[styles.deckGlassLabel, { color: colors.neonGold }]}>DRAW</Text>
-        <Text style={[styles.deckGlassCount, { color: colors.neonGold }]}>{count}</Text>
-      </View>
-    </View>
-  );
-}
-
 /**
  * Landscape game layout — third-person over-the-shoulder POV inspired by the
  * cinematic anime mockup. Composition (left → right):
@@ -241,6 +226,29 @@ export default function GameLandscape(): React.JSX.Element | null {
   const ring2Opacity = useSharedValue(0);
   const ring3Scale = useSharedValue(0.3);
   const ring3Opacity = useSharedValue(0);
+
+  // Card draw animation — a CardBack flies from the draw pile to the hand
+  const drawAnimX = useSharedValue(0);
+  const drawAnimY = useSharedValue(0);
+  const drawAnimOpacity = useSharedValue(0);
+  const drawPileRef = useRef<DrawPileHandle>(null);
+  const prevDeckCountRef = useRef<number | null>(null);
+
+  // Drag-and-drop state
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
+  const dragVisible = useSharedValue(0);
+  const [draggingCard, setDraggingCard] = useState<CardType | null>(null);
+  const draggingCardRef = useRef<CardType | null>(null);
+  const [pileCenter, setPileCenter] = useState<{ x: number; y: number } | null>(null);
+  const tableCenterRef = useRef<View>(null);
+
+  // Cosmetics — actual avatar portraits for name plates
+  const cosmetics = useCosmetics();
+  const myAvatarPortrait = useMemo(
+    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.portrait ?? null,
+    [cosmetics.avatarId],
+  );
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
@@ -334,12 +342,85 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
 
+  // Card draw animation: fire when deckCount decreases (a card was drawn to hand)
+  useEffect(() => {
+    const current = gameView?.deckCount ?? 0;
+    if (prevDeckCountRef.current !== null && current < prevDeckCountRef.current) {
+      drawPileRef.current?.getPosition().then(({ x, y, width: w, height: h }) => {
+        const startX = x + w / 2;
+        const startY = y + h / 2;
+        const endX = width / 2;
+        const endY = height * 0.85;
+        drawAnimX.value = startX - 20;
+        drawAnimY.value = startY - 28;
+        drawAnimOpacity.value = 1;
+        drawAnimX.value = withTiming(endX - 20, { duration: 460, easing: Easing.out(Easing.quad) });
+        drawAnimY.value = withTiming(endY - 28, { duration: 460, easing: Easing.out(Easing.quad) });
+        drawAnimOpacity.value = withTiming(0, { duration: 200 });
+        // Fade out the card near the end
+        setTimeout(() => { drawAnimOpacity.value = withTiming(0, { duration: 180 }); }, 320);
+      }).catch(() => {});
+    }
+    prevDeckCountRef.current = current;
+  }, [gameView?.deckCount]);
+
+  // Drag-and-drop handlers (passed to PlayerHand → HandCard)
+  const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
+    draggingCardRef.current = card;
+    setDraggingCard(card);
+    dragX.value = x;
+    dragY.value = y;
+    dragVisible.value = withTiming(1, { duration: 80 });
+  }, [dragX, dragY, dragVisible]);
+
+  const handleDragMove = useCallback((x: number, y: number) => {
+    dragX.value = x;
+    dragY.value = y;
+  }, [dragX, dragY]);
+
+  const handleDragEnd = useCallback((x: number, y: number) => {
+    const drop = pileCenter;
+    const card = draggingCardRef.current;
+    if (drop && card) {
+      const dist = Math.sqrt(Math.pow(x - drop.x, 2) + Math.pow(y - drop.y, 2));
+      if (dist < 110) {
+        playCard(card.id);
+      }
+    }
+    dragVisible.value = withTiming(0, { duration: 120 });
+    setTimeout(() => {
+      setDraggingCard(null);
+      draggingCardRef.current = null;
+    }, 140);
+  }, [pileCenter, playCard, dragX, dragY, dragVisible]);
+
+  const dragCardStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: dragX.value - 28,
+    top: dragY.value - 39,
+    opacity: dragVisible.value,
+    zIndex: 200,
+    pointerEvents: 'none' as const,
+  }));
+
+  const drawAnimStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: drawAnimX.value,
+    top: drawAnimY.value,
+    opacity: drawAnimOpacity.value,
+    zIndex: 150,
+    pointerEvents: 'none' as const,
+  }));
+
   if (!gameView) return null;
 
   const {
     myHand, myFaceUp, myFaceDownCount, myFaceDownIds, opponentHandCount, opponentFaceUp, opponentFaceDownCount,
     opponentName, discardPile, deckCount, isMyTurn, canFastPlay,
   } = gameView;
+
+  // Opponent gets a deterministic avatar from the AVATARS list based on their name
+  const opponentAvatarPortrait = AVATARS[hashName(opponentName) % AVATARS.length]?.portrait ?? null;
 
   const activeZone = myHand.length > 0 ? myHand : myFaceUp;
   const burnIds = activeZone.filter((c) => c.value === 10 && canPlayCard(c, discardPile)).map((c) => c.id);
@@ -356,9 +437,9 @@ export default function GameLandscape(): React.JSX.Element | null {
     if (sameIds.length > 0) playCards(sameIds);
   };
 
-  // Column widths — tuned so the table center (cards) gets the most real estate.
-  const heroColW = Math.max(140, Math.min(220, width * 0.18));
+  // Column widths — narrower right column now that hero art is removed.
   const sideColW = Math.max(160, Math.min(220, width * 0.16));
+  const drawColW = 100;
 
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -374,7 +455,7 @@ export default function GameLandscape(): React.JSX.Element | null {
           { paddingTop: insets.top + webTopPad + 4, paddingBottom: insets.bottom + 4, paddingHorizontal: 8 },
         ]}
       >
-        {/* LEFT COLUMN — name plates + action buttons (no character art behind so the controls breathe) */}
+        {/* LEFT COLUMN — name plates + action buttons */}
         <View style={[styles.leftColumn, { width: sideColW }]}>
           <View style={styles.namePlateSlot}>
             <NamePlate
@@ -383,7 +464,7 @@ export default function GameLandscape(): React.JSX.Element | null {
               coins={opponentCoins}
               isActive={!isMyTurn}
               align="left"
-              portraitArt={OPPONENT_ART}
+              portraitArt={opponentAvatarPortrait}
             />
           </View>
           <View style={styles.actionStackInline}>
@@ -410,7 +491,7 @@ export default function GameLandscape(): React.JSX.Element | null {
               gems="8,450"
               isActive={isMyTurn}
               align="left"
-              portraitArt={HERO_POV}
+              portraitArt={myAvatarPortrait}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setPlayerMenuOpen((o) => !o);
@@ -424,7 +505,9 @@ export default function GameLandscape(): React.JSX.Element | null {
         <View style={styles.centerColumn}>
           <View style={styles.opponentTopRow}>
             <View style={styles.opponentArtFrame}>
-              <Image source={OPPONENT_ART} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="top" />
+              {opponentAvatarPortrait ? (
+                <Image source={opponentAvatarPortrait} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="top" />
+              ) : null}
             </View>
             <OpponentArea
               handCount={opponentHandCount}
@@ -433,7 +516,15 @@ export default function GameLandscape(): React.JSX.Element | null {
             />
           </View>
 
-          <View style={styles.tableCenter}>
+          <View
+            ref={tableCenterRef}
+            style={styles.tableCenter}
+            onLayout={() => {
+              tableCenterRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                setPileCenter({ x: pageX + w / 2, y: pageY + h / 2 });
+              });
+            }}
+          >
             <GlowPile pile={discardPile} lastEventType={lastEventType} />
           </View>
 
@@ -448,34 +539,31 @@ export default function GameLandscape(): React.JSX.Element | null {
               onPlayCard={playCard}
               onPlayCards={playCards}
               mustPlayStarter={gameView.mustPlayStarter}
+              draggable={isMyTurn && myHand.length > 0}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
             />
           </View>
         </View>
 
-        {/* RIGHT COLUMN — over-the-shoulder hero art + draw deck overlay */}
-        <View style={[styles.heroColumn, { width: heroColW }]}>
-          <View style={styles.heroArtFrame}>
-            <Image
-              source={HERO_POV}
-              style={StyleSheet.absoluteFillObject}
-              contentFit="cover"
-              contentPosition="left"
-            />
-            {/* Left-edge fade so the silhouette blends into the table center */}
-            <LinearGradient
-              colors={['rgba(7,0,15,0.85)', 'transparent']}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
-          </View>
-          {/* Draw deck floats over the hero column's upper-right corner */}
-          <View style={styles.deckOverlay}>
-            <DeckBadge count={deckCount} />
-          </View>
+        {/* RIGHT COLUMN — draw pile (no hero art) */}
+        <View style={[styles.drawPileColumn, { width: drawColW }]}>
+          <DrawPileStack ref={drawPileRef} count={deckCount} />
         </View>
       </View>
+
+      {/* Floating drag ghost card — follows finger while dragging */}
+      {draggingCard && (
+        <Animated.View style={dragCardStyle} pointerEvents="none">
+          <CardComponent card={draggingCard} size="md" />
+        </Animated.View>
+      )}
+
+      {/* Flying card draw animation overlay */}
+      <Animated.View style={drawAnimStyle} pointerEvents="none">
+        <CardBack size="sm" />
+      </Animated.View>
 
       {reveal && (
         <FaceDownReveal
@@ -658,18 +746,10 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 4,
   },
-  heroColumn: { height: '100%', position: 'relative' },
-  heroArtFrame: {
-    flex: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#3a1a5e',
-  },
-  deckOverlay: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
+  drawPileColumn: {
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   centerColumn: { flex: 1, justifyContent: 'space-between', paddingVertical: 4 },
@@ -709,12 +789,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   avatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 52,
+    height: 52,
+    borderRadius: 10,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   avatarText: { fontSize: 16, fontWeight: '900' },
   nameTextWrap: { flex: 1, justifyContent: 'center' },
@@ -723,25 +804,15 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 8, marginTop: 3 },
   statText: { fontSize: 10, fontWeight: '800' },
 
-  deckBadgeWrap: { alignItems: 'center' },
-  deckGlassBubble: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+  tagPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    gap: 2,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignSelf: 'center',
   },
-  deckGlassLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 2 },
-  deckGlassCount: { fontSize: 22, fontWeight: '900', lineHeight: 26 },
+  tagPillText: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
 
   placeholderInner: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 4 },
   placeholderText: { fontSize: 14, fontWeight: '900', letterSpacing: 3 },

@@ -1,9 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo } from 'react';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -35,6 +37,11 @@ interface PlayerHandProps {
   onPlayCards: (cardIds: string[]) => void;
   /** Starter mode: player just picked up the pile and must commit one card to restart it. Any card is playable; the lowest is recommended. Multi-play is disabled. */
   mustPlayStarter?: boolean;
+  /** When true, cards can be dragged to the pile in addition to tapped. */
+  draggable?: boolean;
+  onDragStart?: (card: CardType, x: number, y: number) => void;
+  onDragMove?: (x: number, y: number) => void;
+  onDragEnd?: (x: number, y: number) => void;
 }
 
 function HandCard({
@@ -48,6 +55,10 @@ function HandCard({
   index,
   total,
   isStarterPick,
+  draggable,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
 }: {
   card: CardType;
   isPlayable: boolean;
@@ -59,6 +70,10 @@ function HandCard({
   index: number;
   total: number;
   isStarterPick?: boolean;
+  draggable?: boolean;
+  onDragStart?: (card: CardType, x: number, y: number) => void;
+  onDragMove?: (x: number, y: number) => void;
+  onDragEnd?: (x: number, y: number) => void;
 }) {
   const bounce = useSharedValue(0);
 
@@ -100,7 +115,31 @@ function HandCard({
     onLongPress(card);
   }, [card, isMyTurn, isPlayable, multiplicity, onLongPress]);
 
-  return (
+  const dragGesture = useMemo(() => {
+    if (!draggable || !isMyTurn || !isPlayable) return null;
+    const _card = card;
+    const _onDragStart = onDragStart;
+    const _onDragMove = onDragMove;
+    const _onDragEnd = onDragEnd;
+    return Gesture.Pan()
+      .minDistance(10)
+      .onStart((e) => {
+        'worklet';
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
+        if (_onDragStart) runOnJS(_onDragStart)(_card, e.absoluteX, e.absoluteY);
+      })
+      .onUpdate((e) => {
+        'worklet';
+        if (_onDragMove) runOnJS(_onDragMove)(e.absoluteX, e.absoluteY);
+      })
+      .onEnd((e) => {
+        'worklet';
+        if (_onDragEnd) runOnJS(_onDragEnd)(e.absoluteX, e.absoluteY);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggable, isMyTurn, isPlayable, card]);
+
+  const cardNode = (
     <Animated.View
       style={[
         { marginLeft: overlap },
@@ -125,9 +164,14 @@ function HandCard({
       />
     </Animated.View>
   );
+
+  if (dragGesture) {
+    return <GestureDetector gesture={dragGesture}>{cardNode}</GestureDetector>;
+  }
+  return cardNode;
 }
 
-export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, discardPile, isMyTurn, onPlayCard, onPlayCards, mustPlayStarter }: PlayerHandProps) {
+export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, discardPile, isMyTurn, onPlayCard, onPlayCards, mustPlayStarter, draggable, onDragStart, onDragMove, onDragEnd }: PlayerHandProps) {
   const colors = useColors();
   const showHand = hand.length > 0;
   const showFaceUp = hand.length === 0 && faceUp.length > 0;
@@ -324,6 +368,10 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
                 index={i}
                 total={activeCards.length}
                 isStarterPick={card.id === starterPickId}
+                draggable={draggable}
+                onDragStart={onDragStart}
+                onDragMove={onDragMove}
+                onDragEnd={onDragEnd}
               />
             );
           })}
