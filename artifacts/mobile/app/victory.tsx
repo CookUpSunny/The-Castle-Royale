@@ -2,7 +2,7 @@ import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import BackButton from '@/components/BackButton';
 import Animated, {
   useAnimatedStyle,
@@ -19,6 +19,9 @@ import { useColors } from '@/hooks/useColors';
 
 const crownImage = require('../assets/crown-loss.png');
 
+const SERIF_BOLD = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+const SERIF_REGULAR = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+
 export default function VictoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -31,8 +34,6 @@ export default function VictoryScreen() {
   const opacity = useSharedValue(0);
   const rewardScale = useSharedValue(0);
   const glowPulse = useSharedValue(1);
-  const crownDrop = useSharedValue(-40);
-  const crownOpacity = useSharedValue(0);
 
   useEffect(() => {
     scale.value = withSpring(1, { damping: 12, stiffness: 100 });
@@ -43,10 +44,6 @@ export default function VictoryScreen() {
       -1,
       true,
     );
-    if (!isWin) {
-      crownDrop.value = withDelay(200, withSpring(0, { damping: 14, stiffness: 80 }));
-      crownOpacity.value = withDelay(200, withTiming(1, { duration: 500 }));
-    }
   }, []);
 
   const mainStyle = useAnimatedStyle(() => ({
@@ -62,11 +59,6 @@ export default function VictoryScreen() {
     transform: [{ scale: glowPulse.value }],
   }));
 
-  const crownStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: crownDrop.value }],
-    opacity: crownOpacity.value,
-  }));
-
   const handlePlayAgain = () => {
     clearGame();
     joinQueue();
@@ -80,8 +72,8 @@ export default function VictoryScreen() {
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
-  const cinzelBold = fontsLoaded ? 'Cinzel_700Bold' : undefined;
-  const cinzelRegular = fontsLoaded ? 'Cinzel_400Regular' : undefined;
+  const cinzelBold = fontsLoaded ? 'Cinzel_700Bold' : SERIF_BOLD;
+  const cinzelRegular = fontsLoaded ? 'Cinzel_400Regular' : SERIF_REGULAR;
 
   if (!isWin) {
     return (
@@ -92,7 +84,7 @@ export default function VictoryScreen() {
           <Animated.View style={[styles.lossCenterBlock, mainStyle]}>
             <Animated.Image
               source={crownImage}
-              style={[styles.crownImage, crownStyle]}
+              style={styles.crownImage}
               resizeMode="contain"
             />
             <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>
@@ -111,10 +103,7 @@ export default function VictoryScreen() {
               <Text style={[styles.lossPrimaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
             </Pressable>
 
-            <Pressable
-              onPress={handleLobby}
-              style={styles.lossSecondaryBtn}
-            >
+            <Pressable onPress={handleLobby} style={styles.lossSecondaryBtn}>
               <Text style={[styles.lossSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
             </Pressable>
           </View>
