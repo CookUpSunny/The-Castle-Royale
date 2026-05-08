@@ -2,7 +2,7 @@
  * MusicContext — background music player
  *
  * Two modes:
- *  • Splash  — "Sparks Fly" loops on the lobby screen (6 s fade-in, 6 s
+ *  • Splash  — "Sparks Fly" loops on the lobby screen (4 s fade-in, 6 s
  *              fade-out before each loop boundary, seamless restart).
  *  • Match   — arena-specific track when arena has a dedicated song (3 s fade-in,
  *              seamless loop); otherwise shuffled playlist of tracks 1–4.
@@ -25,11 +25,12 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import type { ArenaId } from './CosmeticsContext';
 import { setSfxMuted } from '../lib/sfx';
 
-const MUTED_KEY         = '@castleroyale_music_muted';
-const VOLUME_KEY        = '@castleroyale_volume';
-const SPLASH_FADE_STEPS = 60;   // 60 × 100 ms = 6 000 ms
-const MATCH_FADE_STEPS  = 30;   // 30 × 100 ms = 3 000 ms
-const FADE_MS           = 100;
+const MUTED_KEY           = '@castleroyale_music_muted';
+const VOLUME_KEY          = '@castleroyale_volume';
+const SPLASH_FADE_STEPS   = 60;   // 60 × 100 ms = 6 000 ms (loop fade-out + stop fade-out)
+const SPLASH_FADE_IN_STEPS = 40;  // 40 × 100 ms = 4 000 ms (opening fade-in only)
+const MATCH_FADE_STEPS    = 30;   // 30 × 100 ms = 3 000 ms
+const FADE_MS             = 100;
 const SPLASH_FADE_MS    = SPLASH_FADE_STEPS * FADE_MS; // 6 000 ms — fade-out trigger point
 const SPLASH_TRACK_IDX  = 1;    // track2.wav — Sparks Fly
 const OASIS_TRACK_IDX    = 4;    // oasis.wav    — Underground Kingdom
@@ -253,7 +254,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
       soundRef.current = sound;
       if (mountedRef.current) setIsPlaying(true);
-      startFade(1); // 6-second splash fade-in
+      startFade(1, undefined, SPLASH_FADE_IN_STEPS); // 4-second opening fade-in
     } catch {
       // Audio is best-effort — never crash the app
     }
