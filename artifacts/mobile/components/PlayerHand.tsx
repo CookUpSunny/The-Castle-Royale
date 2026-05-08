@@ -164,8 +164,6 @@ function HandCard({
       />
     </Animated.View>
   );
-  // When draggable, the long-press-to-multi-play is suppressed to avoid conflicting with
-  // the long-press-activate-drag gesture.  Edit cardNode after dragGesture check:
   const cardNodeFinal = dragGesture
     ? (
       <Animated.View

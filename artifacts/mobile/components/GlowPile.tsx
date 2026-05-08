@@ -159,10 +159,10 @@ export default function GlowPile({ pile, lastEventType, highlighted }: GlowPileP
         {/* ── Ambient table pool — sits behind everything ── */}
         <Animated.View style={[styles.tablePool, poolStyle]} pointerEvents="none">
           <LinearGradient
-            colors={[`${glowColor}00`, `${glowColor}50`, `${glowColor}30`, `${glowColor}00`]}
+            colors={[`${glowColor}55`, `${glowColor}22`, `${glowColor}00`]}
             style={StyleSheet.absoluteFill}
             start={{ x: 0.5, y: 0.0 }}
-            end={{ x: 0.5, y: 0.75 }}
+            end={{ x: 0.5, y: 0.85 }}
           />
         </Animated.View>
 
@@ -235,11 +235,11 @@ const styles = StyleSheet.create({
   tablePool: {
     position: 'absolute',
     width: 220,
-    height: 72,
+    height: 60,
     borderRadius: 999,
+    bottom: -12,
     overflow: 'hidden',
     zIndex: 0,
-    top: '40%',
   },
   dropRing: {
     position: 'absolute',

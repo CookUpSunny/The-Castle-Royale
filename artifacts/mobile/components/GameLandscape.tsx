@@ -163,15 +163,10 @@ function OpponentArea({ handCount, faceUp, faceDownCount }: { handCount: number;
 }
 
 /**
- * Landscape game layout — third-person over-the-shoulder POV inspired by the
- * cinematic anime mockup. Composition (left → right):
- *   • Hero character art column on the left (over-shoulder silhouette)
- *   • Action buttons stacked top-to-bottom on the inner left edge
- *   • Center column: opponent character + opponent cards (top), discard pile (mid), player hand (bottom)
- *   • Right column: opponent name plate (top), draw deck (mid), player name plate (bottom)
- *
- * Falls back to gradient placeholder frames when the AI-generated art assets
- * are not yet present in attached_assets/casino/.
+ * Landscape game layout. Composition (left → right):
+ *   • Left column: opponent name plate (top), action buttons (mid), player name plate (bottom)
+ *   • Center column: opponent avatar + cards (top), discard pile / GlowPile (mid), player hand (bottom)
+ *   • Right column (narrow): DrawPileStack centered vertically
  */
 export default function GameLandscape(): React.JSX.Element | null {
   const colors = useColors();
