@@ -102,6 +102,12 @@ export const ARENAS: Arena[] = [
     description: 'The classic casino table — rich felt green under warm spotlight glow. Clean, timeless, and all business. No distractions. Just cards.',
   },
   {
+    id: 'classic',
+    name: 'The Flamingo Floor',
+    premium: false,
+    description: 'Step into a dazzling neon casino where fortune favors the bold, surrounded by glowing pink lights and the thrill of high-stakes play. Flamingos dance beneath towering neon signs as players battle on a floor that pulses with pure Vegas energy.\n\nWARNING: Winning streaks may become addictive.',
+  },
+  {
     id: 'cosmic',
     name: 'Cosmic Sanctum',
     premium: false,
@@ -150,7 +156,7 @@ const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 const isArenaId = (v: string | null): v is ArenaId =>
-  v === 'greenTable' || v === 'cosmic' || v === 'royal' || v === 'lightning';
+  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning';
 
 const isAvatarId = (v: string | null): v is AvatarId =>
   v === 'eagles' || v === 'frog' || v === 'troll';
@@ -166,6 +172,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     arena === 'lightning' ? 'waterfallCavern' :
     arena === 'royal'     ? 'olympusThrone'   :
     arena === 'cosmic'    ? 'cosmicSanctum'   :
+    arena === 'classic'   ? 'flamingoFloor'   :
     'flamingoCasino';
 
   useEffect(() => {

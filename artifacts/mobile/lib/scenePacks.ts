@@ -1,6 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export type SceneId = 'flamingoCasino' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum';
+export type SceneId = 'flamingoCasino' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum' | 'flamingoFloor';
 export type SceneVariant = 'portrait' | 'landscape';
 export type SceneLayerId = 'L0_far' | 'L1_mid' | 'L2_table' | 'L3_fx' | 'L4_vignette';
 
@@ -36,6 +36,23 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
         L0_far:   require('../assets/scenes/flamingoCasino/landscape/L0_far.png'),
         L1_mid:   null,
         L2_table: require('../assets/scenes/flamingoCasino/landscape/L2_table.png'),
+        L3_fx:    null,
+      },
+    },
+    parallax: { L0_far: 0.03, L1_mid: 0.1, L2_table: 0.05, L3_fx: 0.2, L4_vignette: 0.0 },
+  },
+  flamingoFloor: {
+    layers: {
+      portrait: {
+        L0_far:   require('../assets/scenes/flamingoFloor/portrait/L0_far.png'),
+        L1_mid:   null,
+        L2_table: require('../assets/scenes/flamingoFloor/portrait/L2_table.png'),
+        L3_fx:    null,
+      },
+      landscape: {
+        L0_far:   require('../assets/scenes/flamingoFloor/landscape/L0_far.png'),
+        L1_mid:   null,
+        L2_table: require('../assets/scenes/flamingoFloor/landscape/L2_table.png'),
         L3_fx:    null,
       },
     },
