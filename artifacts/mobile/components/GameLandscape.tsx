@@ -176,7 +176,7 @@ export default function GameLandscape(): React.JSX.Element | null {
     gameView, playerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
     opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
   } = useGame();
-  const { isMuted, toggleMute } = useMusicPlayer();
+  const { isMuted, toggleMute, volumeLevel, setVolumeLevel } = useMusicPlayer();
   const [myEmote, setMyEmote] = useState<{ emote: string; key: number } | null>(null);
   const [opponentEmote, setOpponentEmote] = useState<{ emote: string; key: number } | null>(null);
   useEffect(() => {
@@ -653,18 +653,43 @@ export default function GameLandscape(): React.JSX.Element | null {
               { left: insets.left + 16, bottom: insets.bottom + 12 },
             ]}
           >
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                toggleMute();
-              }}
-              style={styles.playerMenuItemLs}
-            >
-              <Text style={styles.playerMenuIconLs}>{isMuted ? '🔇' : '🔊'}</Text>
-              <Text style={[styles.playerMenuLabelLs, { color: isMuted ? '#6b5a7e' : '#e0c8ff' }]}>
-                {isMuted ? 'SOUND OFF' : 'SOUND ON'}
-              </Text>
-            </Pressable>
+            {/* Volume gauge — 4 tappable segments + mute toggle */}
+            <View style={styles.playerMenuItemLs}>
+              <Text style={styles.playerMenuIconLs}>🎵</Text>
+              <View style={styles.volumeGaugeRow}>
+                {([0.25, 0.5, 0.75, 1.0] as const).map((level) => {
+                  const active = !isMuted && volumeLevel >= level;
+                  return (
+                    <Pressable
+                      key={level}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setVolumeLevel(level);
+                        // Unmute if tapping a level while muted
+                        if (isMuted) toggleMute();
+                      }}
+                      style={[
+                        styles.volumeSegment,
+                        active ? styles.volumeSegmentActive : styles.volumeSegmentInactive,
+                      ]}
+                    >
+                      <Text style={[styles.volumeSegmentLabel, { color: active ? '#e0c8ff' : '#4a2a6e' }]}>
+                        {level === 0.25 ? '25' : level === 0.5 ? '50' : level === 0.75 ? '75' : '100'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  toggleMute();
+                }}
+                style={styles.muteButton}
+              >
+                <Text style={{ fontSize: 15 }}>{isMuted ? '🔇' : '🔊'}</Text>
+              </Pressable>
+            </View>
             <Pressable
               onPress={() => {
                 setPlayerMenuOpen(false);
@@ -745,6 +770,44 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1.2,
     color: '#ff4d6d',
+  },
+
+  volumeGaugeRow: {
+    flexDirection: 'row',
+    gap: 4,
+    flex: 1,
+  },
+  volumeSegment: {
+    flex: 1,
+    height: 22,
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  volumeSegmentActive: {
+    backgroundColor: '#5b1a8c',
+    borderColor: '#b060ff',
+  },
+  volumeSegmentInactive: {
+    backgroundColor: '#1a0535',
+    borderColor: '#3a1a5e',
+  },
+  volumeSegmentLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  muteButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a0535',
+    borderWidth: 1,
+    borderColor: '#3a1a5e',
+    marginLeft: 4,
   },
 
   namePlateSlot: {

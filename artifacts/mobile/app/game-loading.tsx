@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useGame } from '@/contexts/GameContext';
+import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -99,6 +100,7 @@ export default function GameLoadingScreen() {
   const colors = useColors();
   const { stopMusic, startMusic } = useMusicPlayer();
   const { gameView } = useGame();
+  const { arena } = useCosmetics();
 
   const captionOpacity = useSharedValue(0.5);
 
@@ -122,7 +124,7 @@ export default function GameLoadingScreen() {
     const maxT = setTimeout(() => {
       if (navigatedRef.current) return;
       navigatedRef.current = true;
-      startMusic();
+      startMusic(arena);
       router.replace('/game');
     }, MAX_WAIT_MS);
 
@@ -136,7 +138,7 @@ export default function GameLoadingScreen() {
   useEffect(() => {
     if (!animationDone || !gameView || navigatedRef.current) return;
     navigatedRef.current = true;
-    startMusic();
+    startMusic(arena);
     router.replace('/game');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animationDone, gameView]);
