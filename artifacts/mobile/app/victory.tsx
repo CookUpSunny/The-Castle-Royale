@@ -25,7 +25,7 @@ const crownLossImage = require('../assets/crown-loss.png');
 const SERIF_BOLD = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const SERIF_REGULAR = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
-const PARTICLE_COLORS = ['#fbbf24', '#f59e0b', '#10b981', '#ffffff', '#f97316', '#fde047'];
+const PARTICLE_COLORS = ['#fbbf24', '#10b981', '#ffffff', '#f97316'];
 
 interface ParticleDef {
   id: number;
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
 
   // ── Win layout
   winInner: { flex: 1, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 28 },
-  winCenterBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: '8%' },
+  winCenterBlock: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: '15%' },
   winImageWrap: { alignItems: 'center', justifyContent: 'center' },
   winTitle: {
     fontSize: 46,
