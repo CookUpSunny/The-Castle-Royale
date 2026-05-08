@@ -235,10 +235,11 @@ const styles = StyleSheet.create({
   tablePool: {
     position: 'absolute',
     width: 220,
-    height: 80,
+    height: 72,
     borderRadius: 999,
     overflow: 'hidden',
     zIndex: 0,
+    top: '40%',
   },
   dropRing: {
     position: 'absolute',

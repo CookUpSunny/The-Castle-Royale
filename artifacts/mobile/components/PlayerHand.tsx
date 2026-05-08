@@ -164,9 +164,37 @@ function HandCard({
       />
     </Animated.View>
   );
+  // When draggable, the long-press-to-multi-play is suppressed to avoid conflicting with
+  // the long-press-activate-drag gesture.  Edit cardNode after dragGesture check:
+  const cardNodeFinal = dragGesture
+    ? (
+      <Animated.View
+        style={[
+          { marginLeft: overlap },
+          isStarterPick && {
+            shadowColor: '#fde047',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 1,
+            shadowRadius: 16,
+            elevation: 18,
+            borderRadius: 10,
+          },
+          animStyle,
+        ]}
+      >
+        <CardComponent
+          card={card}
+          size="lg"
+          onPress={isMyTurn && isPlayable ? handlePress : undefined}
+          isPlayable={isMyTurn && isPlayable}
+          multiplicity={multiplicity}
+        />
+      </Animated.View>
+    )
+    : cardNode;
 
   if (dragGesture) {
-    return <GestureDetector gesture={dragGesture}>{cardNode}</GestureDetector>;
+    return <GestureDetector gesture={dragGesture}>{cardNodeFinal}</GestureDetector>;
   }
   return cardNode;
 }
