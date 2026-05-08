@@ -81,10 +81,10 @@ function HandCard({
   // Fan curve: distribute rotation symmetrically from center.
   // perCardDeg is capped so a large hand never exceeds ±12° total spread.
   const center = (total - 1) / 2;
-  const perCardDeg = total > 1 ? Math.min(3.5, 24 / (total - 1)) : 0;
+  const perCardDeg = total > 1 ? Math.min(3, 20 / (total - 1)) : 0;
   const fanAngle = (index - center) * perCardDeg;
   // Edge cards arc upward (negative Y) — center is the lowest point.
-  const arcRise = Math.abs(index - center) * 4;
+  const arcRise = Math.abs(index - center) * 3;
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [
