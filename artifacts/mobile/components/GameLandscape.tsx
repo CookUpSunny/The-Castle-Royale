@@ -9,6 +9,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withSpring,
@@ -237,10 +238,13 @@ export default function GameLandscape(): React.JSX.Element | null {
   // Drag-and-drop state
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
+  const dragStartX = useSharedValue(0);
+  const dragStartY = useSharedValue(0);
   const dragVisible = useSharedValue(0);
   const [draggingCard, setDraggingCard] = useState<CardType | null>(null);
   const draggingCardRef = useRef<CardType | null>(null);
   const [pileCenter, setPileCenter] = useState<{ x: number; y: number } | null>(null);
+  const [pileHighlighted, setPileHighlighted] = useState(false);
   const tableCenterRef = useRef<View>(null);
 
   // Cosmetics — actual avatar portraits for name plates
@@ -342,23 +346,22 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
 
-  // Card draw animation: fire when deckCount decreases (a card was drawn to hand)
+  // Card draw animation: fires only when deckCount decreases by exactly 1
   useEffect(() => {
     const current = gameView?.deckCount ?? 0;
-    if (prevDeckCountRef.current !== null && current < prevDeckCountRef.current) {
+    if (prevDeckCountRef.current !== null && current === prevDeckCountRef.current - 1) {
       drawPileRef.current?.getPosition().then(({ x, y, width: w, height: h }) => {
         const startX = x + w / 2;
         const startY = y + h / 2;
         const endX = width / 2;
         const endY = height * 0.85;
+        // Teleport to start position, stay opaque for the 450ms flight, then fade near the end
         drawAnimX.value = startX - 20;
         drawAnimY.value = startY - 28;
         drawAnimOpacity.value = 1;
-        drawAnimX.value = withTiming(endX - 20, { duration: 460, easing: Easing.out(Easing.quad) });
-        drawAnimY.value = withTiming(endY - 28, { duration: 460, easing: Easing.out(Easing.quad) });
-        drawAnimOpacity.value = withTiming(0, { duration: 200 });
-        // Fade out the card near the end
-        setTimeout(() => { drawAnimOpacity.value = withTiming(0, { duration: 180 }); }, 320);
+        drawAnimX.value = withTiming(endX - 20, { duration: 450, easing: Easing.out(Easing.quad) });
+        drawAnimY.value = withTiming(endY - 28, { duration: 450, easing: Easing.out(Easing.quad) });
+        drawAnimOpacity.value = withDelay(300, withTiming(0, { duration: 150 }));
       }).catch(() => {});
     }
     prevDeckCountRef.current = current;
@@ -370,29 +373,48 @@ export default function GameLandscape(): React.JSX.Element | null {
     setDraggingCard(card);
     dragX.value = x;
     dragY.value = y;
+    dragStartX.value = x;
+    dragStartY.value = y;
     dragVisible.value = withTiming(1, { duration: 80 });
-  }, [dragX, dragY, dragVisible]);
+  }, [dragX, dragY, dragStartX, dragStartY, dragVisible]);
 
   const handleDragMove = useCallback((x: number, y: number) => {
     dragX.value = x;
     dragY.value = y;
-  }, [dragX, dragY]);
+    // Highlight the pile when the card is within drop radius
+    const drop = pileCenter;
+    if (drop) {
+      const dist = Math.sqrt(Math.pow(x - drop.x, 2) + Math.pow(y - drop.y, 2));
+      setPileHighlighted(dist < 110);
+    }
+  }, [dragX, dragY, pileCenter]);
 
   const handleDragEnd = useCallback((x: number, y: number) => {
     const drop = pileCenter;
     const card = draggingCardRef.current;
+    setPileHighlighted(false);
     if (drop && card) {
       const dist = Math.sqrt(Math.pow(x - drop.x, 2) + Math.pow(y - drop.y, 2));
       if (dist < 110) {
+        // Successful drop — fade ghost out immediately
         playCard(card.id);
+        dragVisible.value = withTiming(0, { duration: 100 });
+        setTimeout(() => {
+          setDraggingCard(null);
+          draggingCardRef.current = null;
+        }, 120);
+        return;
       }
     }
-    dragVisible.value = withTiming(0, { duration: 120 });
+    // Missed drop — spring ghost back to start position then fade
+    dragX.value = withSpring(dragStartX.value, { damping: 20, stiffness: 200 });
+    dragY.value = withSpring(dragStartY.value, { damping: 20, stiffness: 200 });
+    dragVisible.value = withDelay(180, withTiming(0, { duration: 120 }));
     setTimeout(() => {
       setDraggingCard(null);
       draggingCardRef.current = null;
-    }, 140);
-  }, [pileCenter, playCard, dragX, dragY, dragVisible]);
+    }, 320);
+  }, [pileCenter, playCard, dragX, dragY, dragStartX, dragStartY, dragVisible]);
 
   const dragCardStyle = useAnimatedStyle(() => ({
     position: 'absolute',
@@ -525,7 +547,7 @@ export default function GameLandscape(): React.JSX.Element | null {
               });
             }}
           >
-            <GlowPile pile={discardPile} lastEventType={lastEventType} />
+            <GlowPile pile={discardPile} lastEventType={lastEventType} highlighted={pileHighlighted} />
           </View>
 
           <View style={styles.playerHandSection}>

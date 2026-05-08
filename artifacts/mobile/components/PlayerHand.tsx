@@ -122,7 +122,7 @@ function HandCard({
     const _onDragMove = onDragMove;
     const _onDragEnd = onDragEnd;
     return Gesture.Pan()
-      .minDistance(10)
+      .activateAfterLongPress(350)
       .onStart((e) => {
         'worklet';
         runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);

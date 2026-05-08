@@ -17,6 +17,8 @@ import Card from './Card';
 interface GlowPileProps {
   pile: CardType[];
   lastEventType?: string;
+  /** When true a pulsing ring appears to signal a valid drop target */
+  highlighted?: boolean;
 }
 
 const ARENA_ACCENT: Record<string, string> = {
@@ -27,7 +29,7 @@ const ARENA_ACCENT: Record<string, string> = {
 };
 
 
-export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
+export default function GlowPile({ pile, lastEventType, highlighted }: GlowPileProps) {
   const colors = useColors();
   const { arena } = useCosmetics();
 
@@ -36,8 +38,29 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
   const ring3Scale   = useSharedValue(1);
   const burnOpacity  = useSharedValue(0);
   const poolOpacity  = useSharedValue(0.55);
+  const dropRingOpacity = useSharedValue(0);
+  const dropRingScale   = useSharedValue(1);
 
   const topCard: CardType | undefined = pile[pile.length - 1];
+
+  // Drop-zone highlight pulse when a card is being dragged over the pile
+  useEffect(() => {
+    if (highlighted) {
+      dropRingOpacity.value = withRepeat(
+        withSequence(withTiming(0.9, { duration: 300 }), withTiming(0.4, { duration: 300 })),
+        -1,
+        true,
+      );
+      dropRingScale.value = withRepeat(
+        withSequence(withTiming(1.15, { duration: 320 }), withTiming(1.0, { duration: 320 })),
+        -1,
+        true,
+      );
+    } else {
+      dropRingOpacity.value = withTiming(0, { duration: 150 });
+      dropRingScale.value = withTiming(1, { duration: 150 });
+    }
+  }, [highlighted, dropRingOpacity, dropRingScale]);
 
   useEffect(() => {
     ring1Scale.value = withRepeat(
@@ -118,6 +141,10 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
   const ring3Style = useAnimatedStyle(() => ({ transform: [{ scale: ring3Scale.value }] }));
   const burnStyle  = useAnimatedStyle(() => ({ opacity: burnOpacity.value }));
   const poolStyle  = useAnimatedStyle(() => ({ opacity: poolOpacity.value }));
+  const dropRingStyle = useAnimatedStyle(() => ({
+    opacity: dropRingOpacity.value,
+    transform: [{ scale: dropRingScale.value }],
+  }));
 
   const arenaAccent = ARENA_ACCENT[arena] ?? '#f5a623';
 
@@ -132,10 +159,10 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
         {/* ── Ambient table pool — sits behind everything ── */}
         <Animated.View style={[styles.tablePool, poolStyle]} pointerEvents="none">
           <LinearGradient
-            colors={[`${glowColor}55`, `${glowColor}22`, `${glowColor}00`]}
+            colors={[`${glowColor}00`, `${glowColor}50`, `${glowColor}30`, `${glowColor}00`]}
             style={StyleSheet.absoluteFill}
             start={{ x: 0.5, y: 0.0 }}
-            end={{ x: 0.5, y: 1.0 }}
+            end={{ x: 0.5, y: 0.75 }}
           />
         </Animated.View>
 
@@ -174,6 +201,14 @@ export default function GlowPile({ pile, lastEventType }: GlowPileProps) {
             style={StyleSheet.absoluteFill}
           />
         </Animated.View>
+
+        {/* ── Drop-zone ring — pulses when a card is being dragged over pile ── */}
+        <Animated.View style={[styles.dropRing, dropRingStyle]} pointerEvents="none">
+          <LinearGradient
+            colors={['transparent', '#ffffff60', 'transparent']}
+            style={styles.ringFill}
+          />
+        </Animated.View>
       </View>
 
       {pile.length > 0 && (
@@ -200,11 +235,19 @@ const styles = StyleSheet.create({
   tablePool: {
     position: 'absolute',
     width: 220,
-    height: 56,
+    height: 80,
     borderRadius: 999,
-    bottom: 0,
     overflow: 'hidden',
     zIndex: 0,
+  },
+  dropRing: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 2.5,
+    borderColor: '#ffffff90',
+    overflow: 'hidden',
   },
   ringFill: {
     flex: 1,
