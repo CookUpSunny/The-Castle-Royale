@@ -1,10 +1,12 @@
+import * as Haptics from 'expo-haptics';
 import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/cinzel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import BackButton from '@/components/BackButton';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -17,14 +19,119 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 
-const crownImage = require('../assets/crown-loss.png');
+const crownWinImage = require('../assets/crown-win.png');
+const crownLossImage = require('../assets/crown-loss.png');
 
 const SERIF_BOLD = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const SERIF_REGULAR = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
+const PARTICLE_COLORS = ['#fbbf24', '#f59e0b', '#10b981', '#ffffff', '#f97316', '#fde047'];
+
+interface ParticleDef {
+  id: number;
+  originX: number;
+  originY: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  duration: number;
+  delay: number;
+}
+
+function Particle({ def }: { def: ParticleDef }) {
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    opacity.value = withDelay(def.delay, withTiming(1, { duration: 80 }));
+    tx.value = withDelay(def.delay, withTiming(def.vx, { duration: def.duration, easing: Easing.out(Easing.quad) }));
+    ty.value = withDelay(
+      def.delay,
+      withTiming(def.vy, { duration: def.duration, easing: Easing.in(Easing.quad) }),
+    );
+    opacity.value = withDelay(
+      def.delay + def.duration * 0.3,
+      withTiming(0, { duration: def.duration * 0.7 }),
+    );
+    scale.value = withDelay(def.delay, withTiming(0, { duration: def.duration }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: tx.value },
+      { translateY: ty.value },
+      { scale: scale.value },
+    ],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          left: def.originX - def.size / 2,
+          top: def.originY - def.size / 2,
+          width: def.size,
+          height: def.size,
+          borderRadius: def.size / 2,
+          backgroundColor: def.color,
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+function Fireworks({ width, height }: { width: number; height: number }) {
+  const particles = useMemo<ParticleDef[]>(() => {
+    const origins = [
+      { x: width * 0.22, y: height * 0.22 },
+      { x: width * 0.5,  y: height * 0.15 },
+      { x: width * 0.78, y: height * 0.22 },
+    ];
+    const defs: ParticleDef[] = [];
+    let id = 0;
+    origins.forEach((origin, oi) => {
+      const count = 14;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const speed = 60 + Math.random() * 110;
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed + 80 + Math.random() * 60;
+        defs.push({
+          id: id++,
+          originX: origin.x,
+          originY: origin.y,
+          vx,
+          vy,
+          color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)]!,
+          size: 5 + Math.random() * 5,
+          duration: 900 + Math.random() * 500,
+          delay: oi * 120 + Math.random() * 80,
+        });
+      }
+    });
+    return defs;
+  }, [width, height]);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {particles.map((def) => (
+        <Particle key={def.id} def={def} />
+      ))}
+    </View>
+  );
+}
+
 export default function VictoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const { clearGame, joinQueue } = useGame();
   const params = useLocalSearchParams<{ winner: string; myId: string; opponentName: string }>();
   const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
@@ -32,27 +139,24 @@ export default function VictoryScreen() {
   const isWin = params.winner === params.myId;
   const scale = useSharedValue(0.4);
   const opacity = useSharedValue(0);
-  const rewardScale = useSharedValue(0);
   const glowPulse = useSharedValue(1);
 
   useEffect(() => {
     scale.value = withSpring(1, { damping: 12, stiffness: 100 });
     opacity.value = withTiming(1, { duration: 600 });
-    rewardScale.value = withDelay(400, withSpring(1, { damping: 14 }));
-    glowPulse.value = withRepeat(
-      withSequence(withTiming(1.1, { duration: 1200 }), withTiming(0.95, { duration: 1200 })),
-      -1,
-      true,
-    );
+    if (isWin) {
+      glowPulse.value = withRepeat(
+        withSequence(withTiming(1.06, { duration: 1400 }), withTiming(0.97, { duration: 1400 })),
+        -1,
+        true,
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
   }, []);
 
   const mainStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     opacity: opacity.value,
-  }));
-
-  const rewardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: rewardScale.value }],
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -71,10 +175,10 @@ export default function VictoryScreen() {
   };
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
-
   const cinzelBold = fontsLoaded ? 'Cinzel_700Bold' : SERIF_BOLD;
   const cinzelRegular = fontsLoaded ? 'Cinzel_400Regular' : SERIF_REGULAR;
 
+  // ── LOSS SCREEN ────────────────────────────────────────────────────────────
   if (!isWin) {
     return (
       <View style={[styles.container, styles.lossContainer]}>
@@ -83,13 +187,11 @@ export default function VictoryScreen() {
 
           <Animated.View style={[styles.lossCenterBlock, mainStyle]}>
             <Animated.Image
-              source={crownImage}
+              source={crownLossImage}
               style={styles.crownImage}
               resizeMode="contain"
             />
-            <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>
-              YOU LOSE
-            </Text>
+            <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>YOU LOSE</Text>
             <Text style={[styles.lossSub, { fontFamily: cinzelRegular }]}>
               {params.opponentName ?? 'Opponent'} claims victory
             </Text>
@@ -102,7 +204,6 @@ export default function VictoryScreen() {
             >
               <Text style={[styles.lossPrimaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
             </Pressable>
-
             <Pressable onPress={handleLobby} style={styles.lossSecondaryBtn}>
               <Text style={[styles.lossSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
             </Pressable>
@@ -112,62 +213,51 @@ export default function VictoryScreen() {
     );
   }
 
+  // ── WIN SCREEN ─────────────────────────────────────────────────────────────
+  const imageSize = Math.min(width * 0.82, 340);
+  const topPad = insets.top + webTopPad + 16;
+  const bottomPad = insets.bottom + 40;
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={['#1a0a00', '#3d1a00', '#07000f']}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.container, styles.winContainer]}>
+      <Fireworks width={width} height={height} />
 
-      <Animated.View
-        style={[
-          styles.glowBg,
-          glowStyle,
-          { backgroundColor: '#fbbf2420' },
-          Platform.OS === 'web' ? ({ filter: 'blur(60px)' } as object) : null,
-        ]}
-      />
-
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
+      <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
         <BackButton label="← HOME" onPress={handleLobby} />
 
-        <Animated.View style={[styles.resultSection, mainStyle]}>
-          <Text style={[styles.resultEmoji, { color: colors.neonGold }]}>♛</Text>
-          <Text style={[styles.resultTitle, { color: colors.neonGold }]}>YOU WIN!</Text>
-          <Text style={[styles.resultSub, { color: colors.mutedForeground }]}>
+        <Animated.View style={[styles.winCenterBlock, mainStyle]}>
+          <Animated.View style={[styles.winImageWrap, glowStyle]}>
+            <Animated.Image
+              source={crownWinImage}
+              style={{ width: imageSize, height: imageSize }}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          <Text style={[styles.winTitle, { fontFamily: cinzelBold }]}>YOU WIN</Text>
+          <Text style={[styles.winSub, { fontFamily: cinzelRegular }]}>
             {params.opponentName ?? 'Opponent'} has been outplayed
           </Text>
         </Animated.View>
 
-        <Animated.View style={[styles.rewardSection, rewardStyle]}>
-          <View style={[styles.rewardCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.rewardTitle, { color: colors.mutedForeground }]}>REWARDS</Text>
-            <View style={styles.rewardRow}>
-              <Text style={[styles.rewardValue, { color: colors.accent }]}>+2,500</Text>
-              <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>COINS</Text>
-            </View>
-            <View style={styles.rewardRow}>
-              <Text style={[styles.rewardValue, { color: colors.electric }]}>+50</Text>
-              <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>GEMS</Text>
-            </View>
-          </View>
-        </Animated.View>
-
         <View style={styles.buttonSection}>
-          <Pressable onPress={handlePlayAgain} style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}>
+          <Pressable
+            onPress={handlePlayAgain}
+            style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}
+          >
             <LinearGradient
               colors={['#fbbf24', '#f59e0b', '#d97706']}
               style={styles.primaryBtnInner}
             >
-              <Text style={styles.primaryBtnText}>PLAY AGAIN</Text>
+              <Text style={[styles.primaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
             </LinearGradient>
           </Pressable>
 
           <Pressable
             onPress={handleLobby}
-            style={[styles.secondaryBtn, { borderColor: colors.border }]}
+            style={styles.winSecondaryBtn}
           >
-            <Text style={[styles.secondaryBtnText, { color: colors.mutedForeground }]}>BACK TO LOBBY</Text>
+            <Text style={[styles.winSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
           </Pressable>
         </View>
       </View>
@@ -177,18 +267,45 @@ export default function VictoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  winContainer: { backgroundColor: '#000000' },
   lossContainer: { backgroundColor: '#FFFFFF' },
-  inner: { flex: 1, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32 },
-  glowBg: {
-    position: 'absolute',
-    top: '20%',
-    left: '10%',
-    right: '10%',
-    height: 300,
-    borderRadius: 150,
-    opacity: 0.9,
+
+  // ── Win layout
+  winInner: { flex: 1, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 28 },
+  winCenterBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: '8%' },
+  winImageWrap: { alignItems: 'center', justifyContent: 'center' },
+  winTitle: {
+    fontSize: 46,
+    fontWeight: '700',
+    letterSpacing: 10,
+    color: '#fbbf24',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  winSub: {
+    fontSize: 13,
+    color: 'rgba(251,191,36,0.6)',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  winSecondaryBtn: {
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(251,191,36,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  winSecondaryBtnText: {
+    color: 'rgba(251,191,36,0.55)',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 3,
   },
 
+  // ── Loss layout
+  inner: { flex: 1, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32 },
   lossCenterBlock: { alignItems: 'center', flex: 1, justifyContent: 'center', gap: 8 },
   crownImage: { width: 260, height: 260, marginBottom: 12 },
   lossTitle: {
@@ -217,12 +334,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
   },
-  lossPrimaryBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 4,
-  },
+  lossPrimaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: 4 },
   lossSecondaryBtn: {
     height: 50,
     borderRadius: 12,
@@ -231,27 +343,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  lossSecondaryBtnText: {
-    color: 'rgba(26,26,26,0.6)',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 3,
-  },
+  lossSecondaryBtnText: { color: 'rgba(26,26,26,0.6)', fontSize: 13, fontWeight: '700', letterSpacing: 3 },
 
-  resultSection: { alignItems: 'center', marginTop: 20 },
-  resultEmoji: { fontSize: 80, marginBottom: 8 },
-  resultTitle: { fontSize: 52, fontWeight: '900', letterSpacing: 6, textAlign: 'center' },
-  resultSub: { fontSize: 14, marginTop: 8, textAlign: 'center', letterSpacing: 1 },
-  rewardSection: { width: '100%' },
-  rewardCard: { borderRadius: 16, borderWidth: 1, padding: 24, alignItems: 'center', gap: 12 },
-  rewardTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 3 },
-  rewardRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  rewardValue: { fontSize: 36, fontWeight: '800' },
-  rewardLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 2 },
+  // ── Shared buttons
   buttonSection: { width: '100%', gap: 12 },
-  primaryBtn: { borderRadius: 14, overflow: 'hidden', shadowColor: '#fbbf24', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 12, elevation: 12 },
+  primaryBtn: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+    elevation: 12,
+  },
   primaryBtnInner: { height: 58, justifyContent: 'center', alignItems: 'center', borderRadius: 14 },
-  primaryBtnText: { color: '#07000f', fontSize: 18, fontWeight: '900', letterSpacing: 3 },
-  secondaryBtn: { height: 50, borderRadius: 12, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-  secondaryBtnText: { fontSize: 13, fontWeight: '700', letterSpacing: 3 },
+  primaryBtnText: { color: '#07000f', fontSize: 17, fontWeight: '900', letterSpacing: 3 },
 });
