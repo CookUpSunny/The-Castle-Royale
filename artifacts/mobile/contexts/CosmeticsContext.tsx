@@ -165,6 +165,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const scene: SceneId =
     arena === 'lightning' ? 'waterfallCavern' :
     arena === 'royal'     ? 'olympusThrone'   :
+    arena === 'cosmic'    ? 'cosmicSanctum'   :
     'flamingoCasino';
 
   useEffect(() => {
