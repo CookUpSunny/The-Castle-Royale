@@ -102,21 +102,27 @@ export const ARENAS: Arena[] = [
     description: 'The classic casino table — rich felt green under warm spotlight glow. Clean, timeless, and all business. No distractions. Just cards.',
   },
   {
+    id: 'classic',
+    name: 'The Flamingo Floor',
+    premium: false,
+    description: 'Step into a dazzling neon casino where fortune favors the bold, surrounded by glowing pink lights, glossy marble floors, and the thrill of high-stakes play. Every corner pulses with luxury as players battle beneath towering flamingo statues and radiant casino energy.\n\nWARNING: Winning streaks may become addictive.',
+  },
+  {
     id: 'cosmic',
     name: 'Cosmic Sanctum',
-    premium: true,
+    premium: false,
     description: 'Drift into the depths of the universe where galaxies spiral endlessly and ancient cosmic forces surround the arena. Suspended beside a collapsing black hole, players duel among glowing crystals, celestial energy, and the silence of deep space.\n\nEvery match feels written in the stars.',
   },
   {
     id: 'royal',
     name: 'Olympus Throne',
-    premium: true,
+    premium: false,
     description: 'Ascend into a divine kingdom carved from marble and gold, where towering columns and heavenly statues overlook the battlefield from above the clouds. Golden sunlight pours across the arena as thunder echoes through the skies of the gods themselves.\n\nEnter the throne room of immortals.',
   },
   {
     id: 'lightning',
     name: 'An Oasis in the Cave',
-    premium: true,
+    premium: false,
     description: 'Hidden deep within a mystical cavern, this tranquil sanctuary glows with flowing waterfalls, vibrant vegetation, and drifting cherry blossoms. Soft lantern light reflects across crystal-blue waters as players battle in a peaceful paradise untouched by the outside world.\n\nBeauty can be the deadliest arena of all.',
   },
 ];
@@ -150,7 +156,7 @@ const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 const isArenaId = (v: string | null): v is ArenaId =>
-  v === 'greenTable' || v === 'cosmic' || v === 'royal' || v === 'lightning';
+  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning';
 
 const isAvatarId = (v: string | null): v is AvatarId =>
   v === 'eagles' || v === 'frog' || v === 'troll';
