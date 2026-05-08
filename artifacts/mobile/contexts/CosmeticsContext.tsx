@@ -102,12 +102,6 @@ export const ARENAS: Arena[] = [
     description: 'The classic casino table — rich felt green under warm spotlight glow. Clean, timeless, and all business. No distractions. Just cards.',
   },
   {
-    id: 'classic',
-    name: 'The Flamingo Floor',
-    premium: false,
-    description: 'Step into a dazzling neon casino where fortune favors the bold, surrounded by glowing pink lights, glossy marble floors, and the thrill of high-stakes play. Every corner pulses with luxury as players battle beneath towering flamingo statues and radiant casino energy.\n\nWARNING: Winning streaks may become addictive.',
-  },
-  {
     id: 'cosmic',
     name: 'Cosmic Sanctum',
     premium: true,
@@ -156,7 +150,7 @@ const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 const isArenaId = (v: string | null): v is ArenaId =>
-  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning';
+  v === 'greenTable' || v === 'cosmic' || v === 'royal' || v === 'lightning';
 
 const isAvatarId = (v: string | null): v is AvatarId =>
   v === 'eagles' || v === 'frog' || v === 'troll';
