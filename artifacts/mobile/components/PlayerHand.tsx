@@ -341,7 +341,9 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
 
       {(showHand || showFaceUp) && !mustPlayStarter && duplicateGroups.length > 0 && (
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Tap a chip to play multiples · or long-press a card
+          {draggable
+            ? 'Tap a card to play · tap a chip to play multiples · hold & drag to pile'
+            : 'Tap a chip to play multiples · or long-press a card'}
         </Text>
       )}
       {mustPlayStarter && (

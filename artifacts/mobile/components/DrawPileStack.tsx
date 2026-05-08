@@ -13,8 +13,12 @@ const DrawPileStack = forwardRef<DrawPileHandle, { count: number }>(({ count }, 
 
   useImperativeHandle(ref, () => ({
     getPosition: () =>
-      new Promise((resolve) => {
-        viewRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+      new Promise((resolve, reject) => {
+        if (!viewRef.current) {
+          reject(new Error('DrawPileStack ref not mounted'));
+          return;
+        }
+        viewRef.current.measure((_x, _y, width, height, pageX, pageY) => {
           resolve({ x: pageX, y: pageY, width, height });
         });
       }),
