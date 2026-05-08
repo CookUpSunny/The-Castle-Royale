@@ -18,6 +18,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { setSfxMuted } from '../lib/sfx';
 
 const MUTED_KEY = '@castleroyale_music_muted';
 const FADE_STEPS        = 60;
@@ -99,6 +100,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       prefLoadedRef.current = true;
       if (val === 'true') {
         isMutedRef.current = true;
+        setSfxMuted(true);
         setIsMuted(true);
       }
     });
@@ -107,6 +109,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     isMutedRef.current = isMuted;
+    // Keep SFX module in sync — one toggle silences both music and sound effects.
+    setSfxMuted(isMuted);
     if (prefLoadedRef.current) {
       AsyncStorage.setItem(MUTED_KEY, isMuted ? 'true' : 'false');
     }
