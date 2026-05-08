@@ -170,7 +170,7 @@ function DeckBadge({ count }: { count: number }) {
     <View style={styles.deckBadgeWrap}>
       <View style={styles.deckGlassBubble}>
         <Text style={[styles.deckGlassLabel, { color: colors.neonGold }]}>DRAW</Text>
-        <Text style={[styles.deckGlassCount, { color: colors.foreground }]}>{count}</Text>
+        <Text style={[styles.deckGlassCount, { color: colors.neonGold }]}>{count}</Text>
       </View>
     </View>
   );
