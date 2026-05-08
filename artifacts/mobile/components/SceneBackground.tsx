@@ -58,8 +58,6 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
       {sceneId === 'cosmicSanctum' ? <CosmicAmbience /> : null}
       {sceneId === 'flamingoFloor' ? <FlamingoFloorAmbience /> : null}
 
-      <CasinoTableFloor variant={variant} pack={pack} />
-
       <StaticLayer variant={variant} layerId="L3_fx" pack={pack} opacity={0.55} mode="particles" />
 
       <LinearGradient colors={[...vignette]} style={StyleSheet.absoluteFill} />
@@ -67,43 +65,6 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
   );
 }
 
-function CasinoTableFloor({
-  variant,
-  pack,
-}: {
-  variant: SceneVariant;
-  pack: ReturnType<typeof getScenePack>;
-}) {
-  const source = pack.layers[variant]?.L2_table ?? null;
-  const heightPct = variant === 'landscape' ? '64%' : '52%';
-  const blendStyle = { mixBlendMode: 'screen' } as unknown as ViewStyle;
-
-  if (!source) return null;
-
-  return (
-    <View
-      pointerEvents="none"
-      style={[
-        {
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: heightPct as unknown as number,
-        },
-        blendStyle,
-      ]}
-    >
-      <Image
-        source={source}
-        style={StyleSheet.absoluteFillObject}
-        contentFit="cover"
-        contentPosition="bottom"
-        transition={0}
-      />
-    </View>
-  );
-}
 
 type ParallaxMode = 'default' | 'backdrop' | 'particles';
 

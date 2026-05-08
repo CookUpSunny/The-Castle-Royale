@@ -168,22 +168,9 @@ function DeckBadge({ count }: { count: number }) {
   const colors = useColors();
   return (
     <View style={styles.deckBadgeWrap}>
-      <View style={styles.deckStack}>
-        {[2, 1, 0].map((offset) => (
-          <View
-            key={offset}
-            style={[styles.deckCard, { top: -offset * 2, left: -offset * 2, borderColor: colors.neonGold }]}
-          />
-        ))}
-        <View style={styles.deckLogo}>
-          <Text style={[styles.deckLogoText, { color: colors.neonGold }]}>✦</Text>
-          <Text style={[styles.deckLogoSub, { color: colors.neonGold }]}>CASTLE</Text>
-          <Text style={[styles.deckLogoSub, { color: colors.neonGold }]}>ROYALE</Text>
-        </View>
-      </View>
-      <View style={[styles.tagPill, { borderColor: '#3a1a5e', marginTop: 4 }]}>
-        <Text style={[styles.tagPillText, { color: colors.neonGold }]}>DRAW</Text>
-        <Text style={[styles.deckCount, { color: colors.foreground }]}>{count}</Text>
+      <View style={styles.deckGlassBubble}>
+        <Text style={[styles.deckGlassLabel, { color: colors.neonGold }]}>DRAW</Text>
+        <Text style={[styles.deckGlassCount, { color: colors.foreground }]}>{count}</Text>
       </View>
     </View>
   );
@@ -708,7 +695,7 @@ const styles = StyleSheet.create({
 
   tableCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  playerHandSection: { paddingHorizontal: 4, marginBottom: 14, overflow: 'visible' },
+  playerHandSection: { paddingHorizontal: 4, marginBottom: 28, overflow: 'visible' },
 
   namePlate: {
     flexDirection: 'row',
@@ -736,31 +723,25 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 8, marginTop: 3 },
   statText: { fontSize: 10, fontWeight: '800' },
 
-  deckBadgeWrap: { alignItems: 'center', gap: 4 },
-  deckStack: { width: 60, height: 84, position: 'relative', justifyContent: 'center', alignItems: 'center' },
-  deckCard: {
-    position: 'absolute',
-    width: 60,
-    height: 84,
-    borderRadius: 6,
-    borderWidth: 1.2,
-    backgroundColor: '#1a0535',
-  },
-  deckLogo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' },
-  deckLogoText: { fontSize: 18, fontWeight: '900' },
-  deckLogoSub: { fontSize: 7, fontWeight: '900', letterSpacing: 1, lineHeight: 9 },
-  deckCount: { fontSize: 13, fontWeight: '900', marginLeft: 4 },
-
-  tagPill: {
-    flexDirection: 'row',
+  deckBadgeWrap: { alignItems: 'center' },
+  deckGlassBubble: {
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    backgroundColor: '#10002850',
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    gap: 2,
   },
-  tagPillText: { fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  deckGlassLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 2 },
+  deckGlassCount: { fontSize: 22, fontWeight: '900', lineHeight: 26 },
 
   placeholderInner: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 4 },
   placeholderText: { fontSize: 14, fontWeight: '900', letterSpacing: 3 },

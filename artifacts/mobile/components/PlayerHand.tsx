@@ -63,20 +63,15 @@ function HandCard({
   const bounce = useSharedValue(0);
 
   useEffect(() => {
-    if (isStarterPick) {
-      bounce.value = withRepeat(
-        withSequence(
-          withTiming(-5, { duration: 620, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: 360, easing: Easing.in(Easing.quad) }),
-        ),
-        -1,
-      );
-    } else {
-      cancelAnimation(bounce);
-      bounce.value = withTiming(0, { duration: 180 });
-    }
+    bounce.value = withRepeat(
+      withSequence(
+        withTiming(-5, { duration: 620, easing: Easing.out(Easing.quad) }),
+        withTiming(0, { duration: 360, easing: Easing.in(Easing.quad) }),
+      ),
+      -1,
+    );
     return () => cancelAnimation(bounce);
-  }, [isStarterPick, bounce]);
+  }, [bounce]);
 
   // Fan curve: distribute rotation symmetrically from center.
   // perCardDeg is capped so a large hand never exceeds ±12° total spread.
@@ -490,8 +485,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 4,
+    paddingTop: 36,
+    paddingBottom: 32,
     alignItems: 'flex-end',
   },
 });

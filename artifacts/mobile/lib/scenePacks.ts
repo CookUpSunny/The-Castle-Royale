@@ -29,13 +29,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
       portrait: {
         L0_far:   require('../assets/scenes/flamingoCasino/portrait/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/flamingoCasino/portrait/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
       landscape: {
         L0_far:   require('../assets/scenes/flamingoCasino/landscape/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/flamingoCasino/landscape/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
     },
@@ -46,13 +46,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
       portrait: {
         L0_far:   require('../assets/scenes/flamingoFloor/portrait/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/flamingoFloor/portrait/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
       landscape: {
         L0_far:   require('../assets/scenes/flamingoFloor/landscape/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/flamingoFloor/landscape/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
     },
@@ -63,13 +63,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
       portrait: {
         L0_far:   require('../assets/scenes/cosmicSanctum/portrait/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/cosmicSanctum/portrait/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
       landscape: {
         L0_far:   require('../assets/scenes/cosmicSanctum/landscape/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/cosmicSanctum/landscape/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
     },
@@ -80,13 +80,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
       portrait: {
         L0_far:   require('../assets/scenes/olympusThrone/portrait/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/olympusThrone/portrait/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
       landscape: {
         L0_far:   require('../assets/scenes/olympusThrone/landscape/L0_far.png'),
         L1_mid:   null,
-        L2_table: require('../assets/scenes/olympusThrone/landscape/L2_table.png'),
+        L2_table: null,
         L3_fx:    null,
       },
     },
@@ -95,16 +95,16 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   waterfallCavern: {
     layers: {
       portrait: {
-        L0_far: require('../assets/scenes/waterfallCavern/portrait/L0_far.png'),
-        L1_mid: require('../assets/scenes/waterfallCavern/portrait/L1_mid.png'),
-        L2_table: require('../assets/scenes/waterfallCavern/portrait/L2_table.png'),
-        L3_fx: require('../assets/scenes/waterfallCavern/portrait/L3_fx.png'),
+        L0_far:   require('../assets/scenes/waterfallCavern/portrait/L0_far.png'),
+        L1_mid:   require('../assets/scenes/waterfallCavern/portrait/L1_mid.png'),
+        L2_table: null,
+        L3_fx:    require('../assets/scenes/waterfallCavern/portrait/L3_fx.png'),
       },
       landscape: {
-        L0_far: require('../assets/scenes/waterfallCavern/landscape/L0_far.png'),
-        L1_mid: require('../assets/scenes/waterfallCavern/landscape/L1_mid.png'),
-        L2_table: require('../assets/scenes/waterfallCavern/landscape/L2_table.png'),
-        L3_fx: require('../assets/scenes/waterfallCavern/landscape/L3_fx.png'),
+        L0_far:   require('../assets/scenes/waterfallCavern/landscape/L0_far.png'),
+        L1_mid:   require('../assets/scenes/waterfallCavern/landscape/L1_mid.png'),
+        L2_table: null,
+        L3_fx:    require('../assets/scenes/waterfallCavern/landscape/L3_fx.png'),
       },
     },
     parallax: { L0_far: 0.02, L1_mid: 0.08, L2_table: 0.04, L3_fx: 0.18, L4_vignette: 0.0 },
