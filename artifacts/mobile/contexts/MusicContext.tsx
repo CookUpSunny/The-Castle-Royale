@@ -14,6 +14,7 @@
  *   track4.wav — Go! Go! Go!
  *   oasis.wav    — Underground Kingdom  ← lightning arena ("An Oasis in the Cave")
  *   flamingo.wav — Go! Go! Go!          ← classic arena ("The Flamingo Floor")
+ *   olympus.wav  — Winning Man Anthem   ← royal arena ("Olympus Throne")
  *
  * To add a new arena track: copy the .wav into assets/music/, require() it in
  * TRACKS below, and add one line to ARENA_TRACK mapping the ArenaId → index.
@@ -35,6 +36,7 @@ const SPLASH_FADE_MS    = SPLASH_FADE_STEPS * FADE_MS; // 6 000 ms — fade-out 
 const SPLASH_TRACK_IDX  = 1;    // track2.wav — Sparks Fly
 const OASIS_TRACK_IDX    = 4;    // oasis.wav    — Underground Kingdom
 const FLAMINGO_TRACK_IDX = 5;    // flamingo.wav — Go! Go! Go!
+const OLYMPUS_TRACK_IDX  = 6;    // olympus.wav  — Winning Man Anthem
 
 /**
  * Arena → TRACKS index.
@@ -43,6 +45,7 @@ const FLAMINGO_TRACK_IDX = 5;    // flamingo.wav — Go! Go! Go!
 const ARENA_TRACK: Partial<Record<ArenaId, number>> = {
   lightning: OASIS_TRACK_IDX,
   classic:   FLAMINGO_TRACK_IDX,
+  royal:     OLYMPUS_TRACK_IDX,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -58,6 +61,8 @@ const TRACKS: number[] = [
   require('../assets/music/oasis.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../assets/music/flamingo.wav') as number,
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('../assets/music/olympus.wav') as number,
 ];
 
 // Shuffle queue only spans the generic playlist tracks; arena tracks are excluded.
