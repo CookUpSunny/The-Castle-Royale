@@ -25,10 +25,10 @@ const CARD_COUNT = 17;
 const GOLD_COUNT = 3;
 
 // Entrance timing
-const STAGGER_MS = 120;    // delay between successive card entrances
-const FLIP_DUR   = 300;    // scaleX flip duration per card
-// Total entrance duration before golden cycle may start
-const ENTRANCE_TOTAL_MS = (CARD_COUNT - 1) * STAGGER_MS + FLIP_DUR; // ≈ 2 220 ms
+const STAGGER_MS = 180;    // delay between successive card entrances (~180 ms per spec)
+const FLIP_DUR   = 280;    // scaleX flip duration per card (matches curtain-card feel)
+// Total entrance duration: 16×180 + 280 = 3 160 ms (~3 s; last card finishes here)
+const ENTRANCE_TOTAL_MS = (CARD_COUNT - 1) * STAGGER_MS + FLIP_DUR;
 
 const REVEAL_INTERVAL = 3200;
 const REVEAL_HOLD     = 1600;
@@ -183,7 +183,7 @@ const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) 
     );
     flipSX.value = withDelay(
       spec.entranceDelay,
-      withTiming(1, { duration: FLIP_DUR, easing: Easing.out(Easing.cubic) }),
+      withTiming(1, { duration: FLIP_DUR, easing: Easing.out(Easing.back(1.5)) }),
     );
     // Swap to face-up when the card is "edge-on" (halfway through the flip).
     const faceTimer = setTimeout(() => {
@@ -371,8 +371,8 @@ export default function SplashCards() {
       cycleTimer.current = setTimeout(runCycle, REVEAL_INTERVAL);
     };
 
-    // Golden cycle only fires after all entrance animations have completed.
-    cycleTimer.current = setTimeout(runCycle, ENTRANCE_TOTAL_MS + 800);
+    // Golden cycle starts shortly after all entrance animations have finished.
+    cycleTimer.current = setTimeout(runCycle, ENTRANCE_TOTAL_MS + 300);
 
     return () => {
       if (cycleTimer.current) clearTimeout(cycleTimer.current);
