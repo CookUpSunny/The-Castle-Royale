@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image as RNImage, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import BackButton from '@/components/BackButton';
 import CardCurtain from '@/components/CardCurtain';
 import Animated, {
@@ -22,6 +22,12 @@ import { useColors } from '@/hooks/useColors';
 
 const crownWinImage = require('../assets/crown-win.png');
 const crownLossImage = require('../assets/crown-loss.png');
+
+// Warm expo-image's decoder cache before the victory screen is ever navigated to.
+// RNImage.resolveAssetSource resolves the bundled asset number to a file:// URI
+// that expo-image's prefetch accepts.
+void Image.prefetch(RNImage.resolveAssetSource(crownWinImage as number).uri);
+void Image.prefetch(RNImage.resolveAssetSource(crownLossImage as number).uri);
 
 const SERIF_BOLD = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const SERIF_REGULAR = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
