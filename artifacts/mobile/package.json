@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/cinzel": "^0.4.2",
+    "@shopify/react-native-skia": "2.2.12",
     "expo-av": "~16.0.8",
     "expo-build-properties": "^1.0.10",
     "expo-sensors": "~15.0.8",
