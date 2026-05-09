@@ -35,9 +35,9 @@ const CURTAIN_CARDS: CurtainCardDef[] = [
   // ── King of Hearts — upper-left, sharp left tilt ─────────────────────────
   { card: { id: 'curtain-1', suit: 'H', value: 13 } as CardType, faceDown: false, golden: false, glowColor: '#ef4444', xFrac: 0.22, yFrac: 0.30, rot: -18 },
   // ── Queen of Diamonds — lower-right, right tilt ───────────────────────────
-  { card: { id: 'curtain-2', suit: 'D', value: 12 } as CardType, faceDown: false, golden: false, glowColor: '#f97316', xFrac: 0.76, yFrac: 0.65, rot: 14  },
+  { card: { id: 'curtain-2', suit: 'D', value: 12 } as CardType, faceDown: false, golden: false, glowColor: '#f97316', xFrac: 0.82, yFrac: 0.65, rot: 14  },
   // ── 10 of Clubs — upper-right, face-down ──────────────────────────────────
-  { card: { id: 'curtain-3', suit: 'C', value: 10 } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.73, yFrac: 0.27, rot: 10  },
+  { card: { id: 'curtain-3', suit: 'C', value: 10 } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.80, yFrac: 0.27, rot: 10  },
   // ── 7 of Spades — lower-left, face-down ───────────────────────────────────
   { card: { id: 'curtain-4', suit: 'S', value: 7  } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.24, yFrac: 0.72, rot: -12 },
 ];

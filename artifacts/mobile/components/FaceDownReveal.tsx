@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -14,7 +14,6 @@ import { type Card as CardType } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import CardComponent, { CardBack } from './Card';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 interface FaceDownRevealProps {
   /** The card that was revealed from the blind row. */
@@ -193,6 +192,10 @@ export default function FaceDownReveal({ card, topCard, busted, who, onComplete 
         </Animated.View>
 
         <Animated.View style={[styles.vsBadge, vsStyle]}>
+          {/* Amber glow halo — separate View so no elevation is needed on the
+              transparent Animated.View wrapper (which causes a black rectangle
+              on Android). iOS shadow works because the glow has a background. */}
+          <View style={styles.vsGlowRing} />
           <LinearGradient
             colors={['#fbbf24', '#b45309']}
             start={{ x: 0, y: 0 }}
@@ -239,11 +242,7 @@ function labelFor(value: number): string {
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: SCREEN_W,
-    height: SCREEN_H,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
@@ -307,11 +306,22 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   vsBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vsGlowRing: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#fbbf2430',
     shadowColor: '#fbbf24',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 14,
-    elevation: 14,
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    // elevation intentionally omitted — adding elevation to a transparent-bg
+    // View on Android renders a black drop-shadow rectangle. The iOS shadow
+    // is sufficient; Android gets the amber backgroundColor halo instead.
   },
   vsBadgeInner: {
     width: 48,
@@ -321,6 +331,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#fde047',
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 14,
+    elevation: 12,
   },
   vsText: {
     fontSize: 16,
