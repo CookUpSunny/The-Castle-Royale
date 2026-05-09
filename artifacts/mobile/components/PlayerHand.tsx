@@ -100,8 +100,8 @@ function HandCard({
     const trough = isPlayable && isMyTurn ? 0.25 : 0.06;
     glowOpacity.value = withRepeat(
       withSequence(
-        withTiming(peak, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
-        withTiming(trough, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+        withTiming(peak, { duration: 600, easing: Easing.inOut(Easing.quad) }),
+        withTiming(trough, { duration: 600, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
     );

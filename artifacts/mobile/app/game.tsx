@@ -151,8 +151,8 @@ function AvatarChip({ name, isActive, portraitArt, onPress }: {
     }
     glow.value = withRepeat(
       withSequence(
-        withTiming(1.0, { duration: 800, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0.35, { duration: 800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.0, { duration: 600, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0.35, { duration: 600, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
     );
