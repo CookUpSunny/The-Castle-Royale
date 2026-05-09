@@ -16,6 +16,7 @@
  *   flamingo.wav — Go! Go! Go!          ← classic arena   ("The Flamingo Floor")
  *   olympus.wav  — Winning Man Anthem   ← royal arena     ("Olympus Throne")
  *   cosmic.wav   — All In               ← cosmic arena    ("Cosmic Sanctum")
+ *   matrix.wav  — Whispers Dipped in Dye ← matrix arena  ("Matrix")
  *
  * To add a new arena track: copy the .wav into assets/music/, require() it in
  * TRACKS below, and add one line to ARENA_TRACK mapping the ArenaId → index.
@@ -42,6 +43,7 @@ const OLYMPUS_TRACK_IDX  = 6;    // olympus.wav  — Winning Man Anthem
 
 const CASINO_TRACK_IDX  = 0;    // track1.wav — Low Energy 2nd Wind
 const COSMIC_TRACK_IDX  = 7;    // cosmic.wav  — All In
+const MATRIX_TRACK_IDX  = 8;    // matrix.wav  — Whispers Dipped in Dye
 
 /**
  * Arena → TRACKS index.
@@ -53,6 +55,7 @@ const ARENA_TRACK: Partial<Record<ArenaId, number>> = {
   classic:    FLAMINGO_TRACK_IDX,
   royal:      OLYMPUS_TRACK_IDX,
   cosmic:     COSMIC_TRACK_IDX,
+  matrix:     MATRIX_TRACK_IDX,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -71,7 +74,9 @@ const TRACKS: number[] = [
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../assets/music/olympus.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/cosmic.wav') as number,   // index 7 — replace file with real track
+  require('../assets/music/cosmic.wav') as number,   // index 7 — All In
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('../assets/music/matrix.wav') as number,  // index 8 — Whispers Dipped in Dye
 ];
 
 // Shuffle queue only spans the generic playlist tracks; arena tracks are excluded.
