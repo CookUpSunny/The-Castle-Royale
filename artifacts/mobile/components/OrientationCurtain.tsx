@@ -16,30 +16,31 @@ import { CardBack } from '@/components/Card';
 import { type Card as CardType } from '@/contexts/GameContext';
 
 // ── Card definitions ────────────────────────────────────────────────────────
-// 5-card spread: 3 face-up, 2 face-down; index 0 is the golden card.
+// 5-card column down the screen centre.
+// xFrac is always near 0.5; slight alternating offset gives a subtle zigzag
+// so the column reads as intentional, not a ruler.
+// Order top → bottom matches the stagger: card 0 appears first, card 4 last.
 interface CurtainCardDef {
   card: CardType;
   faceDown: boolean;
   golden: boolean;
   glowColor: string;
-  // Position as fraction of screen dimensions (card centre)
   xFrac: number;
   yFrac: number;
-  // Rotation in degrees (applied as CSS-style string)
   rot: number;
 }
 
 const CURTAIN_CARDS: CurtainCardDef[] = [
-  // ── Golden Ace of Spades — screen centre, slight left tilt ────────────────
-  { card: { id: 'curtain-0', suit: 'S', value: 1  } as CardType, faceDown: false, golden: true,  glowColor: '#f59e0b', xFrac: 0.50, yFrac: 0.50, rot: -6  },
-  // ── King of Hearts — upper-left, sharp left tilt ─────────────────────────
-  { card: { id: 'curtain-1', suit: 'H', value: 13 } as CardType, faceDown: false, golden: false, glowColor: '#ef4444', xFrac: 0.22, yFrac: 0.30, rot: -18 },
-  // ── Queen of Diamonds — lower-right, right tilt ───────────────────────────
-  { card: { id: 'curtain-2', suit: 'D', value: 12 } as CardType, faceDown: false, golden: false, glowColor: '#f97316', xFrac: 0.82, yFrac: 0.65, rot: 14  },
-  // ── 10 of Clubs — upper-right, face-down ──────────────────────────────────
-  { card: { id: 'curtain-3', suit: 'C', value: 10 } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.80, yFrac: 0.27, rot: 10  },
-  // ── 7 of Spades — lower-left, face-down ───────────────────────────────────
-  { card: { id: 'curtain-4', suit: 'S', value: 7  } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.24, yFrac: 0.72, rot: -12 },
+  // ── 10 of Clubs — top, face-down, gentle right tilt ──────────────────────
+  { card: { id: 'curtain-0', suit: 'C', value: 10 } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.52, yFrac: 0.12, rot:  5 },
+  // ── King of Hearts — upper-centre, left tilt ─────────────────────────────
+  { card: { id: 'curtain-1', suit: 'H', value: 13 } as CardType, faceDown: false, golden: false, glowColor: '#ef4444', xFrac: 0.48, yFrac: 0.28, rot: -6 },
+  // ── Golden Ace of Spades — screen centre, slight left tilt ───────────────
+  { card: { id: 'curtain-2', suit: 'S', value: 1  } as CardType, faceDown: false, golden: true,  glowColor: '#f59e0b', xFrac: 0.50, yFrac: 0.46, rot:  4 },
+  // ── Queen of Diamonds — lower-centre, right tilt ─────────────────────────
+  { card: { id: 'curtain-3', suit: 'D', value: 12 } as CardType, faceDown: false, golden: false, glowColor: '#f97316', xFrac: 0.52, yFrac: 0.64, rot: -5 },
+  // ── 7 of Spades — bottom, face-down, left tilt ───────────────────────────
+  { card: { id: 'curtain-4', suit: 'S', value: 7  } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.48, yFrac: 0.80, rot:  6 },
 ];
 
 // Card face dimensions for `lg` size (matches Card.tsx SIZES map)
@@ -47,11 +48,14 @@ const CARD_W = 66;
 const CARD_H = 92;
 
 // ── Timing constants ─────────────────────────────────────────────────────────
-const STAGGER_IN_MS   = 80;   // delay between each card popping in
-const MIDPOINT_MS     = 700;  // layout swap fires here (screen fully dark)
-const STAGGER_OUT_MS  = 55;   // delay between each card popping out
-const DIMOUT_DELAY_MS = 300;  // wait after last card exits before lifting dim
-const DIMOUT_DUR_MS   = 350;  // black dim fades back to transparent
+const STAGGER_IN_MS   = 120;  // delay between each card rising in (top → bottom)
+const MIDPOINT_MS     = 800;  // layout swap fires here (screen fully dark)
+const STAGGER_OUT_MS  = 70;   // delay between each card exiting (bottom → top)
+const DIMOUT_DELAY_MS = 280;  // wait after last card exits before lifting dim
+const DIMOUT_DUR_MS   = 380;  // black dim fades back to transparent
+
+// How far below its resting position each card starts before rising
+const RISE_FROM_Y = 52;
 
 interface OrientationCurtainProps {
   toDirection: 'landscape' | 'portrait';
@@ -60,23 +64,22 @@ interface OrientationCurtainProps {
 }
 
 /**
- * Cascade Pop-In orientation curtain.
+ * Column Rise orientation curtain.
  *
- * Timeline (~1 410 ms total):
+ * Cards are stacked in a vertical column down the screen centre.
+ * Each card rises from below its resting position while scaling in,
+ * creating a cinematic "cards dealt from below" feel.
+ *
+ * Timeline (~1 500 ms total):
  *   0–300 ms         Black overlay fades in (ease-out)
- *   0–480 ms         5 cards pop in, staggered 80 ms each
- *                    Each card: scale 0 → 1.15 (spring overshoot) → 1.0
- *   700 ms           onMidpoint fires → layout committed while screen is dark;
- *                    card pop-out begins immediately (reverse stagger, 55 ms apart)
- *   700–975 ms       Cards exit (5 × 55 ms stagger + 180 ms each)
- *   1 060–1 410 ms   Black overlay fades out → onComplete fires via runOnJS
+ *   0–720 ms         5 cards rise + scale in, staggered 120 ms each (top→bottom)
+ *                    Each card: translateY +52→0 + scale 0→1.12→1.0 (spring)
+ *   800 ms           onMidpoint fires → layout committed while screen is dark
+ *   800–1 130 ms     Cards exit upward, staggered 70 ms each (bottom→top)
+ *                    Each card: translateY 0→-40 + scale 1→0 (ease-in)
+ *   1 130–1 510 ms   Black overlay fades out → onComplete fires via runOnJS
  *
- * `toDirection` is accepted for API compatibility with game.tsx (callers always
- * pass it) but does not currently influence which cards are shown — all rotations
- * use the same 5-card spread. Extend this prop if direction-specific art is added.
- *
- * pointerEvents="none" throughout — curtain never intercepts user touches.
- * Cleanup on unmount cancels all animations + the midpoint timer.
+ * pointerEvents="none" — curtain never intercepts user touches.
  */
 export default function OrientationCurtain({
   onMidpoint,
@@ -87,7 +90,7 @@ export default function OrientationCurtain({
   // ── Shared values ─────────────────────────────────────────────────────────
   const dimOpacity = useSharedValue(0);
 
-  // Five card scales — must be declared individually (hooks rule)
+  // Per-card scale (0 → 1) — hooks must be called individually
   const scale0 = useSharedValue(0);
   const scale1 = useSharedValue(0);
   const scale2 = useSharedValue(0);
@@ -95,45 +98,69 @@ export default function OrientationCurtain({
   const scale4 = useSharedValue(0);
   const scales = [scale0, scale1, scale2, scale3, scale4];
 
+  // Per-card vertical offset — starts below resting position, springs to 0
+  const ty0 = useSharedValue(RISE_FROM_Y);
+  const ty1 = useSharedValue(RISE_FROM_Y);
+  const ty2 = useSharedValue(RISE_FROM_Y);
+  const ty3 = useSharedValue(RISE_FROM_Y);
+  const ty4 = useSharedValue(RISE_FROM_Y);
+  const tys = [ty0, ty1, ty2, ty3, ty4];
+
   // ── Animated styles ───────────────────────────────────────────────────────
-  const dimStyle   = useAnimatedStyle(() => ({ opacity: dimOpacity.value }));
-  const cardStyle0 = useAnimatedStyle(() => ({ transform: [{ scale: scale0.value }] }));
-  const cardStyle1 = useAnimatedStyle(() => ({ transform: [{ scale: scale1.value }] }));
-  const cardStyle2 = useAnimatedStyle(() => ({ transform: [{ scale: scale2.value }] }));
-  const cardStyle3 = useAnimatedStyle(() => ({ transform: [{ scale: scale3.value }] }));
-  const cardStyle4 = useAnimatedStyle(() => ({ transform: [{ scale: scale4.value }] }));
+  const dimStyle = useAnimatedStyle(() => ({ opacity: dimOpacity.value }));
+
+  const cardStyle0 = useAnimatedStyle(() => ({ transform: [{ translateY: ty0.value }, { scale: scale0.value }] }));
+  const cardStyle1 = useAnimatedStyle(() => ({ transform: [{ translateY: ty1.value }, { scale: scale1.value }] }));
+  const cardStyle2 = useAnimatedStyle(() => ({ transform: [{ translateY: ty2.value }, { scale: scale2.value }] }));
+  const cardStyle3 = useAnimatedStyle(() => ({ transform: [{ translateY: ty3.value }, { scale: scale3.value }] }));
+  const cardStyle4 = useAnimatedStyle(() => ({ transform: [{ translateY: ty4.value }, { scale: scale4.value }] }));
   const cardStyles = [cardStyle0, cardStyle1, cardStyle2, cardStyle3, cardStyle4];
 
   useEffect(() => {
     // ── Dim in ────────────────────────────────────────────────────────────
     dimOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) });
 
-    // ── Cards pop in (staggered) ──────────────────────────────────────────
+    // ── Cards rise in (top → bottom stagger) ─────────────────────────────
     scales.forEach((s, i) => {
       s.value = withDelay(
         i * STAGGER_IN_MS,
         withSequence(
-          withSpring(1.15, { damping: 10, stiffness: 260 }),
-          withSpring(1.0,  { damping: 18, stiffness: 320 }),
+          withSpring(1.12, { damping: 11, stiffness: 240 }),
+          withSpring(1.0,  { damping: 20, stiffness: 300 }),
         ),
       );
     });
 
-    // ── Midpoint → pop-out → dim-out ──────────────────────────────────────
+    tys.forEach((ty, i) => {
+      ty.value = withDelay(
+        i * STAGGER_IN_MS,
+        withSpring(0, { damping: 14, stiffness: 200 }),
+      );
+    });
+
+    // ── Midpoint → exit upward → dim-out ─────────────────────────────────
     const midTimer = setTimeout(() => {
       onMidpoint();
 
-      // Cards pop out in reverse order (last card pops out first → cascade feel)
+      // Exit in reverse order: bottom card first, top card last
       scales.forEach((s, i) => {
         const reverseI = CURTAIN_CARDS.length - 1 - i;
         s.value = withDelay(
           reverseI * STAGGER_OUT_MS,
-          withTiming(0, { duration: 180, easing: Easing.in(Easing.quad) }),
+          withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }),
+        );
+      });
+
+      tys.forEach((ty, i) => {
+        const reverseI = CURTAIN_CARDS.length - 1 - i;
+        ty.value = withDelay(
+          reverseI * STAGGER_OUT_MS,
+          withTiming(-44, { duration: 200, easing: Easing.in(Easing.quad) }),
         );
       });
 
       // After all cards have exited, lift the dim
-      const lastCardExitMs = (CURTAIN_CARDS.length - 1) * STAGGER_OUT_MS + 180;
+      const lastCardExitMs = (CURTAIN_CARDS.length - 1) * STAGGER_OUT_MS + 200;
       dimOpacity.value = withDelay(
         lastCardExitMs + DIMOUT_DELAY_MS,
         withTiming(0, { duration: DIMOUT_DUR_MS, easing: Easing.in(Easing.quad) }, (finished) => {
@@ -147,6 +174,7 @@ export default function OrientationCurtain({
       clearTimeout(midTimer);
       cancelAnimation(dimOpacity);
       scales.forEach((s) => cancelAnimation(s));
+      tys.forEach((ty) => cancelAnimation(ty));
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -187,7 +215,6 @@ export default function OrientationCurtain({
             {/* Card itself, rotated */}
             <View style={{ transform: [{ rotate: `${def.rot}deg` }] }}>
               {def.golden ? (
-                // Golden Ace: extra gold border + intense amber glow wrapper
                 <View style={styles.goldenWrapper}>
                   {def.faceDown
                     ? <CardBack size="lg" />
@@ -215,8 +242,6 @@ const styles = StyleSheet.create({
   },
   cardAnchor: {
     position: 'absolute',
-    // Origin is top-left corner of the card; width/height kept at card size
-    // so rotate transform pivots around the card centre correctly.
     width: CARD_W,
     height: CARD_H,
     alignItems: 'center',
