@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Cosmic Sanctum</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #030008; font-family: system-ui, sans-serif; }
+
+    .layer { position: fixed; inset: 0; }
+
+    .arena-bg {
+      background:
+        radial-gradient(ellipse at 50% 45%, rgba(120,0,180,0.55) 0%, rgba(40,0,80,0.70) 30%, rgba(3,0,8,0.90) 65%, #030008 100%),
+        conic-gradient(from 200deg at 50% 45%, #0a0018 0deg, #1a0040 60deg, #0d0030 120deg, #050015 180deg, #1a0040 240deg, #0a0018 360deg);
+      animation: bgPulse 7s ease-in-out infinite;
+      animation-delay: -3.5s;
+    }
+
+    .blackhole-glow {
+      mix-blend-mode: screen;
+      background: radial-gradient(circle at 50% 45%,
+        rgba(255,255,255,.95) 0%,
+        rgba(220,160,255,.65) 4%,
+        rgba(160,40,255,.38) 10%,
+        rgba(40,0,80,.15) 20%,
+        transparent 32%);
+      filter: blur(14px);
+      animation: pulseCore 2.8s ease-in-out infinite;
+      animation-delay: -1.4s;
+    }
+
+    .spiral {
+      mix-blend-mode: screen;
+      background: conic-gradient(
+        from 60deg at 50% 45%,
+        transparent 0deg,
+        rgba(180,60,255,.28) 45deg,
+        transparent 90deg,
+        rgba(255,120,255,.32) 145deg,
+        transparent 210deg,
+        rgba(80,180,255,.22) 285deg,
+        transparent 360deg
+      );
+      filter: blur(24px);
+      animation: spin 18s linear infinite;
+      animation-delay: -9s;
+    }
+
+    .grid {
+      inset: -50%;
+      position: fixed;
+      width: 200%; height: 200%;
+      background-image:
+        linear-gradient(rgba(180,80,255,.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(180,80,255,.18) 1px, transparent 1px);
+      background-size: 70px 70px;
+      transform-origin: center;
+      animation: gridVacuum 10s linear infinite;
+      animation-delay: -5s;
+      opacity: .45;
+      mix-blend-mode: screen;
+    }
+
+    .stars {
+      background:
+        radial-gradient(circle at 12% 18%, white 0 1.5px, transparent 3px),
+        radial-gradient(circle at 68% 14%, white 0 1px, transparent 2px),
+        radial-gradient(circle at 82% 72%, white 0 1.5px, transparent 3px),
+        radial-gradient(circle at 33% 83%, white 0 1px, transparent 2px),
+        radial-gradient(circle at 55% 52%, white 0 1.2px, transparent 2.5px),
+        radial-gradient(circle at 9% 60%, white 0 1px, transparent 2px),
+        radial-gradient(circle at 91% 38%, white 0 1.2px, transparent 2.5px),
+        radial-gradient(circle at 45% 7%, white 0 1px, transparent 2px);
+      opacity: .75;
+      animation: starPull 5s linear infinite;
+      animation-delay: -2.5s;
+    }
+
+    .particles { pointer-events: none; }
+
+    .particle {
+      position: absolute;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 12px #d86cff, 0 0 22px #8f3cff;
+      animation: fallIn linear infinite;
+    }
+
+    @keyframes bgPulse {
+      0%, 100% { filter: brightness(1) saturate(1.1); }
+      50%       { filter: brightness(1.25) saturate(1.55); }
+    }
+    @keyframes pulseCore {
+      0%, 100% { opacity: .65; transform: scale(.94); }
+      50%       { opacity: 1;   transform: scale(1.08); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes gridVacuum {
+      from { background-position: 0 0; transform: rotate(0deg) scale(1.1); }
+      to   { background-position: 140px 140px; transform: rotate(360deg) scale(.85); }
+    }
+    @keyframes starPull {
+      from { transform: scale(1.1); opacity: .8; }
+      to   { transform: scale(.6); opacity: .2; }
+    }
+    @keyframes fallIn {
+      0%   { transform: translate(var(--x), var(--y)) scale(1); opacity: .9; }
+      100% { transform: translate(50vw, 45vh) scale(.05); opacity: 0; }
+    }
+
+    /* ── Game UI overlay ───────────────────────────────── */
+    .ui { position: fixed; inset: 0; pointer-events: none; }
+
+    .arena-label {
+      position: absolute;
+      top: 16px; left: 50%;
+      transform: translateX(-50%);
+      color: #d86cff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      opacity: .7;
+    }
+
+    .namebadge {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px 5px 6px;
+      background: rgba(13,0,26,.88);
+      border-radius: 12px;
+      border: 1.5px solid rgba(160,60,255,.5);
+      font-size: 12px;
+      font-weight: 800;
+      color: #e0c8ff;
+      letter-spacing: .5px;
+      box-shadow: 0 0 12px rgba(140,40,255,.3);
+    }
+    .namebadge.top    { top: 28px; right: 14px; }
+    .namebadge.bottom { bottom: 28px; left: 14px; border-color: rgba(255,215,0,.5); box-shadow: 0 0 12px rgba(255,215,0,.25); }
+
+    .avi {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      background: #2a0d4a;
+      border: 2px solid rgba(160,60,255,.65);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      overflow: hidden;
+    }
+    .namebadge.bottom .avi { border-color: rgba(255,215,0,.65); }
+    .badge-info { display: flex; flex-direction: column; }
+    .badge-name { font-size: 13px; }
+    .badge-sub  { font-size: 9px; font-weight: 600; color: rgba(224,200,255,.5); margin-top: 1px; }
+    .namebadge.bottom .badge-name { color: #ffd700; }
+
+    .pile-area {
+      position: absolute;
+      left: 50%; top: 42%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .card {
+      width: 54px; height: 76px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(160,60,255,.5);
+      background: linear-gradient(140deg, #1e0a42ee 0%, #0a0020ee 100%);
+      box-shadow: 0 0 16px rgba(140,40,255,.35);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 900; color: #e0c8ff;
+    }
+    .card.active {
+      border-color: rgba(255,215,0,.8);
+      box-shadow: 0 0 24px rgba(255,200,0,.55), 0 0 8px rgba(255,200,0,.3);
+      color: #ffd700;
+      transform: translateY(-4px);
+    }
+
+    .action-col {
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .action-btn {
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 10px; font-weight: 900;
+      letter-spacing: 1.5px;
+      text-align: center;
+      background: rgba(13,0,26,.88);
+      border: 1.5px solid rgba(160,60,255,.45);
+      color: #c8a0ff;
+    }
+    .action-btn.primary {
+      border-color: rgba(255,215,0,.6);
+      color: #ffd700;
+      box-shadow: 0 0 10px rgba(255,200,0,.2);
+    }
+    .action-btn.danger {
+      border-color: rgba(255,80,80,.5);
+      color: #ff8080;
+    }
+
+    .hand-row {
+      position: absolute;
+      bottom: 90px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: -4px;
+    }
+    .hand-card {
+      width: 46px; height: 64px;
+      border-radius: 7px;
+      border: 1.5px solid rgba(160,60,255,.4);
+      background: linear-gradient(140deg, #1e0a42ee, #0a0020ee);
+      box-shadow: 0 0 10px rgba(140,40,255,.25);
+      margin-left: -12px;
+    }
+    .hand-card:first-child { margin-left: 0; }
+    .hand-card.playable {
+      border-color: rgba(255,215,0,.6);
+      box-shadow: 0 0 14px rgba(255,200,0,.35);
+      transform: translateY(-6px);
+    }
+  </style>
+</head>
+<body>
+  <div class="layer arena-bg"></div>
+  <div class="layer blackhole-glow"></div>
+  <div class="layer spiral"></div>
+  <div class="layer stars"></div>
+  <div class="layer grid"></div>
+  <div class="layer particles">
+    <span class="particle" style="--x:10vw;--y:10vh;animation-duration:4s;animation-delay:-1s;"></span>
+    <span class="particle" style="--x:80vw;--y:15vh;animation-duration:6s;animation-delay:-2s;"></span>
+    <span class="particle" style="--x:20vw;--y:75vh;animation-duration:5s;animation-delay:-3s;"></span>
+    <span class="particle" style="--x:90vw;--y:80vh;animation-duration:7s;animation-delay:-4s;"></span>
+    <span class="particle" style="--x:50vw;--y:5vh;animation-duration:3.5s;animation-delay:-.5s;"></span>
+    <span class="particle" style="--x:30vw;--y:40vh;animation-duration:5.5s;animation-delay:-2.5s;"></span>
+    <span class="particle" style="--x:70vw;--y:60vh;animation-duration:4.5s;animation-delay:-1.8s;"></span>
+  </div>
+
+  <div class="ui">
+    <div class="arena-label">✦ Cosmic Sanctum ✦</div>
+
+    <div class="namebadge top">
+      <div class="avi">🧌</div>
+      <div class="badge-info">
+        <div class="badge-name">Akira</div>
+        <div class="badge-sub">Lv. 28 · 71,038 🪙</div>
+      </div>
+    </div>
+
+    <div class="pile-area">
+      <div class="card">9</div>
+      <div class="card active">10</div>
+      <div class="card">A</div>
+    </div>
+
+    <div class="action-col">
+      <div class="action-btn primary">TAKE PILE</div>
+      <div class="action-btn danger">BURN 🔥</div>
+      <div class="action-btn">RESET</div>
+    </div>
+
+    <div class="hand-row">
+      <div class="hand-card playable"></div>
+      <div class="hand-card playable"></div>
+      <div class="hand-card"></div>
+      <div class="hand-card"></div>
+      <div class="hand-card playable"></div>
+      <div class="hand-card"></div>
+    </div>
+
+    <div class="namebadge bottom">
+      <div class="avi">⚔️</div>
+      <div class="badge-info">
+        <div class="badge-name">Shadow</div>
+        <div class="badge-sub">Lv. 34 · 125,000 🪙</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
