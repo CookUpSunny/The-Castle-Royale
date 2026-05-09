@@ -470,33 +470,6 @@ export default function GameScreen() {
               <BackButton label="← EXIT" onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })} />
             </View>
 
-            <View style={styles.headerRow}>
-              <View style={styles.playerSlot}>
-                <PlayerInfoCard
-                  name={playerName}
-                  level="Lv. 34"
-                  coins="125,000"
-                  gems="8,450"
-                  isActive={isMyTurn}
-                  align="left"
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setPlayerMenuOpen((o) => !o);
-                  }}
-                  showMenuDots
-                />
-              </View>
-              <View style={styles.playerSlot}>
-                <PlayerInfoCard
-                  name={opponentName}
-                  level="Lv. 28"
-                  coins={opponentCoins}
-                  isActive={!isMyTurn}
-                  align="right"
-                />
-              </View>
-            </View>
-
             <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
 
             <View style={styles.tableCenter}>
@@ -542,16 +515,47 @@ export default function GameScreen() {
             <EmotePicker onSend={sendEmote} />
           </View>
 
+          {/* ── Floating HUD chips ──────────────────────────────────────────
+              Both chips are position:'absolute' so they never push game content
+              in the flex column. Opponent anchors top-right; player bottom-left. */}
+
+          {/* Opponent chip — top-right corner, below the EXIT button row */}
+          <View style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: 8 }]}>
+            <PlayerInfoCard
+              name={opponentName}
+              level="Lv. 28"
+              coins={opponentCoins}
+              isActive={!isMyTurn}
+              align="right"
+            />
+          </View>
+
+          {/* Player chip — bottom-left corner, above the hand + emote area */}
+          <View style={[styles.hudChip, { bottom: (insets.bottom || 12) + 64, left: 8 }]}>
+            <PlayerInfoCard
+              name={playerName}
+              level="Lv. 34"
+              coins="125,000"
+              gems="8,450"
+              isActive={isMyTurn}
+              align="left"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setPlayerMenuOpen((o) => !o);
+              }}
+              showMenuDots
+            />
+          </View>
+
           {/* Player menu popover — opens when you tap your own name card.
-              Tucked in the top-left right under the player plate. Tap the
-              backdrop or anywhere outside the menu to dismiss. */}
+              Opens above the bottom-left player chip. Tap the backdrop to dismiss. */}
           {playerMenuOpen && (
             <>
               <Pressable
                 onPress={() => setPlayerMenuOpen(false)}
                 style={StyleSheet.absoluteFill}
               />
-              <View style={[styles.playerMenu, { top: insets.top + webTopPad + 96, left: 16 }]}>
+              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 64 + 78, left: 16 }]}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput
@@ -712,28 +716,33 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
+  hudChip: {
+    position: 'absolute',
+    zIndex: 20,
+    elevation: 20,
+    width: 215,
+  },
   infoCard: {
-    flex: 1,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: '#2a0d4af2',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1.5,
-    maxWidth: 175,
   },
   avatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: '900',
   },
   infoTextWrap: {
@@ -741,20 +750,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   infoName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   infoLevel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     marginTop: 1,
   },
   statsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 3,
+    marginTop: 4,
   },
   statChip: {
     flexDirection: 'row',
@@ -762,10 +771,10 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   statIcon: {
-    fontSize: 9,
+    fontSize: 10,
   },
   statText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
 
