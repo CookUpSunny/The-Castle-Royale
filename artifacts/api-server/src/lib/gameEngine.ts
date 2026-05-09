@@ -588,5 +588,8 @@ export function getGameView(state: GameState, playerId: string): Record<string, 
     myReady: state.setupReady?.[playerId] ?? false,
     opponentReady: state.setupReady?.[opponentId] ?? false,
     mustPlayStarter: state.mustPlayStarter === playerId,
+    // Default null — overridden by the emitGameView caller when a deck draw occurred.
+    drawPlayerId: null as string | null,
+    drawEventId: null as string | null,
   };
 }

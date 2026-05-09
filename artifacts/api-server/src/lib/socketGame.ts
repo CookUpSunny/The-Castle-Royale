@@ -348,6 +348,26 @@ function emitGameView(
 }
 
 /**
+ * Build the `drawPlayerId` / `drawEventId` extra fields for a `game_update`.
+ * Returns non-null values only when the deck shrank (i.e. a card was drawn).
+ * The `drawEventId` is a unique token per event so two consecutive draws by
+ * the same player both trigger the animation on the client.
+ */
+function drawExtra(
+  actorId: string,
+  prevDeckLen: number,
+  newDeckLen: number,
+): { drawPlayerId: string | null; drawEventId: string | null } {
+  if (newDeckLen < prevDeckLen) {
+    return {
+      drawPlayerId: actorId,
+      drawEventId: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    };
+  }
+  return { drawPlayerId: null, drawEventId: null };
+}
+
+/**
  * Register game participants so we can update their stats when the game ends.
  */
 function registerParticipants(gameId: string, players: QueueEntry[]): void {
@@ -383,7 +403,7 @@ function scheduleBotSetup(io: Server, gameId: string, botId: string): void {
         const view = getGameView(confirmed.newState, orderedPid);
         for (const [sid, p] of socketToPlayer.entries()) {
           if (p === orderedPid) {
-            io.to(sid).emit('game_update', view);
+            io.to(sid).emit('game_update', { ...view, drawPlayerId: null, drawEventId: null });
             break;
           }
         }
@@ -392,7 +412,7 @@ function scheduleBotSetup(io: Server, gameId: string, botId: string): void {
         scheduleBotTurn(io, gameId);
       }
     } else {
-      emitGameView(io, confirmed.newState, 'game_update');
+      emitGameView(io, confirmed.newState, 'game_update', { drawPlayerId: null, drawEventId: null });
     }
   }, 1500);
 }
@@ -422,6 +442,7 @@ function scheduleBotTurn(io: Server, gameId: string): void {
       emitGameView(io, fallback.newState, 'game_update', {
         lastEvent: { type: 'pickup', playerId: botId },
         drawPlayerId: null,
+        drawEventId: null,
       });
       if (fallback.newState.currentPlayerId === botId && fallback.newState.phase === 'playing') {
         scheduleBotTurn(io, gameId);
@@ -443,7 +464,7 @@ function scheduleBotTurn(io: Server, gameId: string): void {
           wasFaceDown: outcome.result.wasFaceDown,
           previousTop: outcome.result.previousTop,
         },
-        drawPlayerId: outcome.newState.deck.length < state.deck.length ? botId : null,
+        ...drawExtra(botId, state.deck.length, outcome.newState.deck.length),
       });
 
       if (outcome.result.gameOver) {
@@ -458,6 +479,7 @@ function scheduleBotTurn(io: Server, gameId: string): void {
       emitGameView(io, outcome.newState, 'game_update', {
         lastEvent: { type: 'pickup', playerId: botId },
         drawPlayerId: null,
+        drawEventId: null,
       });
     }
 
@@ -698,7 +720,7 @@ export function initSocketGame(httpServer: HttpServer): void {
           wasFaceDown: outcome.result.wasFaceDown,
           previousTop: outcome.result.previousTop,
         },
-        drawPlayerId: outcome.newState.deck.length < state.deck.length ? pid : null,
+        ...drawExtra(pid, state.deck.length, outcome.newState.deck.length),
       });
 
       if (outcome.result.gameOver) {
@@ -726,7 +748,7 @@ export function initSocketGame(httpServer: HttpServer): void {
         return;
       }
       games.set(data.gameId, outcome.newState);
-      emitGameView(io, outcome.newState, 'game_update');
+      emitGameView(io, outcome.newState, 'game_update', { drawPlayerId: null, drawEventId: null });
     });
 
     socket.on('swap_card', (data: { gameId: string; handCardId: string; faceUpCardId: string }) => {
@@ -741,7 +763,7 @@ export function initSocketGame(httpServer: HttpServer): void {
         return;
       }
       games.set(data.gameId, outcome.newState);
-      emitGameView(io, outcome.newState, 'game_update');
+      emitGameView(io, outcome.newState, 'game_update', { drawPlayerId: null, drawEventId: null });
     });
 
     socket.on('confirm_setup', (data: { gameId: string }) => {
@@ -763,7 +785,7 @@ export function initSocketGame(httpServer: HttpServer): void {
           const view = getGameView(outcome.newState, orderedPid);
           for (const [sid, p] of socketToPlayer.entries()) {
             if (p === orderedPid) {
-              io.to(sid).emit('game_update', view);
+              io.to(sid).emit('game_update', { ...view, drawPlayerId: null, drawEventId: null });
               break;
             }
           }
@@ -772,7 +794,7 @@ export function initSocketGame(httpServer: HttpServer): void {
           scheduleBotTurn(io, data.gameId);
         }
       } else {
-        emitGameView(io, outcome.newState, 'game_update');
+        emitGameView(io, outcome.newState, 'game_update', { drawPlayerId: null, drawEventId: null });
       }
     });
 
@@ -792,6 +814,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       emitGameView(io, outcome.newState, 'game_update', {
         lastEvent: { type: 'pickup', playerId: pid },
         drawPlayerId: null,
+        drawEventId: null,
       });
 
       if (isBotId(outcome.newState.currentPlayerId)) {

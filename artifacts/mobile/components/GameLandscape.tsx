@@ -340,12 +340,12 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
 
-  // Card draw animation: fires only when the server explicitly tells us the
-  // local player drew. `drawPlayerId` is set server-side at the moment the deck
-  // shrinks — it is null for every other update, including opponent/bot draws,
-  // pile pickups, and setup-phase state changes.
+  // Card draw animation: fires only when the server explicitly stamps this
+  // update with the local player as the drawer. `drawEventId` is a unique token
+  // per draw event — consecutive draws by the same player each get a different
+  // token, so the effect fires reliably every time.
   useEffect(() => {
-    if (!gameView?.drawPlayerId || gameView.drawPlayerId !== gameView.myPlayerId) return;
+    if (!gameView?.drawEventId || gameView.drawPlayerId !== gameView.myPlayerId) return;
     drawPileRef.current?.getPosition().then(({ x, y, width: w, height: h }) => {
       const startX = x + w / 2;
       const startY = y + h / 2;
@@ -358,7 +358,7 @@ export default function GameLandscape(): React.JSX.Element | null {
       drawAnimY.value = withTiming(endY - 28, { duration: 700, easing: Easing.out(Easing.cubic) });
       drawAnimOpacity.value = withDelay(500, withTiming(0, { duration: 200 }));
     }).catch(() => {});
-  }, [gameView?.drawPlayerId]);
+  }, [gameView?.drawEventId]);
 
   // Drag-and-drop handlers (passed to PlayerHand → HandCard)
   const handleDragStart = useCallback((card: CardType, x: number, y: number) => {

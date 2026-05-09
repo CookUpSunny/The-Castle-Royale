@@ -47,10 +47,15 @@ export interface GameView {
   /** True when this player owes a starter play after picking up the pile. They must commit one card (any value, no specials) to restart the pile. */
   mustPlayStarter?: boolean;
   /**
-   * Set to the playerId of whoever drew from the deck on this update, or null/absent if no draw occurred.
+   * Set to the playerId of whoever drew from the deck on this update, or null if no draw occurred.
    * The client uses this to trigger the draw animation only for the local player.
    */
   drawPlayerId?: string | null;
+  /**
+   * Unique opaque token that changes on every draw event (even consecutive draws by the same player).
+   * The client keys its draw-animation `useEffect` on this field so two draws in a row both fire.
+   */
+  drawEventId?: string | null;
 }
 
 interface GameContextType {
