@@ -88,7 +88,7 @@ function OutlinedTitle({
 export default function LobbyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { playerName, setPlayerName, isInQueue, connectionStatus, gameView } = useGame();
+  const { playerName, setPlayerName, isInQueue, connectionStatus, gameView, onlineCount } = useGame();
   const { isAuthenticated, profile } = useGameCenter();
   const { playSplashTrack } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
@@ -297,7 +297,11 @@ export default function LobbyScreen() {
         <View style={styles.connectionDot}>
           <View style={[styles.dot, { backgroundColor: connectionStatus === 'connected' ? '#22c55e' : '#ef4444' }]} />
           <Text style={[styles.connectionText, { color: colors.mutedForeground }]}>
-            {connectionStatus === 'connected' ? 'ONLINE' : connectionStatus.toUpperCase()}
+            {connectionStatus === 'connected'
+              ? onlineCount > 0
+                ? `● ${onlineCount} online`
+                : 'ONLINE'
+              : connectionStatus.toUpperCase()}
           </Text>
         </View>
       </View>

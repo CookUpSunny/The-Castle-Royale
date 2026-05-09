@@ -55,6 +55,7 @@ interface GameContextType {
   gameView: GameView | null;
   isInQueue: boolean;
   queueSeconds: number;
+  onlineCount: number;
   connectionStatus: 'connected' | 'disconnected' | 'connecting';
   opponentDisconnected: boolean;
   /** True while the opponent has temporarily lost connection but is within the grace period. */
@@ -128,6 +129,7 @@ export function GameProvider({
   const [gameView, setGameView] = useState<GameView | null>(null);
   const [isInQueue, setIsInQueue] = useState(false);
   const [queueSeconds, setQueueSeconds] = useState(0);
+  const [onlineCount, setOnlineCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [opponentReconnecting, setOpponentReconnecting] = useState(false);
@@ -211,11 +213,16 @@ export function GameProvider({
     socket.on('disconnect', () => {
       setConnectionStatus('disconnected');
       setIsInQueue(false);
+      setOnlineCount(0);
       if (queueTimerRef.current) clearInterval(queueTimerRef.current);
     });
 
     socket.on('connect_error', () => {
       setConnectionStatus('disconnected');
+    });
+
+    socket.on('online_count', (count: number) => {
+      setOnlineCount(count);
     });
 
     socket.on('queue_joined', () => {
@@ -449,6 +456,7 @@ export function GameProvider({
         gameView,
         isInQueue,
         queueSeconds,
+        onlineCount,
         connectionStatus,
         opponentDisconnected,
         opponentReconnecting,

@@ -10,7 +10,7 @@ import BackButton from '@/components/BackButton';
 export default function ModeSelectScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { connectionStatus } = useGame();
+  const { connectionStatus, onlineCount } = useGame();
 
   const goPrivate = () => {
     if (connectionStatus !== 'connected') return;
@@ -20,6 +20,11 @@ export default function ModeSelectScreen() {
   const goBot = () => {
     if (connectionStatus !== 'connected') return;
     router.push('/arena-picker?mode=bot');
+  };
+
+  const goOnline = () => {
+    if (connectionStatus !== 'connected') return;
+    router.push('/arena-picker?mode=online');
   };
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
@@ -59,6 +64,25 @@ export default function ModeSelectScreen() {
               <Text style={[styles.bigBtnIcon, !isConnected && { color: '#5a5030' }]}>⚡</Text>
               <Text style={[styles.bigBtnText, !isConnected && { color: '#5a5030' }]}>PLAY QUICK GAME</Text>
               <Text style={[styles.bigBtnSubText, !isConnected && { color: '#5a5030' }]}>· BOT ·</Text>
+            </LinearGradient>
+          </Pressable>
+
+          <Pressable
+            onPress={goOnline}
+            disabled={!isConnected}
+            style={({ pressed }) => [styles.bigBtnOuter, styles.tealShadow, pressed && { opacity: 0.86 }]}
+          >
+            <LinearGradient
+              colors={isConnected ? ['#22d3ee', '#0891b2', '#0e7490'] : ['#0a2428', '#051214', '#0a2428']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.bigBtn}
+            >
+              <Text style={[styles.bigBtnIcon, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>🌐</Text>
+              <Text style={[styles.bigBtnText, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>PLAY ONLINE</Text>
+              <Text style={[styles.bigBtnSubText, { color: 'rgba(255,255,255,0.78)' }, !isConnected && { color: '#1a4048' }]}>
+                {isConnected ? `· ${onlineCount} PLAYERS ONLINE ·` : '· FIND AN OPPONENT ·'}
+              </Text>
             </LinearGradient>
           </Pressable>
 
@@ -109,6 +133,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 16,
     elevation: 14,
+  },
+  tealShadow: {
+    shadowColor: '#0891b2',
   },
   bigBtn: { paddingVertical: 26, justifyContent: 'center', alignItems: 'center', borderRadius: 18 },
   bigBtnIcon: { fontSize: 28, fontWeight: '900', color: '#1a0e00', marginBottom: 6 },

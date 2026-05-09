@@ -475,6 +475,7 @@ export function initSocketGame(httpServer: HttpServer): void {
 
   io.on('connection', (socket: Socket) => {
     logger.info({ sid: socket.id }, 'Socket connected');
+    io.emit('online_count', io.engine.clientsCount);
 
     socket.on('join_queue', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
       const { playerId, playerName, gameCenterId } = data;
@@ -925,6 +926,7 @@ export function initSocketGame(httpServer: HttpServer): void {
     });
 
     socket.on('disconnect', () => {
+      io.emit('online_count', io.engine.clientsCount);
       const pid = socketToPlayer.get(socket.id);
       logger.info({ sid: socket.id, pid }, 'Socket disconnected');
 
