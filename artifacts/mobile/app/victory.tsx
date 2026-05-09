@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/cinzel';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -13,7 +14,6 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -139,15 +139,17 @@ export default function VictoryScreen() {
 
   const isWin = params.winner === params.myId;
 
-  const scale = useSharedValue(0.4);
+  // No scale animation — images always render at their natural full resolution.
+  // Entrance is driven purely by opacity (fade) + a subtle translateY slide.
   const contentOpacity = useSharedValue(0);
-  const glowPulse = useSharedValue(1);
+  const slideY        = useSharedValue(28);   // slides up 28 px on reveal
+  const glowPulse     = useSharedValue(1);
 
   const [curtainSweeping, setCurtainSweeping] = useState(false);
 
   const handleContentReady = useCallback(() => {
-    contentOpacity.value = withTiming(1, { duration: 400 });
-    scale.value = withDelay(100, withSpring(1, { damping: 12, stiffness: 100 }));
+    contentOpacity.value = withTiming(1, { duration: 380 });
+    slideY.value = withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) });
     if (isWin) {
       glowPulse.value = withRepeat(
         withSequence(withTiming(1.06, { duration: 1400 }), withTiming(0.97, { duration: 1400 })),
@@ -159,13 +161,12 @@ export default function VictoryScreen() {
     setTimeout(() => setCurtainSweeping(true), 200);
   }, [isWin]);
 
-  const mainStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
+  // The entire visible content fades + slides up together — images always at
+  // scale 1 so React Native rasterises them at full native resolution.
   const innerContentStyle = useAnimatedStyle(() => ({
     flex: 1,
     opacity: contentOpacity.value,
+    transform: [{ translateY: slideY.value }],
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -195,17 +196,17 @@ export default function VictoryScreen() {
           <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
             <BackButton label="← HOME" onPress={handleLobby} />
 
-            <Animated.View style={[styles.lossCenterBlock, mainStyle]}>
-              <Animated.Image
+            <View style={styles.lossCenterBlock}>
+              <Image
                 source={crownLossImage}
                 style={styles.crownImage}
-                resizeMode="contain"
+                contentFit="contain"
               />
               <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>YOU LOSE</Text>
               <Text style={[styles.lossSub, { fontFamily: cinzelRegular }]}>
                 {params.opponentName ?? 'Opponent'} claims victory
               </Text>
-            </Animated.View>
+            </View>
 
             <View style={styles.buttonSection}>
               <Pressable
@@ -238,12 +239,12 @@ export default function VictoryScreen() {
         <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
           <BackButton label="← HOME" onPress={handleLobby} />
 
-          <Animated.View style={[styles.winCenterBlock, mainStyle]}>
+          <View style={styles.winCenterBlock}>
             <Animated.View style={[styles.winImageWrap, glowStyle]}>
-              <Animated.Image
+              <Image
                 source={crownWinImage}
                 style={{ width: imageSize, height: imageSize }}
-                resizeMode="contain"
+                contentFit="contain"
               />
             </Animated.View>
 
@@ -251,7 +252,7 @@ export default function VictoryScreen() {
             <Text style={[styles.winSub, { fontFamily: cinzelRegular }]}>
               {params.opponentName ?? 'Opponent'} has been outplayed
             </Text>
-          </Animated.View>
+          </View>
 
           <View style={styles.buttonSection}>
             <Pressable
