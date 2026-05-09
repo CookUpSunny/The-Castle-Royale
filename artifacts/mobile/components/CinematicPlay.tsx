@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
 import type { LayoutRect } from '@/components/CardPlayFlight';
@@ -66,6 +66,11 @@ export default function CinematicPlay({
   const cy = useSharedValue(0);
   const impact = useSharedValue(0);
 
+  // 3D rotation shared values — rotateX tilts the card flat during flight,
+  // rotateY adds a gentle tumble wobble; both use perspective: 800.
+  const rotX = useSharedValue(0);
+  const rotY = useSharedValue(0);
+
   const [spotTrigger, setSpotTrigger] = useState(0);
   const [impactVisible, setImpactVisible] = useState(false);
 
@@ -104,6 +109,8 @@ export default function CinematicPlay({
     cy.value = ctrlY - SM.h / 2;
     progress.value = 0;
     impact.value = 0;
+    rotX.value = 0;
+    rotY.value = 0;
 
     setFlight({ card, key, side, kind: k });
     setSpotTrigger((n) => n + 1);
@@ -117,18 +124,42 @@ export default function CinematicPlay({
       setTimeout(() => setImpactVisible(false), 720);
     };
 
+    const flightMs = k === 'big' ? 480 : 420;
+    const anticipationMs = 110;
+
+    // rotateX: card tilts from upright → flat during flight.
+    // Self side tilts away (+35°); opponent side tilts toward viewer (-35°).
+    const rotXTarget = side === 'self' ? 35 : -35;
+    rotX.value = withSequence(
+      withTiming(0, { duration: anticipationMs }),
+      withTiming(rotXTarget, { duration: flightMs, easing: Easing.inOut(Easing.cubic) }),
+    );
+
+    // rotateY: gentle 3-segment tumble wobble (0° → 15° → −10° → 0°).
+    // Same for both sides — natural spin doesn't depend on which player.
+    const seg = Math.floor(flightMs / 3);
+    rotY.value = withSequence(
+      withTiming(0, { duration: anticipationMs }),
+      withTiming(15, { duration: seg, easing: Easing.out(Easing.cubic) }),
+      withTiming(-10, { duration: seg, easing: Easing.inOut(Easing.cubic) }),
+      withTiming(0, { duration: flightMs - seg * 2, easing: Easing.in(Easing.cubic) }),
+    );
+
     // Timeline:
     // - 0..~120ms anticipation
     // - ~120..520ms flight
     trigger.value = trigger.value + 1;
     progress.value = withSequence(
-      withTiming(-0.14, { duration: 110, easing: Easing.out(Easing.cubic) }),
-      withTiming(1, { duration: k === 'big' ? 480 : 420, easing: Easing.inOut(Easing.cubic) }, (finished) => {
+      withTiming(-0.14, { duration: anticipationMs, easing: Easing.out(Easing.cubic) }),
+      withTiming(1, { duration: flightMs, easing: Easing.inOut(Easing.cubic) }, (finished) => {
         if (!finished) return;
         impact.value = withSequence(
           withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) }),
           withTiming(0, { duration: 220, easing: Easing.in(Easing.cubic) }),
         );
+        // Landing settle: card springs back to flat on the table.
+        rotX.value = withSpring(0, { damping: 18, stiffness: 200 });
+        rotY.value = withSpring(0, { damping: 20, stiffness: 220 });
         runOnJS(showImpact)();
         runOnJS(finish)();
       }),
@@ -155,7 +186,7 @@ export default function CinematicPlay({
     const antX = ant * (flight?.side === 'self' ? -10 : 10);
     const antY = ant * 8;
 
-    // Landing “punch”: quick scale bump.
+    // Landing "punch": quick scale bump.
     const punch = impact.value;
     const baseScale = 0.9 + t * 0.14;
     return {
@@ -164,6 +195,9 @@ export default function CinematicPlay({
       top: by + antY,
       opacity: fade,
       transform: [
+        { perspective: 800 },
+        { rotateX: `${rotX.value}deg` },
+        { rotateY: `${rotY.value}deg` },
         { rotate: `${t * (flight?.kind === 'big' ? 22 : 16)}deg` },
         { scale: baseScale + punch * 0.08 },
       ],
@@ -171,6 +205,10 @@ export default function CinematicPlay({
       elevation: 30,
     };
   });
+
+  // Trail ghost copies get a fixed mid-flight rotateX so they read as motion
+  // blur rather than independent perspective layers that fight the lead card.
+  const TRAIL_ROT_X = 18; // deg — approximate midpoint of the 0→35 range
 
   const trailStyle = (dt: number) =>
     useAnimatedStyle(() => {
@@ -186,7 +224,12 @@ export default function CinematicPlay({
         left: bx,
         top: by,
         opacity: o,
-        transform: [{ rotate: `${t * 18}deg` }, { scale: 0.9 + t * 0.14 }],
+        transform: [
+          { perspective: 800 },
+          { rotateX: `${TRAIL_ROT_X}deg` },
+          { rotate: `${t * 18}deg` },
+          { scale: 0.9 + t * 0.14 },
+        ],
         zIndex: 110,
       };
     });
@@ -276,4 +319,3 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,220,140,0.7)',
   },
 });
-
