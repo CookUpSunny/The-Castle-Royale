@@ -637,6 +637,7 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
+                availableWidth={Math.round(width * 0.88)}
               />
             </View>
 
@@ -648,7 +649,7 @@ export default function GameScreen() {
               in the flex column. Opponent anchors top-right; player bottom-left. */}
 
           {/* Opponent avatar chip — top-right corner, below the EXIT button row */}
-          <View style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: 10 }]}>
+          <View pointerEvents="box-none" style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: 10 }]}>
             <AvatarChip
               name={opponentName}
               isActive={!isMyTurn}
@@ -657,7 +658,7 @@ export default function GameScreen() {
           </View>
 
           {/* Player avatar chip — bottom-left corner, above the hand + emote area */}
-          <View style={[styles.hudChip, { bottom: (insets.bottom || 12) + 64, left: 10 }]}>
+          <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 64, left: 10 }]}>
             <AvatarChip
               name={playerName}
               isActive={isMyTurn}
@@ -846,7 +847,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 20,
     elevation: 20,
-    width: 215,
   },
   infoCard: {
     flexShrink: 1,

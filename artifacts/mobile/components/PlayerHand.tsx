@@ -44,6 +44,8 @@ interface PlayerHandProps {
   onDragStart?: (card: CardType, x: number, y: number) => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd?: (x: number, y: number) => void;
+  /** Override the available width used for overlap + edge-clamp math (defaults to full screen width). Pass when the container is narrower than the screen. */
+  availableWidth?: number;
 }
 
 function HandCard({
@@ -221,9 +223,10 @@ function HandCard({
 const CARD_WIDTH = 66;
 const SCROLL_PADDING_H = 48; // paddingHorizontal 24 each side in scrollContent
 
-export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, discardPile, isMyTurn, onPlayCard, onPlayCards, mustPlayStarter, draggable, onDragStart, onDragMove, onDragEnd }: PlayerHandProps) {
+export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, discardPile, isMyTurn, onPlayCard, onPlayCards, mustPlayStarter, draggable, onDragStart, onDragMove, onDragEnd, availableWidth }: PlayerHandProps) {
   const colors = useColors();
   const { width: screenWidth } = useWindowDimensions();
+  const containerWidth = availableWidth ?? screenWidth;
   const showHand = hand.length > 0;
   const showFaceUp = hand.length === 0 && faceUp.length > 0;
   const showFaceDown = hand.length === 0 && faceUp.length === 0 && faceDownCount > 0;
@@ -287,13 +290,13 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
   const staticOverlap = useMemo(() => {
     if (totalCards <= 1) return 0;
     const comfortableOverlap = totalCards > 5 ? -28 : -10;
-    const availableWidth = screenWidth - SCROLL_PADDING_H;
+    const usableWidth = containerWidth - SCROLL_PADDING_H;
     // Total width = CARD_WIDTH + (n-1) * (CARD_WIDTH + overlapValue)
     // Solve for overlapValue at the boundary:
-    const requiredOverlap = (availableWidth - CARD_WIDTH * totalCards) / (totalCards - 1);
+    const requiredOverlap = (usableWidth - CARD_WIDTH * totalCards) / (totalCards - 1);
     // Use whichever is more compressed (more negative)
     return Math.min(comfortableOverlap, requiredOverlap);
-  }, [totalCards, screenWidth]);
+  }, [totalCards, containerWidth]);
 
   // Animated shared value for live bunching during drag
   const liveOverlapSV = useSharedValue(staticOverlap);
@@ -306,14 +309,14 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
   // Wrap drag callbacks to animate bunching near screen edges
   const wrappedOnDragMove = useCallback((x: number, y: number) => {
     const edgeThreshold = 80;
-    if (x < edgeThreshold || x > screenWidth - edgeThreshold) {
+    if (x < edgeThreshold || x > containerWidth - edgeThreshold) {
       // Tighten by 14px more than the static overlap, but never compress past -44
       // Math.max picks the less-negative value (the cap) when tightening would overshoot
       const tightened = Math.max(staticOverlap - 14, -44);
       liveOverlapSV.value = withTiming(tightened, { duration: 80 });
     }
     onDragMove?.(x, y);
-  }, [onDragMove, screenWidth, staticOverlap, liveOverlapSV]);
+  }, [onDragMove, containerWidth, staticOverlap, liveOverlapSV]);
 
   const wrappedOnDragEnd = useCallback((x: number, y: number) => {
     liveOverlapSV.value = withSpring(staticOverlap, { stiffness: 180, damping: 18 });
