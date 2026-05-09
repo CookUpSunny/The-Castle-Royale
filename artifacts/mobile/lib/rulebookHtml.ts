@@ -195,7 +195,7 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
 <div class="hero">
   <div class="hero-cards" id="heroCards"></div>
   <div class="hero-eyebrow">Official Rules &amp; Guide</div>
-  <div class="hero-title">&#9820; Castle</div>
+  <div class="hero-title">♜ Castle</div>
 
   <div class="hero-meta">
     <div class="hero-chip">2&ndash;4 Players</div>
@@ -204,9 +204,9 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
   </div>
 </div>
 
-<div class="orn-line"><span>&#10022; &#10022; &#10022;</span></div>
+<div class="orn-line"><span>✦ ✦ ✦</span></div>
 
-<!-- 1 &middot; WHAT IS CASTLE -->
+<!-- 1 · WHAT IS CASTLE -->
 <div class="section">
   <div class="sacc" style="background:linear-gradient(90deg,var(--yellow),var(--orange))"></div>
   <div class="section-header">
@@ -450,32 +450,43 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
   </div>
 </div>
 
-<div class="orn-line"><span>&#10022; &#10022; &#10022;</span></div>
+<div class="orn-line"><span>✦ ✦ ✦</span></div>
 
 </div>
 <script>
 (function(){
-  var container = document.getElementById('heroCards');
-  var cards = [
-    {r:'A',s:'&#9824;',cl:'fc-black'},{r:'K',s:'&#9829;',cl:'fc-red'},{r:'Q',s:'&#9830;',cl:'fc-red'},
-    {r:'J',s:'&#9824;',cl:'fc-black'},{r:'10',s:'&#9827;',cl:'fc-black'},{r:'9',s:'&#9829;',cl:'fc-red'},
-    {r:'8',s:'&#9824;',cl:'fc-black'},{r:'7',s:'&#9830;',cl:'fc-red'},{r:'2',s:'&#9733;',cl:'fc-gold'},
-    {r:'2',s:'&#9733;',cl:'fc-gold'},{r:'10',s:'&#9824;',cl:'fc-face'},{r:'A',s:'&#9830;',cl:'fc-red'},
-    {r:'K',s:'&#9827;',cl:'fc-black'},{r:'Q',s:'&#9829;',cl:'fc-red'},{r:'J',s:'&#9830;',cl:'fc-red'},
-    {r:'3',s:'&#9824;',cl:'fc-black'},{r:'6',s:'&#9829;',cl:'fc-red'},{r:'5',s:'&#9827;',cl:'fc-black'},
+  const container = document.getElementById('heroCards');
+  const cards = [
+    {r:'A',s:'♠',cl:'fc-black'},{r:'K',s:'♥',cl:'fc-red'},{r:'Q',s:'♦',cl:'fc-red'},
+    {r:'J',s:'♠',cl:'fc-black'},{r:'10',s:'♣',cl:'fc-black'},{r:'9',s:'♥',cl:'fc-red'},
+    {r:'8',s:'♠',cl:'fc-black'},{r:'7',s:'♦',cl:'fc-red'},{r:'2',s:'★',cl:'fc-gold'},
+    {r:'2',s:'★',cl:'fc-gold'},{r:'10',s:'♠',cl:'fc-face'},{r:'A',s:'♦',cl:'fc-red'},
+    {r:'K',s:'♣',cl:'fc-black'},{r:'Q',s:'♥',cl:'fc-red'},{r:'J',s:'♦',cl:'fc-red'},
+    {r:'3',s:'♠',cl:'fc-black'},{r:'6',s:'♥',cl:'fc-red'},{r:'5',s:'♣',cl:'fc-black'},
   ];
-  cards.forEach(function(c, i){
-    var el = document.createElement('div');
-    var left = 4 + (i / cards.length) * 92;
-    var dur  = 7 + Math.random() * 9;
-    var delay = -(Math.random() * dur);
-    var r0   = -30 + Math.random() * 60;
-    var r1   = r0 + (-40 + Math.random() * 80);
-    var sc   = 0.6 + Math.random() * 0.7;
-    var op   = 0.12 + Math.random() * 0.22;
-    el.className = 'fcard ' + c.cl;
-    el.innerHTML = '<div class="fr">'+c.r+'</div><div class="fs">'+c.s+'</div><div class="fb">'+c.r+'</div>';
-    el.style.cssText = 'left:'+left+'%;--r0:'+r0+'deg;--r1:'+r1+'deg;--sc:'+sc+';--op:'+op+';animation-duration:'+dur+'s;animation-delay:'+delay+'s;';
+
+  // spawn 18 cards at staggered positions and timings
+  cards.forEach((c, i) => {
+    const el = document.createElement('div');
+    const left = 4 + (i / cards.length) * 92; // spread left 4–96%
+    const dur  = 7 + Math.random() * 9;        // 7–16s per cycle
+    const delay = -(Math.random() * dur);       // stagger start
+    const r0   = -30 + Math.random() * 60;     // starting rotation
+    const r1   = r0 + (-40 + Math.random() * 80); // ending rotation
+    const sc   = 0.6 + Math.random() * 0.7;    // scale 0.6–1.3
+    const op   = 0.12 + Math.random() * 0.22;  // opacity 0.12–0.34
+
+    el.className = \`fcard \${c.cl}\`;
+    el.innerHTML = \`<div class="fr">\${c.r}</div><div class="fs">\${c.s}</div><div class="fb">\${c.r}</div>\`;
+    el.style.cssText = \`
+      left:\${left}%;
+      --r0:\${r0}deg;
+      --r1:\${r1}deg;
+      --sc:\${sc};
+      --op:\${op};
+      animation-duration:\${dur}s;
+      animation-delay:\${delay}s;
+    \`;
     container.appendChild(el);
   });
 })();

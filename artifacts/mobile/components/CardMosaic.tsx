@@ -28,12 +28,7 @@ const CARD_POOL: CardData[] = [
   { rank: 'J', suit: '♣', rankColor: '#111', suitColor: '#111', bg: '#faf8f2', border: '#bbb', faceDown: false },
   { rank: '10', suit: '♠', rankColor: '#111', suitColor: '#111', bg: '#fff0f0', border: '#ff3d3d', faceDown: false },
   { rank: '2', suit: '★', rankColor: '#7a6000', suitColor: '#9a7800', bg: '#fffce0', border: '#f5e642', faceDown: false },
-  { rank: '9', suit: '♥', rankColor: '#cc0000', suitColor: '#cc0000', bg: '#faf8f2', border: '#cc0000', faceDown: false },
-  { rank: '8', suit: '♣', rankColor: '#111', suitColor: '#111', bg: '#faf8f2', border: '#bbb', faceDown: false },
   { rank: '?', suit: '', rankColor: '#b44fff', suitColor: '#b44fff', bg: '#1a1a2e', border: 'rgba(180,79,255,0.5)', faceDown: true },
-  { rank: 'A', suit: '♦', rankColor: '#cc0000', suitColor: '#cc0000', bg: '#faf8f2', border: '#cc0000', faceDown: false },
-  { rank: '7', suit: '♠', rankColor: '#111', suitColor: '#111', bg: '#faf8f2', border: '#bbb', faceDown: false },
-  { rank: '10', suit: '♦', rankColor: '#cc0000', suitColor: '#cc0000', bg: '#edfff8', border: '#2affa0', faceDown: false },
 ];
 
 interface MosaicCellProps {
@@ -51,7 +46,7 @@ function MosaicCell({ delay, card, dissolving }: MosaicCellProps) {
 
   useEffect(() => {
     if (dissolving) {
-      scale.value = withTiming(0, { duration: 480 });
+      scale.value = withTiming(0, { duration: 500 });
     }
   }, [dissolving]);
 
@@ -91,8 +86,8 @@ export default function CardMosaic({ onAssembled, dissolving }: CardMosaicProps)
   const { width, height } = useWindowDimensions();
   const assembledRef = useRef(false);
 
-  const cols = Math.ceil(width / CELL_W) + 1;
-  const rows = Math.ceil(height / CELL_H) + 1;
+  const cols = Math.ceil(width / CELL_W);
+  const rows = Math.ceil(height / CELL_H);
   const total = cols * rows;
 
   const cellData = useMemo(() => {

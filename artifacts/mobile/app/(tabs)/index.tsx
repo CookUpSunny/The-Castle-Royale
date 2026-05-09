@@ -108,6 +108,7 @@ export default function LobbyScreen() {
       morphW.value = -1;
       morphH.value = 60;
       morphTextOpacity.value = 1;
+      morphGoldOpacity.value = 0;
       morphingRef.current = false;
     }, [playSplashTrack]),
   );
@@ -120,6 +121,7 @@ export default function LobbyScreen() {
   const morphW = useSharedValue(-1);
   const morphH = useSharedValue(60);
   const morphTextOpacity = useSharedValue(1);
+  const morphGoldOpacity = useSharedValue(0);
   const buttonWidthRef = useRef(0);
   const morphingRef = useRef(false);
 
@@ -161,6 +163,12 @@ export default function LobbyScreen() {
     opacity: morphTextOpacity.value,
   }));
 
+  const morphGoldStyle = useAnimatedStyle(() => ({
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#c8960a',
+    opacity: morphGoldOpacity.value,
+  }));
+
   useEffect(() => {
     if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
       lastNavigatedGameIdRef.current = gameView.gameId;
@@ -188,6 +196,7 @@ export default function LobbyScreen() {
     morphingRef.current = true;
 
     morphTextOpacity.value = withTiming(0, { duration: 110 });
+    morphGoldOpacity.value = withTiming(1, { duration: 500 });
 
     morphBR.value = withSequence(
       withTiming(50, { duration: 200 }),
@@ -318,6 +327,7 @@ export default function LobbyScreen() {
                   <Text style={styles.pillIcon}>?</Text>
                   <Text style={[styles.goldPillText, styles.goldPillTextSm]}>HOW TO PLAY</Text>
                 </Animated.View>
+                <Animated.View style={morphGoldStyle} />
               </LinearGradient>
             </Pressable>
           </Animated.View>
