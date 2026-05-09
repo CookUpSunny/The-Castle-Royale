@@ -104,12 +104,16 @@ export default function LobbyScreen() {
   useFocusEffect(
     useCallback(() => {
       playSplashTrack();
-      morphBR.value = 32;
-      morphW.value = -1;
-      morphH.value = 60;
-      morphTextOpacity.value = 1;
-      morphGoldOpacity.value = 0;
       morphingRef.current = false;
+      const w = buttonWidthRef.current || 240;
+      morphBR.value = withTiming(32, { duration: 220 });
+      morphH.value = withTiming(60, { duration: 220 });
+      morphTextOpacity.value = withTiming(1, { duration: 180 });
+      morphGoldOpacity.value = withTiming(0, { duration: 150 });
+      morphW.value = withTiming(w, { duration: 220 }, () => {
+        'worklet';
+        morphW.value = -1;
+      });
     }, [playSplashTrack]),
   );
 
