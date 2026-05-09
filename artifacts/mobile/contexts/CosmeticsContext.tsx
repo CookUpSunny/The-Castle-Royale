@@ -168,7 +168,7 @@ const isAvatarId = (v: string | null): v is AvatarId =>
   v === 'eagles' || v === 'frog' || v === 'troll';
 
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
-  const [cardSkin, setCardSkinState] = useState<CardSkinId>('neon-glow');
+  const [cardSkin, setCardSkinState] = useState<CardSkinId>('royal-gold');
   const [arena, setArenaState] = useState<ArenaId>('greenTable');
   const [avatarId, setAvatarState] = useState<AvatarId>('eagles');
 

@@ -14,12 +14,18 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Animated, {
+  Easing,
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
+import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
 import ActionButtons from '@/components/ActionButtons';
@@ -127,6 +133,81 @@ function PlayerInfoCard({ name, level, coins, gems, isActive, align, onPress, sh
     </Wrapper>
   );
 }
+
+function AvatarChip({ name, isActive, portraitArt, onPress }: {
+  name: string;
+  isActive: boolean;
+  portraitArt?: number | null;
+  onPress?: () => void;
+}) {
+  const colors = useColors();
+  const initial = name.charAt(0).toUpperCase();
+  const glow = useSharedValue(0.2);
+
+  useEffect(() => {
+    if (!isActive) {
+      glow.value = withTiming(0.18, { duration: 400 });
+      return;
+    }
+    glow.value = withRepeat(
+      withSequence(
+        withTiming(1.0, { duration: 800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0.35, { duration: 800, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+    );
+    return () => cancelAnimation(glow);
+  }, [isActive, glow]);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowOpacity: glow.value,
+  }));
+
+  const Wrapper: React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }> = onPress ? (Pressable as React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }>) : View;
+
+  return (
+    <Wrapper onPress={onPress}>
+      <Animated.View
+        style={[
+          avatarChipStyles.chip,
+          {
+            borderColor: isActive ? colors.neonGold : colors.neonPurple,
+            shadowColor: isActive ? colors.neonGold : colors.neonPurple,
+          },
+          glowStyle,
+        ]}
+      >
+        {portraitArt ? (
+          <Image source={portraitArt} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+        ) : (
+          <Text style={[avatarChipStyles.initial, { color: isActive ? colors.neonGold : colors.neonPurple }]}>
+            {initial}
+          </Text>
+        )}
+      </Animated.View>
+    </Wrapper>
+  );
+}
+
+const avatarChipStyles = StyleSheet.create({
+  chip: {
+    width: 54,
+    height: 54,
+    borderRadius: 12,
+    borderWidth: 2,
+    overflow: 'hidden',
+    backgroundColor: '#0d001ad9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  initial: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+});
 
 function DeckBadge({ count }: { count: number }) {
   const colors = useColors();
@@ -269,6 +350,11 @@ export default function GameScreen() {
     gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
     opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
   } = useGame();
+  const cosmetics = useCosmetics();
+  const myAvatarPortrait = useMemo(
+    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.portrait ?? null,
+    [cosmetics.avatarId],
+  );
   // Music is started by the game-loading screen *before* navigating here, so
   // game.tsx no longer manages the music lifecycle. Even if /game remounts due
   // to a stale router.replace('/game') call, music will not restart because
@@ -533,7 +619,7 @@ export default function GameScreen() {
 
             <View
               ref={selfHandRef}
-              style={styles.playerSection}
+              style={[styles.playerSection, { marginLeft: '8%' }]}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -561,31 +647,25 @@ export default function GameScreen() {
               Both chips are position:'absolute' so they never push game content
               in the flex column. Opponent anchors top-right; player bottom-left. */}
 
-          {/* Opponent chip — top-right corner, below the EXIT button row */}
-          <View style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: 8 }]}>
-            <PlayerInfoCard
+          {/* Opponent avatar chip — top-right corner, below the EXIT button row */}
+          <View style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: 10 }]}>
+            <AvatarChip
               name={opponentName}
-              level="Lv. 28"
-              coins={opponentCoins}
               isActive={!isMyTurn}
-              align="right"
+              portraitArt={null}
             />
           </View>
 
-          {/* Player chip — bottom-left corner, above the hand + emote area */}
-          <View style={[styles.hudChip, { bottom: (insets.bottom || 12) + 64, left: 8 }]}>
-            <PlayerInfoCard
+          {/* Player avatar chip — bottom-left corner, above the hand + emote area */}
+          <View style={[styles.hudChip, { bottom: (insets.bottom || 12) + 64, left: 10 }]}>
+            <AvatarChip
               name={playerName}
-              level="Lv. 34"
-              coins="125,000"
-              gems="8,450"
               isActive={isMyTurn}
-              align="left"
+              portraitArt={myAvatarPortrait}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setPlayerMenuOpen((o) => !o);
               }}
-              showMenuDots
             />
           </View>
 
@@ -943,9 +1023,7 @@ const styles = StyleSheet.create({
 
   playerSection: {
     paddingHorizontal: 4,
-    // Lift the hand above the absolutely-positioned chat/emote buttons so
-    // the bottom corners of the cards aren't clipped by the screen edge.
-    paddingBottom: 36,
+    paddingBottom: 10,
   },
 
   chatRow: {

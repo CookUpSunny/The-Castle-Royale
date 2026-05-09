@@ -80,6 +80,7 @@ function HandCard({
   onDragEnd?: (x: number, y: number) => void;
 }) {
   const bounce = useSharedValue(0);
+  const glowOpacity = useSharedValue(isPlayable && isMyTurn ? 0.4 : 0.12);
 
   useEffect(() => {
     bounce.value = withRepeat(
@@ -91,6 +92,23 @@ function HandCard({
     );
     return () => cancelAnimation(bounce);
   }, [bounce]);
+
+  useEffect(() => {
+    const peak = isPlayable && isMyTurn ? 0.75 : 0.18;
+    const trough = isPlayable && isMyTurn ? 0.25 : 0.06;
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(peak, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+        withTiming(trough, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+    );
+    return () => cancelAnimation(glowOpacity);
+  }, [isPlayable, isMyTurn, glowOpacity]);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowOpacity: glowOpacity.value,
+  }));
 
   // Fan curve: distribute rotation symmetrically from center.
   // perCardDeg is capped so a large hand never exceeds ±12° total spread.
@@ -155,29 +173,41 @@ function HandCard({
       } as const)
     : undefined;
 
+  const softGlowWrap = {
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 } as const,
+    shadowRadius: 14,
+    elevation: 6,
+    borderRadius: 10,
+  };
+
   const cardNode = (
-    <Animated.View style={[starterGlowStyle, animStyle]}>
-      <CardComponent
-        card={card}
-        size="lg"
-        onPress={isMyTurn && isPlayable ? handlePress : undefined}
-        onLongPress={isMyTurn && isPlayable && multiplicity >= 2 ? handleLongPress : undefined}
-        isPlayable={isMyTurn && isPlayable}
-        multiplicity={multiplicity}
-      />
+    <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
+      <Animated.View style={starterGlowStyle}>
+        <CardComponent
+          card={card}
+          size="lg"
+          onPress={isMyTurn && isPlayable ? handlePress : undefined}
+          onLongPress={isMyTurn && isPlayable && multiplicity >= 2 ? handleLongPress : undefined}
+          isPlayable={isMyTurn && isPlayable}
+          multiplicity={multiplicity}
+        />
+      </Animated.View>
     </Animated.View>
   );
 
   const cardNodeFinal = dragGesture
     ? (
-      <Animated.View style={[starterGlowStyle, animStyle]}>
-        <CardComponent
-          card={card}
-          size="lg"
-          onPress={isMyTurn && isPlayable ? handlePress : undefined}
-          isPlayable={isMyTurn && isPlayable}
-          multiplicity={multiplicity}
-        />
+      <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
+        <Animated.View style={starterGlowStyle}>
+          <CardComponent
+            card={card}
+            size="lg"
+            onPress={isMyTurn && isPlayable ? handlePress : undefined}
+            isPlayable={isMyTurn && isPlayable}
+            multiplicity={multiplicity}
+          />
+        </Animated.View>
       </Animated.View>
     )
     : cardNode;

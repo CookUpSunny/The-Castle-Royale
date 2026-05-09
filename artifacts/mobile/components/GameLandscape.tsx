@@ -469,8 +469,8 @@ export default function GameLandscape(): React.JSX.Element | null {
     if (sameIds.length > 0) playCards(sameIds);
   };
 
-  // Column widths — narrower right column now that hero art is removed.
-  const sideColW = Math.max(160, Math.min(220, width * 0.16));
+  // Left column holds only action buttons now (name plates moved to absolute corners).
+  const sideColW = Math.max(90, Math.min(130, width * 0.10));
   const drawColW = 100;
 
   return (
@@ -481,24 +481,45 @@ export default function GameLandscape(): React.JSX.Element | null {
         onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })}
         style={{ position: 'absolute', top: insets.top + webTopPad + 8, left: insets.left + 14, zIndex: 55 }}
       />
+
+      {/* Opponent gamer tag — top-right corner, below EXIT button row */}
+      <View style={{ position: 'absolute', top: insets.top + webTopPad + 8, right: insets.right + 14, zIndex: 50, maxWidth: 220 }}>
+        <NamePlate
+          name={opponentName}
+          level="Lv. 28"
+          coins={opponentCoins}
+          isActive={!isMyTurn}
+          align="right"
+          portraitArt={opponentAvatarPortrait}
+        />
+      </View>
+
+      {/* Player gamer tag — bottom-left corner */}
+      <View style={{ position: 'absolute', bottom: insets.bottom + 8, left: insets.left + 14, zIndex: 50, maxWidth: 220 }}>
+        <NamePlate
+          name={playerName}
+          level="Lv. 34"
+          coins="125,000"
+          gems="8,450"
+          isActive={isMyTurn}
+          align="left"
+          portraitArt={myAvatarPortrait}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setPlayerMenuOpen((o) => !o);
+          }}
+          showMenuDots
+        />
+      </View>
+
       <View
         style={[
           styles.layout,
           { paddingTop: insets.top + webTopPad + 4, paddingBottom: insets.bottom + 4, paddingHorizontal: 8 },
         ]}
       >
-        {/* LEFT COLUMN — name plates + action buttons */}
+        {/* LEFT COLUMN — action buttons only (name plates are now corner overlays) */}
         <View style={[styles.leftColumn, { width: sideColW }]}>
-          <View style={styles.namePlateSlot}>
-            <NamePlate
-              name={opponentName}
-              level="Lv. 28"
-              coins={opponentCoins}
-              isActive={!isMyTurn}
-              align="left"
-              portraitArt={opponentAvatarPortrait}
-            />
-          </View>
           <View style={styles.actionStackInline}>
             {/* Action buttons hide during STARTER mode — tap a hand card directly. */}
             {!gameView.mustPlayStarter && (
@@ -515,22 +536,6 @@ export default function GameLandscape(): React.JSX.Element | null {
               />
             )}
           </View>
-          <View style={styles.namePlateSlot}>
-            <NamePlate
-              name={playerName}
-              level="Lv. 34"
-              coins="125,000"
-              gems="8,450"
-              isActive={isMyTurn}
-              align="left"
-              portraitArt={myAvatarPortrait}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setPlayerMenuOpen((o) => !o);
-              }}
-              showMenuDots
-            />
-          </View>
         </View>
 
         {/* CENTER COLUMN — opponent (top) → pile (mid) → player hand (bottom) */}
@@ -545,11 +550,6 @@ export default function GameLandscape(): React.JSX.Element | null {
               });
             }}
           >
-            <View style={styles.opponentArtFrame}>
-              {opponentAvatarPortrait ? (
-                <Image source={opponentAvatarPortrait} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="top" />
-              ) : null}
-            </View>
             <OpponentArea
               handCount={opponentHandCount}
               faceUp={opponentFaceUp}
@@ -699,7 +699,7 @@ export default function GameLandscape(): React.JSX.Element | null {
           <View
             style={[
               styles.playerMenuLs,
-              { left: insets.left + 16, bottom: insets.bottom + 12 },
+              { left: insets.left + 16, bottom: insets.bottom + 90 },
             ]}
           >
             {/* Volume gauge — 4 tappable segments + mute toggle */}

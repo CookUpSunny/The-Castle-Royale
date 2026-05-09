@@ -8,8 +8,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const CELL_W = 50;
-const CELL_H = 72;
+const CARD_W = 48;
+const CARD_H = 68;
+const CARD_COUNT = 88;
 
 interface CardData {
   rank: string;
@@ -28,16 +29,19 @@ const CARD_POOL: CardData[] = [
   { rank: 'J', suit: '♣', rankColor: '#111', suitColor: '#111', bg: '#faf8f2', border: '#bbb', faceDown: false },
   { rank: '10', suit: '♠', rankColor: '#111', suitColor: '#111', bg: '#fff0f0', border: '#ff3d3d', faceDown: false },
   { rank: '2', suit: '★', rankColor: '#7a6000', suitColor: '#9a7800', bg: '#fffce0', border: '#f5e642', faceDown: false },
-  { rank: '?', suit: '', rankColor: '#b44fff', suitColor: '#b44fff', bg: '#1a1a2e', border: 'rgba(180,79,255,0.5)', faceDown: true },
+  { rank: '♦', suit: '', rankColor: '#e8b84b', suitColor: '#e8b84b', bg: '#080500', border: '#e8b84b', faceDown: true },
 ];
 
 interface MosaicCellProps {
   delay: number;
   card: CardData;
   dissolving: boolean;
+  left: number;
+  top: number;
+  rotate: number;
 }
 
-function MosaicCell({ delay, card, dissolving }: MosaicCellProps) {
+function MosaicCell({ delay, card, dissolving, left, top, rotate }: MosaicCellProps) {
   const scale = useSharedValue(0);
 
   useEffect(() => {
@@ -51,27 +55,38 @@ function MosaicCell({ delay, card, dissolving }: MosaicCellProps) {
   }, [dissolving]);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { rotate: `${rotate}deg` },
+      { scale: scale.value },
+    ],
   }));
 
   return (
-    <Animated.View style={[styles.cellWrap, animStyle]}>
+    <Animated.View style={[styles.cellWrap, { left, top }, animStyle]}>
       <View
         style={[
           styles.miniCard,
           {
+            width: CARD_W,
+            height: CARD_H,
             backgroundColor: card.bg,
             borderColor: card.border,
           },
           card.faceDown && styles.faceDownCard,
         ]}
       >
-        <Text style={[styles.cardRank, { color: card.rankColor }]} numberOfLines={1}>
-          {card.rank}
-        </Text>
-        {card.suit ? (
-          <Text style={[styles.cardSuit, { color: card.suitColor }]}>{card.suit}</Text>
-        ) : null}
+        {card.faceDown ? (
+          <Text style={[styles.cardSuit, { color: card.rankColor, fontSize: 18 }]}>{card.rank}</Text>
+        ) : (
+          <>
+            <Text style={[styles.cardRank, { color: card.rankColor }]} numberOfLines={1}>
+              {card.rank}
+            </Text>
+            {card.suit ? (
+              <Text style={[styles.cardSuit, { color: card.suitColor }]}>{card.suit}</Text>
+            ) : null}
+          </>
+        )}
       </View>
     </Animated.View>
   );
@@ -82,24 +97,37 @@ interface CardMosaicProps {
   dissolving: boolean;
 }
 
+function seededRand(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
 export default function CardMosaic({ onAssembled, dissolving }: CardMosaicProps) {
   const { width, height } = useWindowDimensions();
   const assembledRef = useRef(false);
 
-  const cols = Math.ceil(width / CELL_W);
-  const rows = Math.ceil(height / CELL_H);
-  const total = cols * rows;
-
   const cellData = useMemo(() => {
-    const data: { delay: number; card: CardData }[] = [];
+    const rand = seededRand(width * 1000 + height);
+    const data: { delay: number; card: CardData; left: number; top: number; rotate: number }[] = [];
     let maxDelay = 0;
-    for (let i = 0; i < total; i++) {
-      const delay = Math.random() * 1400;
+
+    const shuffled: CardData[] = Array.from({ length: CARD_COUNT }, () => {
+      return CARD_POOL[Math.floor(rand() * CARD_POOL.length)]!;
+    });
+
+    for (let i = 0; i < CARD_COUNT; i++) {
+      const delay = rand() * 1400;
       if (delay > maxDelay) maxDelay = delay;
-      data.push({ delay, card: CARD_POOL[i % CARD_POOL.length] });
+      const left = rand() * (width - CARD_W - 8) + 4;
+      const top = rand() * (height - CARD_H - 8) + 4;
+      const rotate = (rand() - 0.5) * 30;
+      data.push({ delay, card: shuffled[i]!, left, top, rotate });
     }
     return { cells: data, maxDelay };
-  }, [total]);
+  }, [width, height]);
 
   useEffect(() => {
     if (assembledRef.current) return;
@@ -118,6 +146,9 @@ export default function CardMosaic({ onAssembled, dissolving }: CardMosaicProps)
           delay={item.delay}
           card={item.card}
           dissolving={dissolving}
+          left={item.left}
+          top={item.top}
+          rotate={item.rotate}
         />
       ))}
     </View>
@@ -126,17 +157,13 @@ export default function CardMosaic({ onAssembled, dissolving }: CardMosaicProps)
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    position: 'relative',
     overflow: 'hidden',
   },
   cellWrap: {
-    width: CELL_W,
-    height: CELL_H,
-    padding: 2,
+    position: 'absolute',
   },
   miniCard: {
-    flex: 1,
     borderRadius: 6,
     borderWidth: 1.5,
     paddingHorizontal: 4,
@@ -145,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 4,
   },
