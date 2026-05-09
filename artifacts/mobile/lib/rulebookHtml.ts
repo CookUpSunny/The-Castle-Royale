@@ -2,7 +2,7 @@ export const RULEBOOK_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Castle — Official Rulebook</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
@@ -16,12 +16,74 @@ export const RULEBOOK_HTML = `<!DOCTYPE html>
   --ink:#10100e;--cream:#faf8f2;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)}
-.page{width:820px;max-width:98vw;margin:0 auto;padding:44px 36px 80px}
+
+html,body{
+  background:var(--bg);
+  font-family:'Inter',sans-serif;
+  color:var(--white);
+  height:100%;
+  overflow:hidden;
+}
+body{
+  display:flex;
+  flex-direction:row;
+  width:300vw;
+  overflow-x:scroll;
+  overflow-y:hidden;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* PANELS */
+.panel{
+  width:100vw;
+  height:100vh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scroll-snap-align:start;
+  flex-shrink:0;
+  -webkit-overflow-scrolling:touch;
+  position:relative;
+}
+.page{
+  width:100%;
+  max-width:100%;
+  margin:0;
+  padding:44px 20px 100px;
+}
+
+/* PANEL NAVIGATION */
+.panel-nav{
+  position:sticky;
+  bottom:0;
+  left:0;
+  right:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:10px 0 16px;
+  background:linear-gradient(to top,rgba(15,15,19,1) 60%,rgba(15,15,19,0));
+  pointer-events:none;
+}
+.dots{
+  display:flex;
+  gap:8px;
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:rgba(255,255,255,0.18);
+  transition:background 0.2s;
+}
+.dot.on{background:var(--yellow);}
+.swipe-hint{
+  font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+  color:rgba(255,255,255,0.28);
+}
 
 /* HERO */
 .hero{
-  text-align:center;padding:64px 24px 56px;
+  text-align:center;padding:56px 20px 48px;
   border-radius:24px;margin-bottom:0;overflow:hidden;position:relative;
   background:linear-gradient(135deg,#1a0a2e 0%,#0a1a2e 50%,#0a2e1a 100%);
 }
@@ -32,8 +94,6 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
     radial-gradient(ellipse at 78% 30%,rgba(61,143,255,0.22) 0%,transparent 55%),
     radial-gradient(ellipse at 55% 85%,rgba(42,255,160,0.18) 0%,transparent 50%);
 }
-
-/* floating card layer */
 .hero-cards{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
 .fcard{
   position:absolute;
@@ -64,131 +124,134 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
 }
 .hero-eyebrow{font-size:13px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:var(--green);margin-bottom:16px;position:relative;z-index:2}
 .hero-title{
-  font-family:'Bebas Neue',sans-serif;font-size:120px;line-height:0.88;
+  font-family:'Bebas Neue',sans-serif;font-size:110px;line-height:0.88;
   background:linear-gradient(135deg,var(--yellow) 0%,var(--orange) 50%,var(--pink) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
   margin-bottom:16px;position:relative;letter-spacing:0.04em;z-index:2;
 }
-.hero-sub{font-size:18px;font-weight:600;color:var(--dim);position:relative;margin-bottom:28px;z-index:2}
-.hero-meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;position:relative;z-index:2}
-.hero-chip{padding:10px 22px;border-radius:100px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);font-size:14px;font-weight:700;color:var(--white)}
+.hero-sub{font-size:17px;font-weight:600;color:var(--dim);position:relative;margin-bottom:24px;z-index:2}
+.hero-meta{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;position:relative;z-index:2}
+.hero-chip{padding:9px 18px;border-radius:100px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);font-size:13px;font-weight:700;color:var(--white)}
 
 /* DIVIDER */
-.orn-line{display:flex;align-items:center;gap:14px;margin:28px 0}
+.orn-line{display:flex;align-items:center;gap:14px;margin:24px 0}
 .orn-line::before,.orn-line::after{content:'';flex:1;height:1px;background:var(--border)}
 .orn-line span{font-size:18px;color:rgba(255,255,255,0.12);flex-shrink:0}
 
 /* SECTION */
-.section{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 34px 32px;margin-bottom:20px;position:relative;overflow:hidden}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 22px 26px;margin-bottom:16px;position:relative;overflow:hidden}
 .sacc{position:absolute;top:0;left:0;right:0;height:3px;border-radius:20px 20px 0 0}
-.section-header{display:flex;align-items:flex-start;gap:18px;margin-bottom:28px}
-.sec-icon{width:56px;height:56px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:26px}
-.sec-eyebrow{font-size:12px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:5px}
-.sec-title{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;color:var(--white);margin-bottom:7px;letter-spacing:0.03em}
-.sec-sub{font-size:17px;font-weight:500;color:var(--dim);line-height:1.5}
+.section-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:22px}
+.sec-icon{width:48px;height:48px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px}
+.sec-eyebrow{font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:4px}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:38px;line-height:1;color:var(--white);margin-bottom:5px;letter-spacing:0.03em}
+.sec-sub{font-size:15px;font-weight:500;color:var(--dim);line-height:1.5}
 
 /* CARDS */
-.pc{display:flex;flex-direction:column;justify-content:space-between;width:80px;height:114px;border-radius:10px;background:var(--cream);padding:8px 9px;flex-shrink:0;position:relative;box-shadow:0 8px 28px rgba(0,0,0,0.5),0 2px 8px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.9)}
+.pc{display:flex;flex-direction:column;justify-content:space-between;width:72px;height:102px;border-radius:10px;background:var(--cream);padding:7px 8px;flex-shrink:0;position:relative;box-shadow:0 8px 28px rgba(0,0,0,0.5),0 2px 8px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.9)}
 .pc::after{content:'';position:absolute;inset:0;border-radius:10px;border:1px solid rgba(0,0,0,0.1)}
-.pc .t{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;color:var(--ink)}
-.pc .m{font-size:24px;line-height:1;text-align:center;margin:auto;color:var(--ink)}
-.pc .b{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;color:var(--ink);align-self:flex-end;transform:rotate(180deg)}
+.pc .t{font-family:'Bebas Neue',sans-serif;font-size:23px;line-height:1;color:var(--ink)}
+.pc .m{font-size:21px;line-height:1;text-align:center;margin:auto;color:var(--ink)}
+.pc .b{font-family:'Bebas Neue',sans-serif;font-size:23px;line-height:1;color:var(--ink);align-self:flex-end;transform:rotate(180deg)}
 .pc.rd .t,.pc.rd .b,.pc.rd .m{color:#cc0000}
 .pc.fd{background:linear-gradient(135deg,#1a1a2e,#2a1a3e);border:2px solid rgba(180,79,255,0.5)}
 .pc.fd::before{content:'';position:absolute;inset:5px;border-radius:6px;border:1px solid rgba(180,79,255,0.3);background:repeating-linear-gradient(45deg,rgba(180,79,255,0.05) 0,rgba(180,79,255,0.05) 1px,transparent 0,transparent 50%);background-size:7px 7px}
-.pc.fd .t{color:var(--purple);font-size:24px;position:relative;z-index:1}
+.pc.fd .t{color:var(--purple);font-size:22px;position:relative;z-index:1}
 .pc.sp{background:linear-gradient(135deg,#fffce0,#fff5a0);border:2px solid var(--yellow)}
 .pc.sp .t,.pc.sp .b{color:#7a6000}.pc.sp .m{color:#9a7800}
 .pc.bn{background:linear-gradient(135deg,#fff0f0,#ffd0d0);border:2px solid var(--red)}
 .pc.bn .t,.pc.bn .b{color:var(--red)}
 .pc.gn{background:linear-gradient(135deg,#edfff8,#b0ffe0);border:2px solid var(--green)}
 .pc.gn .t,.pc.gn .b{color:#008845}
-.pc-sm{width:62px;height:88px}
-.pc-sm .t{font-size:20px}.pc-sm .m{font-size:20px}.pc-sm .b{font-size:20px}
+.pc-sm{width:54px;height:76px}
+.pc-sm .t{font-size:18px}.pc-sm .m{font-size:17px}.pc-sm .b{font-size:18px}
 
 /* STEPS */
-.steps{display:flex;flex-direction:column;gap:14px}
-.step{display:flex;gap:18px;align-items:flex-start;padding:20px 22px;border-radius:14px;background:var(--surface2);border:1px solid var(--border)}
-.snum{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;margin-top:2px}
-.step-t{font-size:20px;font-weight:800;color:var(--white);margin-bottom:6px;line-height:1.2}
-.step-d{font-size:18px;color:var(--mid);line-height:1.65;font-weight:500}
+.steps{display:flex;flex-direction:column;gap:12px}
+.step{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:14px;background:var(--surface2);border:1px solid var(--border)}
+.snum{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;margin-top:1px}
+.step-t{font-size:17px;font-weight:800;color:var(--white);margin-bottom:5px;line-height:1.2}
+.step-d{font-size:15px;color:var(--mid);line-height:1.6;font-weight:500}
 
 /* ZONES */
-.zone-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:8px 0 16px}
-.zone-col{border-radius:16px;padding:22px 14px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;background:var(--surface2);border:2px solid var(--border);position:relative;overflow:hidden}
+.zone-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:8px 0 14px}
+.zone-col{border-radius:14px;padding:16px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--surface2);border:2px solid var(--border);position:relative;overflow:hidden}
 .zone-col::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .z-fd{border-color:rgba(180,79,255,0.3)}.z-fu{border-color:rgba(42,255,160,0.3)}.z-hd{border-color:rgba(245,230,66,0.3)}
 .z-fd::before{background:var(--purple)}.z-fu::before{background:var(--green)}.z-hd::before{background:var(--yellow)}
-.znm{font-size:13px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase}
+.znm{font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase}
 .z-fd .znm{color:var(--purple)}.z-fu .znm{color:var(--green)}.z-hd .znm{color:var(--yellow)}
-.zcards{display:flex;justify-content:center;gap:6px}
-.zdesc{font-size:15px;color:var(--dim);line-height:1.5;text-align:center;font-weight:500}
-.zone-rule{width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:700;line-height:1.5;text-align:center}
+.zcards{display:flex;justify-content:center;gap:4px}
+.zdesc{font-size:13px;color:var(--dim);line-height:1.4;text-align:center;font-weight:500}
+.zone-rule{width:100%;padding:9px;border-radius:8px;font-size:12px;font-weight:700;line-height:1.4;text-align:center}
 .z-fd .zone-rule{background:rgba(180,79,255,0.12);color:rgba(210,160,255,0.9);border:1px solid rgba(180,79,255,0.2)}
 .z-fu .zone-rule{background:rgba(42,255,160,0.1);color:rgba(140,255,200,0.9);border:1px solid rgba(42,255,160,0.2)}
 .z-hd .zone-rule{background:rgba(245,230,66,0.1);color:rgba(255,245,140,0.9);border:1px solid rgba(245,230,66,0.25)}
-.zone-num{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800}
+.zone-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
 .z-fd .zone-num{background:rgba(180,79,255,0.2);color:var(--purple);border:1px solid rgba(180,79,255,0.4)}
 .z-fu .zone-num{background:rgba(42,255,160,0.15);color:var(--green);border:1px solid rgba(42,255,160,0.4)}
 .z-hd .zone-num{background:rgba(245,230,66,0.15);color:var(--yellow);border:1px solid rgba(245,230,66,0.4)}
 
 /* DEAL / DECISION */
-.deal-notice{display:flex;align-items:center;gap:18px;padding:20px 24px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:14px}
-.deal-icon{font-size:36px;flex-shrink:0}
-.deal-title{font-size:22px;font-weight:800;color:var(--white);margin-bottom:5px}
-.deal-desc{font-size:17px;color:var(--dim);line-height:1.6;font-weight:500}
-.decision-row{display:flex;align-items:center;gap:18px;padding:20px 24px;border-radius:14px;margin-bottom:16px;background:rgba(245,230,66,0.06);border:2px dashed rgba(245,230,66,0.35)}
-.dec-arrow{font-size:32px;color:var(--yellow)}
-.dec-title{font-size:22px;font-weight:800;color:var(--yellow);margin-bottom:5px}
-.dec-desc{font-size:17px;color:rgba(255,245,180,0.65);line-height:1.6;font-weight:500}
+.deal-notice{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px}
+.deal-icon{font-size:30px;flex-shrink:0}
+.deal-title{font-size:18px;font-weight:800;color:var(--white);margin-bottom:4px}
+.deal-desc{font-size:15px;color:var(--dim);line-height:1.55;font-weight:500}
+.decision-row{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;margin-bottom:14px;background:rgba(245,230,66,0.06);border:2px dashed rgba(245,230,66,0.35)}
+.dec-arrow{font-size:26px;color:var(--yellow)}
+.dec-title{font-size:18px;font-weight:800;color:var(--yellow);margin-bottom:4px}
+.dec-desc{font-size:15px;color:rgba(255,245,180,0.65);line-height:1.55;font-weight:500}
 
 /* SPECIALS */
-.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.spec-tile{border-radius:16px;padding:24px 20px;display:flex;gap:18px;align-items:flex-start;background:var(--surface2);border:2px solid var(--border);position:relative;overflow:hidden}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.spec-tile{border-radius:16px;padding:20px 16px;display:flex;gap:14px;align-items:flex-start;background:var(--surface2);border:2px solid var(--border);position:relative;overflow:hidden}
 .t-gold{border-color:rgba(245,230,66,0.3);background:rgba(245,230,66,0.05)}
 .t-red{border-color:rgba(255,61,61,0.3);background:rgba(255,61,61,0.05)}
-.si-rank{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--white);line-height:1}
-.si-label{font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin:4px 0 10px}
+.si-rank{font-family:'Bebas Neue',sans-serif;font-size:44px;color:var(--white);line-height:1}
+.si-label{font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin:4px 0 8px}
 .t-gold .si-label{color:var(--yellow)}.t-red .si-label{color:var(--red)}
-.si-desc{font-size:17px;color:var(--mid);line-height:1.65;font-weight:500}
+.si-desc{font-size:15px;color:var(--mid);line-height:1.6;font-weight:500}
 
 /* RULES GRID */
-.rules-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
-.rule-tile{padding:18px 16px;border-radius:14px;background:var(--surface2);border:1px solid var(--border)}
-.rule-head{font-size:16px;font-weight:800;color:var(--white);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rule-body{font-size:16px;color:var(--dim);line-height:1.6;font-weight:500}
-.badge{font-size:10px;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.07em;text-transform:uppercase}
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rule-tile{padding:16px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--border)}
+.rule-head{font-size:15px;font-weight:800;color:var(--white);margin-bottom:7px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.rule-body{font-size:14px;color:var(--dim);line-height:1.55;font-weight:500}
+.badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:6px;letter-spacing:0.07em;text-transform:uppercase}
 .bgg{background:rgba(42,255,160,0.15);color:var(--green);border:1px solid rgba(42,255,160,0.3)}
 .bgr{background:rgba(255,61,61,0.15);color:var(--red);border:1px solid rgba(255,61,61,0.3)}
 .bga{background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.3)}
 
 /* PHASES */
-.phases{display:flex;flex-direction:column;margin-bottom:24px;border-radius:16px;overflow:hidden;border:1px solid var(--border)}
-.phase{display:flex;align-items:center;gap:20px;padding:24px 26px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.phases{display:flex;flex-direction:column;margin-bottom:20px;border-radius:16px;overflow:hidden;border:1px solid var(--border)}
+.phase{display:flex;align-items:center;gap:16px;padding:20px 20px;border-bottom:1px solid var(--border);background:var(--surface2)}
 .phase:last-child{border-bottom:none}
-.phase-n{width:52px;height:52px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:24px}
+.phase-n{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:22px}
 .ph1 .phase-n{background:rgba(245,230,66,0.15);color:var(--yellow);border:2px solid rgba(245,230,66,0.4)}
 .ph2 .phase-n{background:rgba(61,143,255,0.15);color:var(--blue);border:2px solid rgba(61,143,255,0.4)}
 .ph3 .phase-n{background:rgba(180,79,255,0.15);color:var(--purple);border:2px solid rgba(180,79,255,0.4)}
 .phase-body{flex:1}
-.phase-title{font-size:21px;font-weight:800;color:var(--white);margin-bottom:5px}
-.phase-desc{font-size:17px;color:var(--dim);line-height:1.6;font-weight:500}
-.phase-cards{display:flex;gap:6px;flex-shrink:0}
+.phase-title{font-size:18px;font-weight:800;color:var(--white);margin-bottom:4px}
+.phase-desc{font-size:15px;color:var(--dim);line-height:1.55;font-weight:500}
+.phase-cards{display:flex;gap:5px;flex-shrink:0}
 
 /* WIN BANNER */
-.win-banner{text-align:center;padding:44px 28px;border-radius:20px;background:linear-gradient(135deg,#1a1a0a,#0a1a10,#1a0a2e);border:2px solid rgba(245,230,66,0.3);position:relative;overflow:hidden}
+.win-banner{text-align:center;padding:36px 22px;border-radius:20px;background:linear-gradient(135deg,#1a1a0a,#0a1a10,#1a0a2e);border:2px solid rgba(245,230,66,0.3);position:relative;overflow:hidden}
 .win-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(245,230,66,0.1) 0%,transparent 65%);pointer-events:none}
-.crown{font-size:60px;color:var(--yellow);margin-bottom:14px;position:relative}
-.win-t{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:1;background:linear-gradient(135deg,var(--yellow),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:14px;position:relative;letter-spacing:0.03em}
-.win-d{font-size:20px;color:var(--mid);line-height:1.7;font-weight:500;position:relative}
-.lose-note{display:inline-block;margin-top:22px;padding:12px 26px;border-radius:10px;background:rgba(255,61,61,0.12);border:2px solid rgba(255,61,61,0.3);font-size:14px;font-weight:800;color:var(--red);letter-spacing:0.07em;text-transform:uppercase;position:relative}
+.crown{font-size:52px;color:var(--yellow);margin-bottom:12px;position:relative}
+.win-t{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;background:linear-gradient(135deg,var(--yellow),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;position:relative;letter-spacing:0.03em}
+.win-d{font-size:17px;color:var(--mid);line-height:1.65;font-weight:500;position:relative}
+.lose-note{display:inline-block;margin-top:18px;padding:10px 22px;border-radius:10px;background:rgba(255,61,61,0.12);border:2px solid rgba(255,61,61,0.3);font-size:13px;font-weight:800;color:var(--red);letter-spacing:0.07em;text-transform:uppercase;position:relative}
 
 /* TIP */
-.tip{border-radius:12px;padding:18px 22px;background:rgba(245,230,66,0.06);border-left:4px solid var(--yellow);font-size:17px;color:var(--dim);line-height:1.65;margin-top:18px;font-weight:500}
+.tip{border-radius:12px;padding:16px 18px;background:rgba(245,230,66,0.06);border-left:4px solid var(--yellow);font-size:15px;color:var(--dim);line-height:1.6;margin-top:16px;font-weight:500}
 .tip b{color:var(--yellow);font-weight:800}
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════ PANEL 1 ════════════════════════════════ -->
+<div class="panel" id="p1">
 <div class="page">
 
 <!-- HERO -->
@@ -196,7 +259,6 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
   <div class="hero-cards" id="heroCards"></div>
   <div class="hero-eyebrow">Official Rules &amp; Guide</div>
   <div class="hero-title">♜ Castle</div>
-
   <div class="hero-meta">
     <div class="hero-chip">2&ndash;4 Players</div>
     <div class="hero-chip">Standard 52-Card Deck</div>
@@ -228,7 +290,7 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
     </div>
     <div class="step">
       <div class="snum" style="background:var(--orange);color:#fff">3</div>
-      <div><div class="step-t">Cannot Play?</div><div class="step-d">If you hold no valid card to play, you must collect the entire pile into your hand &mdash; and you may also leave your lowest card if you so choose.</div></div>
+      <div><div class="step-t">Cannot Play?</div><div class="step-d">If you hold no valid card to play, you must collect the entire pile into your hand.</div></div>
     </div>
     <div class="step">
       <div class="snum" style="background:var(--red);color:#fff">4</div>
@@ -237,7 +299,20 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
   </div>
 </div>
 
-<!-- 2 &middot; SETUP -->
+</div><!-- /page -->
+
+<div class="panel-nav">
+  <div class="dots"><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+  <div class="swipe-hint">Swipe for more &rarr;</div>
+</div>
+</div><!-- /panel 1 -->
+
+
+<!-- ═══════════════════════════════ PANEL 2 ════════════════════════════════ -->
+<div class="panel" id="p2">
+<div class="page">
+
+<!-- 2 · SETUP -->
 <div class="section">
   <div class="sacc" style="background:linear-gradient(90deg,var(--blue),var(--purple))"></div>
   <div class="section-header">
@@ -253,17 +328,17 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
     <div class="deal-icon">&#127183;</div>
     <div>
       <div class="deal-title">You Are Dealt Your Hand</div>
-      <div class="deal-desc">Each player receives 9 cards &mdash; 3 face-down, 3 face-up on top of them, and 3 held privately. No one touches the pile yet.</div>
+      <div class="deal-desc">Each player receives 9 cards &mdash; 3 face-down, 3 face-up on top of them, and 3 held privately.</div>
     </div>
   </div>
 
   <div class="decision-row">
-    <div class="pc sp pc-sm" style="width:44px;height:62px"><div class="t" style="font-size:14px">A</div><div class="m" style="font-size:12px">&#9830;</div></div>
+    <div class="pc sp pc-sm" style="width:42px;height:58px"><div class="t" style="font-size:13px">A</div><div class="m" style="font-size:11px">&#9830;</div></div>
     <div class="dec-arrow">&#8644;</div>
-    <div class="pc pc-sm" style="width:44px;height:62px"><div class="t" style="font-size:14px">5</div><div class="m" style="font-size:12px">&#9827;</div></div>
+    <div class="pc pc-sm" style="width:42px;height:58px"><div class="t" style="font-size:13px">5</div><div class="m" style="font-size:11px">&#9827;</div></div>
     <div style="margin-left:6px">
       <div class="dec-title">The Decision Phase</div>
-      <div class="dec-desc">This is where you choose what three cards will be your Castle. This is the best time to put your best cards face-up.</div>
+      <div class="dec-desc">Choose your three Castle cards. Load your best cards face-up before the game begins.</div>
     </div>
   </div>
 
@@ -276,8 +351,8 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
         <div class="pc fd pc-sm"><div class="t">?</div></div>
         <div class="pc fd pc-sm"><div class="t">?</div></div>
       </div>
-      <div class="zdesc">3 cards placed face-down on the table. You may not look at these until you play them.</div>
-      <div class="zone-rule">&#128683; Never peek.<br>Played completely blind at the end.</div>
+      <div class="zdesc">3 cards placed face-down. You may not look at these until you play them.</div>
+      <div class="zone-rule">&#128683; Never peek.<br>Played blind at the end.</div>
     </div>
     <div class="zone-col z-fu">
       <div class="zone-num">2</div>
@@ -287,8 +362,8 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
         <div class="pc rd pc-sm"><div class="t">7</div><div class="m">&#9829;</div><div class="b">7</div></div>
         <div class="pc sp pc-sm"><div class="t">A</div><div class="m">&#9830;</div><div class="b">A</div></div>
       </div>
-      <div class="zdesc">3 cards face-up on top of your face-down row. Visible to all players at all times.</div>
-      <div class="zone-rule">&#128064; Visible to all.<br>Played once your hand is empty.</div>
+      <div class="zdesc">3 cards face-up on top of your face-down row. Visible to all players.</div>
+      <div class="zone-rule">&#128064; Visible to all.<br>Played once hand is empty.</div>
     </div>
     <div class="zone-col z-hd">
       <div class="zone-num">3</div>
@@ -298,7 +373,7 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
         <div class="pc pc-sm"><div class="t">4</div><div class="m">&#9827;</div><div class="b">4</div></div>
         <div class="pc gn pc-sm"><div class="t">10</div><div class="m">&#9830;</div><div class="b">10</div></div>
       </div>
-      <div class="zdesc">3 cards held privately. No one else sees these. Refill to 3 from the deck each turn.</div>
+      <div class="zdesc">3 cards held privately. Refill to 3 from the deck each turn.</div>
       <div class="zone-rule">&#129296; Always private.<br>Play these first every turn.</div>
     </div>
   </div>
@@ -306,7 +381,7 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
   <div class="tip"><b>The wise play:</b> Load your face-up row with 2s, 10s, and Aces. You'll see them and control them in the late game when every card is critical.</div>
 </div>
 
-<!-- 3 &middot; TURN FLOW -->
+<!-- 3 · TURN FLOW -->
 <div class="section">
   <div class="sacc" style="background:linear-gradient(90deg,var(--green),var(--blue))"></div>
   <div class="section-header">
@@ -320,7 +395,7 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
   <div class="steps">
     <div class="step">
       <div class="snum" style="background:var(--yellow);color:var(--ink)">1</div>
-      <div><div class="step-t">Play a Card &mdash; or a Pair, Three of a Kind, or Four of a Kind</div><div class="step-d">Play one or more cards of the same rank from your hand. You may play a single card, two of a kind, three of a kind, or all four of a kind at once. All cards must be equal to or higher in rank than the top card of the pile.</div></div>
+      <div><div class="step-t">Play a Card — or Multiple</div><div class="step-d">Play one or more cards of the same rank from your hand. All must be equal to or higher in rank than the top card of the pile.</div></div>
     </div>
     <div class="step">
       <div class="snum" style="background:var(--blue);color:#fff">2</div>
@@ -328,20 +403,33 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
     </div>
     <div class="step">
       <div class="snum" style="background:var(--red);color:#fff">3</div>
-      <div><div class="step-t">Cannot Play? Collect the Pile</div><div class="step-d">If no card in your hand is valid to play, collect every card from the pile into your hand. You may also leave your lowest card if you so choose.</div></div>
+      <div><div class="step-t">Cannot Play? Collect the Pile</div><div class="step-d">If no card in your hand is valid to play, collect every card from the pile into your hand.</div></div>
     </div>
     <div class="step">
       <div class="snum" style="background:var(--green);color:var(--ink)">4</div>
-      <div><div class="step-t">Hand Empty &amp; Deck Gone &mdash; Play Face-Ups</div><div class="step-d">Once your hand is empty and the deck is exhausted, begin playing your face-up cards. Same rules &mdash; equal or higher to play.</div></div>
+      <div><div class="step-t">Hand Empty &amp; Deck Gone — Play Face-Ups</div><div class="step-d">Once your hand is empty and the deck is exhausted, begin playing your face-up cards. Same rules apply.</div></div>
     </div>
     <div class="step">
       <div class="snum" style="background:var(--purple);color:#fff">5</div>
-      <div><div class="step-t">Face-Ups Gone &mdash; Flip Blind</div><div class="step-d">Choose any face-down card without looking at it. Flip it. Plays legally? Go. Doesn't? Collect the pile and that card into your hand.</div></div>
+      <div><div class="step-t">Face-Ups Gone — Flip Blind</div><div class="step-d">Choose any face-down card without looking. Flip it. Plays legally? Go. Doesn't? Collect the pile and that card into your hand.</div></div>
     </div>
   </div>
 </div>
 
-<!-- 4 &middot; SPECIAL CARDS -->
+</div><!-- /page -->
+
+<div class="panel-nav">
+  <div class="dots"><div class="dot"></div><div class="dot on"></div><div class="dot"></div></div>
+  <div class="swipe-hint">&larr; Swipe &rarr;</div>
+</div>
+</div><!-- /panel 2 -->
+
+
+<!-- ═══════════════════════════════ PANEL 3 ════════════════════════════════ -->
+<div class="panel" id="p3">
+<div class="page">
+
+<!-- 4 · SPECIAL CARDS -->
 <div class="section">
   <div class="sacc" style="background:linear-gradient(90deg,var(--yellow),var(--pink))"></div>
   <div class="section-header">
@@ -349,31 +437,31 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
     <div>
       <div class="sec-eyebrow" style="color:var(--purple)">Power Cards</div>
       <div class="sec-title">Special Cards</div>
-      <div class="sec-sub">Two cards that command their own rules &mdash; know them both</div>
+      <div class="sec-sub">Two cards that command their own rules</div>
     </div>
   </div>
   <div class="spec-grid">
     <div class="spec-tile t-gold">
-      <div class="pc sp"><div class="t">2</div><div class="m">&#9733;</div><div class="b">2</div></div>
+      <div class="pc sp pc-sm"><div class="t">2</div><div class="m">&#9733;</div><div class="b">2</div></div>
       <div>
         <div class="si-rank">2</div>
         <div class="si-label">Wild Card</div>
-        <div class="si-desc">May be played on anything &mdash; any card, any situation. After playing a 2, the same player immediately plays another card on top of it. A true wildcard.</div>
+        <div class="si-desc">May be played on anything &mdash; any card, any situation. After playing a 2, the same player immediately plays another card on top of it.</div>
       </div>
     </div>
     <div class="spec-tile t-red">
-      <div class="pc bn"><div class="t">10</div><div class="m">&#9824;</div><div class="b">10</div></div>
+      <div class="pc bn pc-sm"><div class="t">10</div><div class="m">&#9824;</div><div class="b">10</div></div>
       <div>
         <div class="si-rank">10</div>
         <div class="si-label">The Burn</div>
-        <div class="si-desc">Destroys the entire pile &mdash; all cards permanently removed from play. The player who burns takes another turn immediately. Devastating in the late game.</div>
+        <div class="si-desc">Destroys the entire pile &mdash; all cards permanently removed from play. The player who burns takes another turn immediately.</div>
       </div>
     </div>
   </div>
   <div class="tip"><b>Bonus burn:</b> Playing four cards of the same rank at once also burns the pile &mdash; same effect as a 10. You play again immediately.</div>
 </div>
 
-<!-- 5 &middot; KEY RULES -->
+<!-- 5 · KEY RULES -->
 <div class="section">
   <div class="sacc" style="background:linear-gradient(90deg,var(--orange),var(--red))"></div>
   <div class="section-header">
@@ -381,20 +469,20 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
     <div>
       <div class="sec-eyebrow" style="color:var(--orange)">The House Rules</div>
       <div class="sec-title">Rules That Matter</div>
-      <div class="sec-sub">Six rulings every player must know before cards are dealt</div>
+      <div class="sec-sub">Six rulings every player must know</div>
     </div>
   </div>
   <div class="rules-grid">
     <div class="rule-tile"><div class="rule-head"><span class="badge bgg">Legal</span> Equal Rank</div><div class="rule-body">Playing the same rank as the top card is always a valid play. Equal counts.</div></div>
-    <div class="rule-tile"><div class="rule-head"><span class="badge bgg">Legal</span> Multi-Play</div><div class="rule-body">You may play two, three, or four cards of the same rank in a single turn. All count as one play.</div></div>
+    <div class="rule-tile"><div class="rule-head"><span class="badge bgg">Legal</span> Multi-Play</div><div class="rule-body">You may play two, three, or four cards of the same rank in a single turn.</div></div>
     <div class="rule-tile"><div class="rule-head"><span class="badge bgr">Illegal</span> Skip Zones</div><div class="rule-body">You may not play face-ups while hand cards remain. You may not play face-downs while face-ups remain.</div></div>
-    <div class="rule-tile"><div class="rule-head"><span class="badge bgr">Trap</span> Blind Flip Fails</div><div class="rule-body">If your flipped face-down card cannot be played, you collect the pile and that card into your hand. You must then play a card.</div></div>
-    <div class="rule-tile"><div class="rule-head"><span class="badge bga">Rule</span> Ace is Highest</div><div class="rule-body">Ace beats everything in the game &mdash; except a 2 wild or a 10 burn. Those two cards override the Ace.</div></div>
-    <div class="rule-tile"><div class="rule-head"><span class="badge bgr">Rule</span> Drawing from Deck</div><div class="rule-body">You cannot draw from the deck if you already hold more than 3 cards in your hand. Get back down to 3 cards before you draw again.</div></div>
+    <div class="rule-tile"><div class="rule-head"><span class="badge bgr">Trap</span> Blind Flip Fails</div><div class="rule-body">If your flipped face-down card cannot be played, you collect the pile and that card into your hand.</div></div>
+    <div class="rule-tile"><div class="rule-head"><span class="badge bga">Rule</span> Ace is Highest</div><div class="rule-body">Ace beats everything &mdash; except a 2 wild or a 10 burn. Those two cards override the Ace.</div></div>
+    <div class="rule-tile"><div class="rule-head"><span class="badge bgr">Rule</span> Drawing from Deck</div><div class="rule-body">You cannot draw from the deck if you already hold more than 3 cards in your hand.</div></div>
   </div>
 </div>
 
-<!-- 6 &middot; HOW TO WIN -->
+<!-- 6 · HOW TO WIN -->
 <div class="section">
   <div class="sacc" style="background:linear-gradient(90deg,var(--green),var(--yellow))"></div>
   <div class="section-header">
@@ -425,7 +513,6 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
       </div>
       <div class="phase-cards">
         <div class="pc pc-sm"><div class="t">J</div><div class="m">&#9829;</div><div class="b">J</div></div>
-        <div class="pc rd pc-sm"><div class="t">9</div><div class="m">&#9829;</div><div class="b">9</div></div>
         <div class="pc sp pc-sm"><div class="t">2</div><div class="m">&#9733;</div><div class="b">2</div></div>
       </div>
     </div>
@@ -452,7 +539,14 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
 
 <div class="orn-line"><span>✦ ✦ ✦</span></div>
 
+</div><!-- /page -->
+
+<div class="panel-nav">
+  <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot on"></div></div>
+  <div class="swipe-hint">&larr; Swipe back</div>
 </div>
+</div><!-- /panel 3 -->
+
 <script>
 (function(){
   const container = document.getElementById('heroCards');
@@ -465,16 +559,15 @@ html,body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white)
     {r:'3',s:'♠',cl:'fc-black'},{r:'6',s:'♥',cl:'fc-red'},{r:'5',s:'♣',cl:'fc-black'},
   ];
 
-  // spawn 18 cards at staggered positions and timings
   cards.forEach((c, i) => {
     const el = document.createElement('div');
-    const left = 4 + (i / cards.length) * 92; // spread left 4–96%
-    const dur  = 7 + Math.random() * 9;        // 7–16s per cycle
-    const delay = -(Math.random() * dur);       // stagger start
-    const r0   = -30 + Math.random() * 60;     // starting rotation
-    const r1   = r0 + (-40 + Math.random() * 80); // ending rotation
-    const sc   = 0.6 + Math.random() * 0.7;    // scale 0.6–1.3
-    const op   = 0.12 + Math.random() * 0.22;  // opacity 0.12–0.34
+    const left = 4 + (i / cards.length) * 92;
+    const dur  = 7 + Math.random() * 9;
+    const delay = -(Math.random() * dur);
+    const r0   = -30 + Math.random() * 60;
+    const r1   = r0 + (-40 + Math.random() * 80);
+    const sc   = 0.6 + Math.random() * 0.7;
+    const op   = 0.12 + Math.random() * 0.22;
 
     el.className = \`fcard \${c.cl}\`;
     el.innerHTML = \`<div class="fr">\${c.r}</div><div class="fs">\${c.s}</div><div class="fb">\${c.r}</div>\`;

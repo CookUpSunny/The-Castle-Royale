@@ -36,8 +36,9 @@ export default function HowToPlayScreen() {
             style={styles.webView}
             javaScriptEnabled
             originWhitelist={['*']}
-            scrollEnabled
+            scrollEnabled={false}
             showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
           />
         </Animated.View>
       </View>
