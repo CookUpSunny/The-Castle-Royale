@@ -1,7 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 import type { ArenaId } from '@/contexts/CosmeticsContext';
 
-export type ArenaIdForTint = 'greenTable' | 'classic' | 'cosmic' | 'royal';
+export type ArenaIdForTint = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'matrix';
 
 export { VISUAL_ASSET_PIPELINE } from './visualPipeline';
 
@@ -17,6 +17,7 @@ export const ARENA_TABLE_TINT: Record<
   classic: ['rgba(88,28,135,0.14)', 'rgba(7,0,15,0.10)', 'rgba(88,28,135,0.18)'],
   cosmic: ['rgba(30,20,80,0.18)', 'rgba(120,80,255,0.08)', 'rgba(7,0,25,0.22)'],
   royal: ['rgba(120,53,15,0.18)', 'rgba(251,191,36,0.06)', 'rgba(60,20,10,0.24)'],
+  matrix: ['rgba(0,200,60,0.10)', 'rgba(0,100,30,0.06)', 'rgba(0,200,60,0.12)'],
 };
 
 /**
@@ -57,5 +58,9 @@ export const FELT_TINT: Record<
   lightning: {
     vertical:   ['transparent', 'rgba(13,74,60,0.07)', 'rgba(26,140,106,0.16)', 'rgba(26,140,106,0.16)', 'rgba(13,74,60,0.07)', 'transparent'],
     horizontal: ['transparent', 'rgba(20,100,80,0.09)', 'transparent'],
+  },
+  matrix: {
+    vertical:   ['transparent', 'rgba(0,80,30,0.07)', 'rgba(0,160,60,0.18)', 'rgba(0,160,60,0.18)', 'rgba(0,80,30,0.07)', 'transparent'],
+    horizontal: ['transparent', 'rgba(0,120,45,0.11)', 'transparent'],
   },
 };

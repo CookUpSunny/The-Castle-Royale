@@ -26,7 +26,7 @@ export type CardSkinId =
   | 'cyber-punk'
   | 'vintage-casino';
 
-export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning';
+export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning' | 'matrix';
 
 export type AvatarId = 'eagles' | 'frog' | 'troll';
 
@@ -125,6 +125,12 @@ export const ARENAS: Arena[] = [
     premium: false,
     description: 'Hidden deep within a mystical cavern, this tranquil sanctuary glows with flowing waterfalls, vibrant vegetation, and drifting cherry blossoms. Soft lantern light reflects across crystal-blue waters as players battle in a peaceful paradise untouched by the outside world.\n\nBeauty can be the deadliest arena of all.',
   },
+  {
+    id: 'matrix',
+    name: 'Matrix',
+    premium: false,
+    description: 'Enter the digital realm where cascading code rains down through a world built entirely of data. Green characters stream endlessly as glowing circuits pulse beneath the surface — reality itself is just a program, and the cards you hold may already be written.\n\nThere is no spoon. Only the next hand.',
+  },
 ];
 
 const VALID_SKIN_IDS = new Set<CardSkinId>(CARD_SKINS.map((s) => s.id));
@@ -156,7 +162,7 @@ const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 const isArenaId = (v: string | null): v is ArenaId =>
-  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning';
+  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning' || v === 'matrix';
 
 const isAvatarId = (v: string | null): v is AvatarId =>
   v === 'eagles' || v === 'frog' || v === 'troll';
@@ -173,6 +179,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     arena === 'royal'     ? 'olympusThrone'   :
     arena === 'cosmic'    ? 'cosmicSanctum'   :
     arena === 'classic'   ? 'flamingoFloor'   :
+    arena === 'matrix'    ? 'matrixArena'     :
     'casinoGreen';
 
   useEffect(() => {

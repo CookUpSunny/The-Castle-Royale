@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { ARENA_TABLE_TINT } from '@/lib/sceneAssets';
 import {
@@ -27,9 +28,77 @@ function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] 
   if (sceneId === 'olympusThrone')   return ['#0d0a00', '#1a1400', '#0a0800'];
   if (sceneId === 'cosmicSanctum')   return ['#000008', '#050010', '#000005'];
   if (sceneId === 'flamingoFloor')   return ['#1a0008', '#2d0015', '#0f0006'];
+  if (sceneId === 'matrixArena')     return ['#001a08', '#000e04', '#000000'];
   // casinoGreen
   return ['#120010', '#22002a', '#07000f'];
 }
+
+// ── Matrix rain HTML — embedded verbatim from the design brief ────────────────
+const MATRIX_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020802; }
+    canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block;
+      background: radial-gradient(circle at center, rgba(0,255,90,0.18), transparent 35%),
+                  linear-gradient(180deg, #001a08 0%, #000000 100%); }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const chars = 'アァカサタナハマヤャラワガザダバパ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ\u2660\u2663\u2665\u2666';
+    const fontSize = 20;
+    let drops = [], speeds = [], columns;
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = window.innerWidth, h = window.innerHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      columns = Math.floor(w / fontSize);
+      drops  = Array.from({ length: columns }, () => Math.random() * -100);
+      speeds = Array.from({ length: columns }, () => 0.5 + Math.random() * 2.2);
+    }
+
+    function draw() {
+      ctx.fillStyle = 'rgba(0,8,2,0.13)';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.font = fontSize + 'px monospace';
+      ctx.textAlign = 'center';
+      for (let i = 0; i < columns; i++) {
+        const x = i * fontSize + fontSize / 2;
+        const y = drops[i] * fontSize;
+        const ch = chars[Math.floor(Math.random() * chars.length)];
+        ctx.shadowBlur = 18; ctx.shadowColor = '#ffffff'; ctx.fillStyle = '#ffffff';
+        ctx.fillText(ch, x, y);
+        for (let t = 1; t < 12; t++) {
+          const tc = chars[Math.floor(Math.random() * chars.length)];
+          const alpha = 1 - t / 12;
+          ctx.shadowBlur = 8 * alpha; ctx.shadowColor = '#00ff66';
+          ctx.fillStyle = 'rgba(0,' + (180 - t * 8) + ',70,' + alpha + ')';
+          ctx.fillText(tc, x, y - t * fontSize);
+        }
+        drops[i] += speeds[i] * 0.35;
+        if (y > window.innerHeight + Math.random() * 500) {
+          drops[i] = Math.random() * -50;
+          speeds[i] = 0.5 + Math.random() * 2.2;
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+  </script>
+</body>
+</html>`;
 
 export default function SceneBackground({ sceneOverride }: { sceneOverride?: SceneId }) {
   const { width, height } = useWindowDimensions();
@@ -42,13 +111,15 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
     () => ['rgba(0,0,0,0.32)', 'rgba(0,0,0,0.04)', 'rgba(0,0,0,0.55)'] as const,
     [],
   );
-  const arenaTint = useMemo(() => getArenaTint(arena), [arena]);
+  const arenaTint = useMemo(() => getArenaTint(arena as keyof typeof ARENA_TABLE_TINT), [arena]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <LinearGradient colors={[...sceneBaseGradient(sceneId)]} style={StyleSheet.absoluteFill} />
 
       <StaticLayer variant={variant} layerId="L0_far" pack={pack} mode="backdrop" />
+
+      {sceneId === 'matrixArena' ? <MatrixAmbience /> : null}
 
       <LinearGradient colors={[...arenaTint]} style={StyleSheet.absoluteFill} />
 
@@ -100,6 +171,23 @@ function StaticLayer({
       <View style={[StyleSheet.absoluteFill, { transform: [{ scale }] }]}>
         <Image source={source} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="center" transition={0} />
       </View>
+    </View>
+  );
+}
+
+function MatrixAmbience() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <WebView
+        source={{ html: MATRIX_HTML }}
+        style={StyleSheet.absoluteFillObject}
+        scrollEnabled={false}
+        bounces={false}
+        overScrollMode="never"
+        pointerEvents="none"
+        javaScriptEnabled
+        originWhitelist={['*']}
+      />
     </View>
   );
 }

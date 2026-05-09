@@ -61,6 +61,7 @@
     "expo-build-properties": "^1.0.10",
     "expo-sensors": "~15.0.8",
     "react-native-game-center": "^1.2.3",
+    "react-native-webview": "^13.16.1",
     "socket.io-client": "^4.8.3"
   }
 }

@@ -1,6 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export type SceneId = 'casinoGreen' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum' | 'flamingoFloor';
+export type SceneId = 'casinoGreen' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum' | 'flamingoFloor' | 'matrixArena';
 export type SceneVariant = 'portrait' | 'landscape';
 export type SceneLayerId = 'L0_far' | 'L1_mid' | 'L2_table' | 'L3_fx' | 'L4_vignette';
 
@@ -108,6 +108,23 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
       },
     },
     parallax: { L0_far: 0.02, L1_mid: 0.08, L2_table: 0.04, L3_fx: 0.18, L4_vignette: 0.0 },
+  },
+  matrixArena: {
+    layers: {
+      portrait: {
+        L0_far:   require('../assets/scenes/matrixArena/portrait/L0_far.png'),
+        L1_mid:   null,
+        L2_table: null,
+        L3_fx:    null,
+      },
+      landscape: {
+        L0_far:   require('../assets/scenes/matrixArena/landscape/L0_far.png'),
+        L1_mid:   null,
+        L2_table: null,
+        L3_fx:    null,
+      },
+    },
+    parallax: { L0_far: 0.0, L1_mid: 0.0, L2_table: 0.0, L3_fx: 0.0, L4_vignette: 0.0 },
   },
 };
 

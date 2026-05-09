@@ -25,6 +25,7 @@ export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps)
   if (which === 'cosmic')    return <CosmicArena />;
   if (which === 'royal')     return <RoyalArena />;
   if (which === 'lightning') return <LightningArena />;
+  if (which === 'matrix')    return <MatrixArena />;
   return <ClassicArena />;
 }
 
@@ -64,6 +65,13 @@ const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, str
     'rgba(10,140,130,0.16)',
     'transparent',
   ],
+  matrix: [
+    'transparent',
+    'rgba(0,160,60,0.18)',
+    'rgba(0,200,70,0.28)',
+    'rgba(0,160,60,0.18)',
+    'transparent',
+  ],
 };
 
 const ARENA_PHOTO_LABELS: Partial<Record<ArenaId, string>> = {
@@ -80,6 +88,7 @@ const ARENA_FALLBACK_COLORS: Record<ArenaId, readonly [string, string, string]> 
   cosmic:     ['#0d0520', '#1a0840', '#100530'],
   royal:      ['#1e1200', '#3a2200', '#2a1a00'],
   lightning:  ['#031a1a', '#062e28', '#041f1c'],
+  matrix:     ['#001a08', '#002e10', '#001a08'],
 };
 
 function ArenaPhotoBase({ arenaId }: { arenaId: ArenaId }) {
@@ -267,6 +276,25 @@ function LightningArena() {
       <View pointerEvents="none" style={{ position: 'absolute', left: '5%',  top: '4%',  width: 260, height: 90,  borderRadius: 50, backgroundColor: 'rgba(100,80,200,0.28)', opacity: 0.55 }} />
       <View pointerEvents="none" style={{ position: 'absolute', left: '40%', top: '10%', width: 310, height: 100, borderRadius: 55, backgroundColor: 'rgba(80,60,180,0.22)',   opacity: 0.55 }} />
       <View pointerEvents="none" style={{ position: 'absolute', left: '60%', top: '2%',  width: 240, height: 80,  borderRadius: 44, backgroundColor: 'rgba(120,90,220,0.30)',  opacity: 0.55 }} />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Matrix Arena
+// ---------------------------------------------------------------------------
+
+function MatrixArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="matrix" />
+      <TableEdgeBlend arenaId="matrix" />
+      <LinearGradient
+        colors={['rgba(0,200,60,0.16)', 'transparent', 'rgba(0,160,50,0.12)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
     </View>
   );
 }
