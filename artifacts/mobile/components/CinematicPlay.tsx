@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
 import type { LayoutRect } from '@/components/CardPlayFlight';
@@ -32,6 +32,26 @@ function spotlightFromEvent(ev: LastEvent): SpotlightStrength {
 }
 
 /**
+ * 3D tilt helpers — all inline math from progress t so they run on the UI
+ * thread without extra Reanimated SVs.
+ *
+ * rotateX: parabola through (0, 12°) → (0.5, −8°) → (1, 0°)
+ *   Derived: a=56, b=−68, c=12 → f(t) = 56t²−68t+12
+ *
+ * rotateY: sin(π·t) banking in the direction of travel; sideDir = +1 (self)
+ *   or −1 (opponent). Peaks at t=0.5, returns to 0 at landing.
+ */
+function tiltRotX(t: number): number {
+  'worklet';
+  return 56 * t * t - 68 * t + 12;
+}
+
+function tiltRotY(t: number, sideDir: number): number {
+  'worklet';
+  return Math.sin(Math.PI * t) * 10 * sideDir;
+}
+
+/**
  * Orchestrates a cinematic play timeline (spotlight + optional hand + flight +
  * impact sparks). Presentation-only; authoritative game state still comes from
  * `gameView`.
@@ -44,6 +64,7 @@ export default function CinematicPlay({
   selfHandRect,
   opponentZoneRect,
   onAvatarPulse,
+  initialLastKey,
 }: {
   gameId: string;
   lastEvent: LastEvent | undefined;
@@ -52,9 +73,15 @@ export default function CinematicPlay({
   selfHandRect: LayoutRect | null;
   opponentZoneRect: LayoutRect | null;
   onAvatarPulse: (side: 'self' | 'opponent') => void;
+  initialLastKey?: string | null;
 }) {
   const [flight, setFlight] = useState<{ card: CardType; key: string; side: 'self' | 'opponent'; kind: CinematicKind } | null>(null);
-  const lastKeyRef = useRef<string | null>(null);
+  const lastKeyRef = useRef<string | null>(initialLastKey ?? null);
+
+  // Skip the gameId reset on first mount so the pre-seeded initialLastKey is
+  // honoured. Subsequent gameId changes (joining a new game without unmounting)
+  // still clear the key so the new game's first event plays correctly.
+  const isFirstMountRef = useRef(true);
 
   const trigger = useSharedValue(0);
   const progress = useSharedValue(0);
@@ -66,15 +93,18 @@ export default function CinematicPlay({
   const cy = useSharedValue(0);
   const impact = useSharedValue(0);
 
-  // 3D rotation: rotX tilts the card flat as it flies (UNO-style table tilt),
-  // rotY adds a gentle tumble wobble. perspective: 800 gives physical depth.
-  const rotX = useSharedValue(0);
-  const rotY = useSharedValue(0);
+  // sideDir: +1 for self (right bank), -1 for opponent (left bank).
+  // Used inside useAnimatedStyle worklets to drive rotateY direction.
+  const sideDir = useSharedValue(1);
 
   const [spotTrigger, setSpotTrigger] = useState(0);
   const [impactVisible, setImpactVisible] = useState(false);
 
   useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
     lastKeyRef.current = null;
   }, [gameId]);
 
@@ -109,8 +139,7 @@ export default function CinematicPlay({
     cy.value = ctrlY - SM.h / 2;
     progress.value = 0;
     impact.value = 0;
-    rotX.value = 0;
-    rotY.value = 0;
+    sideDir.value = side === 'self' ? 1 : -1;
 
     setFlight({ card, key, side, kind: k });
     setSpotTrigger((n) => n + 1);
@@ -127,25 +156,6 @@ export default function CinematicPlay({
     const flightMs = k === 'big' ? 480 : 420;
     const anticipationMs = 110;
 
-    // rotateX: self side tilts away (+35°), opponent tilts toward viewer (-35°).
-    const rotXTarget = side === 'self' ? 35 : -35;
-    rotX.value = withSequence(
-      withTiming(0, { duration: anticipationMs }),
-      withTiming(rotXTarget, { duration: flightMs, easing: Easing.inOut(Easing.cubic) }),
-    );
-
-    // rotateY: 3-segment tumble wobble 0° → 15° → −10° → 0°.
-    const seg = Math.floor(flightMs / 3);
-    rotY.value = withSequence(
-      withTiming(0, { duration: anticipationMs }),
-      withTiming(15, { duration: seg, easing: Easing.out(Easing.cubic) }),
-      withTiming(-10, { duration: seg, easing: Easing.inOut(Easing.cubic) }),
-      withTiming(0, { duration: flightMs - seg * 2, easing: Easing.in(Easing.cubic) }),
-    );
-
-    // Timeline:
-    // - 0..~120ms anticipation
-    // - ~120..520ms flight
     trigger.value = trigger.value + 1;
     progress.value = withSequence(
       withTiming(-0.14, { duration: anticipationMs, easing: Easing.out(Easing.cubic) }),
@@ -155,9 +165,6 @@ export default function CinematicPlay({
           withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) }),
           withTiming(0, { duration: 220, easing: Easing.in(Easing.cubic) }),
         );
-        // Landing settle: springs back to flat on the table.
-        rotX.value = withSpring(0, { damping: 18, stiffness: 200 });
-        rotY.value = withSpring(0, { damping: 20, stiffness: 220 });
         runOnJS(showImpact)();
         runOnJS(finish)();
       }),
@@ -171,6 +178,8 @@ export default function CinematicPlay({
 
   const enableHand = !!flight && flight.side === 'self' && (flight.kind === 'big' || (lastEvent?.type === 'normal' || lastEvent?.type === 'reset'));
 
+  // Lead card — full 3D tilt driven inline from progress.value.
+  // rotateX: parabola 12° → −8° → 0°   rotateY: sin-bank in travel direction.
   const flightStyle0 = useAnimatedStyle(() => {
     const rawT = progress.value;
     const t = rawT < 0 ? 0 : rawT;
@@ -179,14 +188,16 @@ export default function CinematicPlay({
     const by = omt * omt * sy.value + 2 * omt * t * cy.value + t * t * ey.value;
     const fade = t > 0.92 ? 1 - (t - 0.92) / 0.08 : 1;
 
-    // Anticipation: small pull-back opposite of travel.
-    const ant = rawT < 0 ? rawT / -0.14 : 0; // 0..1 during anticipation
-    const antX = ant * (flight?.side === 'self' ? -10 : 10);
+    const ant = rawT < 0 ? rawT / -0.14 : 0;
+    const antX = ant * (sideDir.value > 0 ? -10 : 10);
     const antY = ant * 8;
 
-    // Landing "punch": quick scale bump.
     const punch = impact.value;
     const baseScale = 0.9 + t * 0.14;
+
+    const rX = tiltRotX(t);
+    const rY = tiltRotY(t, sideDir.value);
+
     return {
       position: 'absolute',
       left: bx + antX,
@@ -194,8 +205,8 @@ export default function CinematicPlay({
       opacity: fade,
       transform: [
         { perspective: 800 },
-        { rotateX: `${rotX.value}deg` },
-        { rotateY: `${rotY.value}deg` },
+        { rotateX: `${rX}deg` },
+        { rotateY: `${rY}deg` },
         { rotate: `${t * (flight?.kind === 'big' ? 22 : 16)}deg` },
         { scale: baseScale + punch * 0.08 },
       ],
@@ -204,10 +215,8 @@ export default function CinematicPlay({
     };
   });
 
-  // Trail ghost copies use a fixed mid-flight rotateX so they blur naturally
-  // rather than fighting the lead card's live rotation.
-  const TRAIL_ROT_X = 18; // midpoint of the 0→35° tilt arc
-
+  // Trail ghost copies — same tilt formulas at ~40% intensity so they read as
+  // the same physical card smearing through space rather than flat sprites.
   const trailStyle = (dt: number) =>
     useAnimatedStyle(() => {
       const rawT = progress.value;
@@ -217,6 +226,10 @@ export default function CinematicPlay({
       const bx = omt * omt * sx.value + 2 * omt * t * cx.value + t * t * ex.value;
       const by = omt * omt * sy.value + 2 * omt * t * cy.value + t * t * ey.value;
       const o = (1 - t0) * 0.16;
+
+      const rX = tiltRotX(t) * 0.4;
+      const rY = tiltRotY(t, sideDir.value) * 0.4;
+
       return {
         position: 'absolute',
         left: bx,
@@ -224,7 +237,8 @@ export default function CinematicPlay({
         opacity: o,
         transform: [
           { perspective: 800 },
-          { rotateX: `${TRAIL_ROT_X}deg` },
+          { rotateX: `${rX}deg` },
+          { rotateY: `${rY}deg` },
           { rotate: `${t * 18}deg` },
           { scale: 0.9 + t * 0.14 },
         ],
@@ -239,7 +253,6 @@ export default function CinematicPlay({
     return null;
   }
 
-  // Impact FX color roughly matches existing burn palette.
   const impactColor =
     lastEvent?.type === 'burn' || lastEvent?.type === 'set_complete'
       ? '#ff7f00'

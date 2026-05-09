@@ -23,6 +23,8 @@ import { useColors } from '@/hooks/useColors';
 import ActionButtons from '@/components/ActionButtons';
 import BackButton from '@/components/BackButton';
 import CardComponent, { CardBack } from '@/components/Card';
+import CinematicPlay from '@/components/CinematicPlay';
+import type { LayoutRect } from '@/components/CardPlayFlight';
 import DrawPileStack, { type DrawPileHandle } from '@/components/DrawPileStack';
 import SceneBackground from '@/components/SceneBackground';
 import EmoteBubble from '@/components/EmoteBubble';
@@ -31,6 +33,8 @@ import FaceDownReveal from '@/components/FaceDownReveal';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import GlowPile from '@/components/GlowPile';
 import PlayerHand from '@/components/PlayerHand';
+import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
+import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 
 function canPlayCard(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -222,6 +226,19 @@ export default function GameLandscape(): React.JSX.Element | null {
   const ring2Opacity = useSharedValue(0);
   const ring3Scale = useSharedValue(0.3);
   const ring3Opacity = useSharedValue(0);
+
+  // Layout rects for CinematicPlay (landscape)
+  const [pileRectLs, setPileRectLs] = useState<LayoutRect | null>(null);
+  const [selfHandRectLs, setSelfHandRectLs] = useState<LayoutRect | null>(null);
+  const [opponentZoneRectLs, setOpponentZoneRectLs] = useState<LayoutRect | null>(null);
+  const selfHandRefLs = useRef<View>(null);
+  const opponentZoneRefLs = useRef<View>(null);
+
+  // Stable initial key so CinematicPlay does not replay the last event when
+  // the landscape branch mounts (e.g. after rotating from portrait).
+  const initialCinematicKeyRef = useRef<string | null>(
+    initialEvent ? lastEventIdentityKey(gameView?.gameId ?? '', initialEvent) : null,
+  );
 
   // Card draw animation — a CardBack flies from the draw pile to the hand
   const drawAnimX = useSharedValue(0);
@@ -518,7 +535,16 @@ export default function GameLandscape(): React.JSX.Element | null {
 
         {/* CENTER COLUMN — opponent (top) → pile (mid) → player hand (bottom) */}
         <View style={styles.centerColumn}>
-          <View style={styles.opponentTopRow}>
+          <View
+            ref={opponentZoneRefLs}
+            style={styles.opponentTopRow}
+            onLayout={() => {
+              opponentZoneRefLs.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                const r = { x: pageX, y: pageY, width: w, height: h };
+                setOpponentZoneRectLs((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
+              });
+            }}
+          >
             <View style={styles.opponentArtFrame}>
               {opponentAvatarPortrait ? (
                 <Image source={opponentAvatarPortrait} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="top" />
@@ -537,13 +563,24 @@ export default function GameLandscape(): React.JSX.Element | null {
             onLayout={() => {
               tableCenterRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                 setPileCenter({ x: pageX + w / 2, y: pageY + h / 2 });
+                const r = { x: pageX, y: pageY, width: w, height: h };
+                setPileRectLs((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
               });
             }}
           >
             <GlowPile pile={discardPile} lastEventType={lastEventType} highlighted={pileHighlighted} />
           </View>
 
-          <View style={styles.playerHandSection}>
+          <View
+            ref={selfHandRefLs}
+            style={styles.playerHandSection}
+            onLayout={() => {
+              selfHandRefLs.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                const r = { x: pageX, y: pageY, width: w, height: h };
+                setSelfHandRectLs((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
+              });
+            }}
+          >
             <PlayerHand
               hand={myHand}
               faceUp={myFaceUp}
@@ -635,6 +672,20 @@ export default function GameLandscape(): React.JSX.Element | null {
           side="right"
         />
       ) : null}
+
+      {/* Cinematic card-flight overlay — spotlight + Bezier arc + 3D tilt + impact sparks */}
+      {gameView && (
+        <CinematicPlay
+          gameId={gameView.gameId}
+          lastEvent={gameView.lastEvent}
+          myPlayerId={gameView.myPlayerId}
+          pileRect={pileRectLs}
+          selfHandRect={selfHandRectLs}
+          opponentZoneRect={opponentZoneRectLs}
+          onAvatarPulse={() => {}}
+          initialLastKey={initialCinematicKeyRef.current}
+        />
+      )}
 
       {/* Player menu popover (Exit Game). Anchored over the player name plate
           on the left column, just below where the plate sits. Tap backdrop to

@@ -26,6 +26,8 @@ import ActionButtons from '@/components/ActionButtons';
 import BackButton from '@/components/BackButton';
 import SceneBackground from '@/components/SceneBackground';
 import CardComponent, { CardBack } from '@/components/Card';
+import CinematicPlay from '@/components/CinematicPlay';
+import type { LayoutRect } from '@/components/CardPlayFlight';
 import EmoteBubble from '@/components/EmoteBubble';
 import EmotePicker from '@/components/EmotePicker';
 import FaceDownReveal from '@/components/FaceDownReveal';
@@ -35,6 +37,8 @@ import MultiPlayBurst from '@/components/MultiPlayBurst';
 import OrientationCurtain from '@/components/OrientationCurtain';
 import PlayerHand from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
+import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
+import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 
@@ -305,6 +309,15 @@ export default function GameScreen() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(playerName);
 
+  // Layout rects for CinematicPlay (portrait)
+  const [pileRectP, setPileRectP] = useState<LayoutRect | null>(null);
+  const [selfHandRectP, setSelfHandRectP] = useState<LayoutRect | null>(null);
+  const [opponentZoneRectP, setOpponentZoneRectP] = useState<LayoutRect | null>(null);
+  const pileViewRef = useRef<View>(null);
+  const selfHandRef = useRef<View>(null);
+  const opponentZoneRef = useRef<View>(null);
+
+
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
   useEffect(() => {
@@ -470,12 +483,32 @@ export default function GameScreen() {
               <BackButton label="← EXIT" onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })} />
             </View>
 
-            <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
+            <View
+              ref={opponentZoneRef}
+              onLayout={() => {
+                opponentZoneRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                  const r = { x: pageX, y: pageY, width: w, height: h };
+                  setOpponentZoneRectP((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
+                });
+              }}
+            >
+              <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
+            </View>
 
             <View style={styles.tableCenter}>
               <View style={styles.pileRow}>
                 <View style={{ flex: 1 }} />
-                <GlowPile pile={discardPile} lastEventType={lastEventType} />
+                <View
+                  ref={pileViewRef}
+                  onLayout={() => {
+                    pileViewRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                      const r = { x: pageX, y: pageY, width: w, height: h };
+                      setPileRectP((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
+                    });
+                  }}
+                >
+                  <GlowPile pile={discardPile} lastEventType={lastEventType} />
+                </View>
                 <View style={styles.deckSlot}>
                   <DeckBadge count={deckCount} />
                 </View>
@@ -498,7 +531,16 @@ export default function GameScreen() {
               )}
             </View>
 
-            <View style={styles.playerSection}>
+            <View
+              ref={selfHandRef}
+              style={styles.playerSection}
+              onLayout={() => {
+                selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                  const r = { x: pageX, y: pageY, width: w, height: h };
+                  setSelfHandRectP((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
+                });
+              }}
+            >
               <PlayerHand
                 hand={myHand}
                 faceUp={myFaceUp}
@@ -546,6 +588,23 @@ export default function GameScreen() {
               showMenuDots
             />
           </View>
+
+          {/* Cinematic card-flight overlay — spotlight + Bezier arc + 3D tilt + impact sparks.
+              initialLastKey is computed inline at render time so that each portrait branch
+              remount (after rotating back from landscape) gets the current lastEvent key
+              and does not replay an event that already played in landscape. */}
+          {gameView && (
+            <CinematicPlay
+              gameId={gameView.gameId}
+              lastEvent={gameView.lastEvent}
+              myPlayerId={gameView.myPlayerId}
+              pileRect={pileRectP}
+              selfHandRect={selfHandRectP}
+              opponentZoneRect={opponentZoneRectP}
+              onAvatarPulse={() => {}}
+              initialLastKey={gameView.lastEvent ? lastEventIdentityKey(gameView.gameId, gameView.lastEvent) : null}
+            />
+          )}
 
           {/* Player menu popover — opens when you tap your own name card.
               Opens above the bottom-left player chip. Tap the backdrop to dismiss. */}
