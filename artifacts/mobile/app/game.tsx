@@ -511,6 +511,10 @@ export default function GameScreen() {
   const ring3Style = useAnimatedStyle(() => ({ transform: [{ scale: ring3Scale.value }], opacity: ring3Opacity.value }));
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
+  const opponentAvatarPortrait = useMemo(
+    () => AVATARS[hashName(gameView?.opponentName ?? '') % AVATARS.length]?.portrait ?? null,
+    [gameView?.opponentName],
+  );
 
   if (!gameView) return null;
 
@@ -653,12 +657,12 @@ export default function GameScreen() {
             <AvatarChip
               name={opponentName}
               isActive={!isMyTurn}
-              portraitArt={null}
+              portraitArt={opponentAvatarPortrait}
             />
           </View>
 
-          {/* Player avatar chip — bottom-left corner, above the hand + emote area */}
-          <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 64, left: 10 }]}>
+          {/* Player avatar chip — left side, above the action buttons area */}
+          <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 148, left: 10 }]}>
             <AvatarChip
               name={playerName}
               isActive={isMyTurn}
@@ -695,7 +699,7 @@ export default function GameScreen() {
                 onPress={() => setPlayerMenuOpen(false)}
                 style={StyleSheet.absoluteFill}
               />
-              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 64 + 78, left: 16 }]}>
+              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 148 + 68, left: 16 }]}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput

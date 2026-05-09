@@ -56,7 +56,7 @@ function fakeCoins(name: string): string {
 }
 
 /** Compact name + coins plate for landscape header corners. */
-function NamePlate({ name, level, coins, gems, isActive, align, portraitArt, onPress, showMenuDots }: {
+function NamePlate({ name, level, coins, gems, isActive, align, portraitArt, onPress, showMenuDots, compact }: {
   name: string;
   level: string;
   coins: string;
@@ -66,10 +66,15 @@ function NamePlate({ name, level, coins, gems, isActive, align, portraitArt, onP
   portraitArt?: number | null;
   onPress?: () => void;
   showMenuDots?: boolean;
+  /** Compact pill variant: smaller avatar, single subtitle line. Used for opponent top-right. */
+  compact?: boolean;
 }) {
   const colors = useColors();
   const initial = name.charAt(0).toUpperCase();
   const Wrapper: React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }> = onPress ? (Pressable as React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }>) : View;
+
+  const avatarSize = compact ? 36 : 52;
+
   return (
     <Wrapper
       onPress={onPress}
@@ -82,28 +87,45 @@ function NamePlate({ name, level, coins, gems, isActive, align, portraitArt, onP
           shadowRadius: 10,
           elevation: isActive ? 8 : 0,
           flexDirection: align === 'left' ? 'row' : 'row-reverse',
+          paddingVertical: compact ? 4 : 6,
+          paddingHorizontal: compact ? 6 : 8,
+          gap: compact ? 6 : 8,
         },
       ]}
     >
       <View
         style={[
           styles.avatarCircle,
-          { borderColor: isActive ? colors.neonGold : colors.neonPurple, overflow: 'hidden' },
+          {
+            borderColor: isActive ? colors.neonGold : colors.neonPurple,
+            overflow: 'hidden',
+            width: avatarSize,
+            height: avatarSize,
+            borderRadius: compact ? 8 : 10,
+          },
         ]}
       >
         {portraitArt ? (
           <Image source={portraitArt} style={StyleSheet.absoluteFillObject} contentFit="cover" />
         ) : (
-          <Text style={[styles.avatarText, { color: isActive ? colors.neonGold : colors.neonPurple }]}>{initial}</Text>
+          <Text style={[styles.avatarText, { color: isActive ? colors.neonGold : colors.neonPurple, fontSize: compact ? 13 : 16 }]}>{initial}</Text>
         )}
       </View>
       <View style={[styles.nameTextWrap, align === 'right' && { alignItems: 'flex-end' }]}>
-        <Text style={[styles.nameText, { color: colors.foreground }]} numberOfLines={1}>{name}</Text>
-        <Text style={[styles.levelText, { color: colors.mutedForeground }]}>{level}</Text>
-        <View style={[styles.statsRow, align === 'right' && { flexDirection: 'row-reverse' }]}>
-          <Text style={[styles.statText, { color: colors.neonGold }]}>🪙 {coins}</Text>
-          {gems ? <Text style={[styles.statText, { color: colors.electric }]}>💎 {gems}</Text> : null}
-        </View>
+        <Text style={[styles.nameText, { color: colors.foreground, fontSize: compact ? 12 : 13 }]} numberOfLines={1}>{name}</Text>
+        {compact ? (
+          <Text style={[styles.levelText, { color: colors.mutedForeground, marginTop: 1 }]} numberOfLines={1}>
+            {level} · 🪙 {coins}
+          </Text>
+        ) : (
+          <>
+            <Text style={[styles.levelText, { color: colors.mutedForeground }]}>{level}</Text>
+            <View style={[styles.statsRow, align === 'right' && { flexDirection: 'row-reverse' }]}>
+              <Text style={[styles.statText, { color: colors.neonGold }]}>🪙 {coins}</Text>
+              {gems ? <Text style={[styles.statText, { color: colors.electric }]}>💎 {gems}</Text> : null}
+            </View>
+          </>
+        )}
       </View>
       {showMenuDots ? (
         <View style={styles.menuDotsBadgeLs} pointerEvents="none">
@@ -482,8 +504,8 @@ export default function GameLandscape(): React.JSX.Element | null {
         style={{ position: 'absolute', top: insets.top + webTopPad + 8, left: insets.left + 14, zIndex: 55 }}
       />
 
-      {/* Opponent gamer tag — top-right corner, below EXIT button row */}
-      <View style={{ position: 'absolute', top: insets.top + webTopPad + 8, right: insets.right + 14, zIndex: 50, maxWidth: 220 }}>
+      {/* Opponent gamer tag — top-right corner, compact pill so it doesn't droop over cards */}
+      <View style={{ position: 'absolute', top: insets.top + webTopPad + 8, right: insets.right + 14, zIndex: 50, maxWidth: 200 }}>
         <NamePlate
           name={opponentName}
           level="Lv. 28"
@@ -491,11 +513,12 @@ export default function GameLandscape(): React.JSX.Element | null {
           isActive={!isMyTurn}
           align="right"
           portraitArt={opponentAvatarPortrait}
+          compact
         />
       </View>
 
-      {/* Player gamer tag — bottom-left corner */}
-      <View style={{ position: 'absolute', bottom: insets.bottom + 8, left: insets.left + 14, zIndex: 50, maxWidth: 220 }}>
+      {/* Player gamer tag — bottom-left, raised so it sits near the action buttons */}
+      <View style={{ position: 'absolute', bottom: insets.bottom + 72, left: insets.left + 14, zIndex: 50, maxWidth: 220 }}>
         <NamePlate
           name={playerName}
           level="Lv. 34"
@@ -699,7 +722,7 @@ export default function GameLandscape(): React.JSX.Element | null {
           <View
             style={[
               styles.playerMenuLs,
-              { left: insets.left + 16, bottom: insets.bottom + 90 },
+              { left: insets.left + 16, bottom: insets.bottom + 146 },
             ]}
           >
             {/* Volume gauge — 4 tappable segments + mute toggle */}
