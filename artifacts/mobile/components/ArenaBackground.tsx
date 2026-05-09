@@ -15,6 +15,7 @@ export const ARENA_IMAGES: Partial<Record<ArenaId, number>> = {
   cosmic:    require('@/assets/arenas/cosmic_sanctum.png') as number,
   royal:     require('@/assets/arenas/olympus_throne.png') as number,
   lightning: require('@/assets/arenas/oasis_cave.png') as number,
+  matrix:    require('@/assets/scenes/matrixArena/portrait/L0_far.png') as number,
 };
 
 export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps) {
