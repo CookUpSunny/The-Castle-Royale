@@ -25,10 +25,13 @@ const CARD_COUNT = 17;
 const GOLD_COUNT = 3;
 
 // Entrance timing
-const STAGGER_MS = 180;    // delay between successive card entrances (~180 ms per spec)
-const FLIP_DUR   = 280;    // scaleX flip duration per card (matches curtain-card feel)
-// Total entrance duration: 16×180 + 280 = 3 160 ms (~3 s; last card finishes here)
-const ENTRANCE_TOTAL_MS = (CARD_COUNT - 1) * STAGGER_MS + FLIP_DUR;
+// STAGGER_MS is tuned so 17 cards finish in ≈2 s:
+//   (CARD_COUNT-1) × STAGGER_MS + OPACITY_DUR + FLIP_DUR
+//   = 16 × 110 + 80 + 280 = 2 120 ms  ≈ 2 s  ✓
+const STAGGER_MS   = 110;   // per-card entrance stagger (110 ms → ~2 s total for 17 cards)
+const OPACITY_DUR  = 80;    // fade-in precedes the flip
+const FLIP_DUR     = 280;   // scaleX flip (matches curtain-card feel, Easing.out(Easing.back))
+const ENTRANCE_TOTAL_MS = (CARD_COUNT - 1) * STAGGER_MS + OPACITY_DUR + FLIP_DUR; // ≈ 2 120 ms
 
 const REVEAL_INTERVAL = 3200;
 const REVEAL_HOLD     = 1600;
@@ -170,19 +173,23 @@ const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) 
   const baseScale   = 0.74 + spec.depth * 0.26;
   const cardOpacity = 0.44 + spec.depth * 0.51;
 
-  // Idle loops must wait until this card's own entrance has finished.
-  const IDLE_DELAY = spec.entranceDelay + FLIP_DUR + 160;
+  // Sequential entrance: opacity fires first, flip starts after opacity finishes.
+  const FLIP_START  = spec.entranceDelay + OPACITY_DUR;
+  // Idle loops start after this card's full entrance (opacity + flip) is done.
+  const IDLE_DELAY  = FLIP_START + FLIP_DUR + 120;
 
   useEffect(() => {
     mountedRef.current = true;
 
-    // ── Entrance: fade in, then scaleX flip back → face ──────────────────────
+    // ── Entrance: fade in first, then scaleX flip back → face ────────────────
+    // Step 1: opacity 0 → 1 over 80 ms
     entranceOp.value = withDelay(
       spec.entranceDelay,
-      withTiming(1, { duration: 90, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: OPACITY_DUR, easing: Easing.out(Easing.quad) }),
     );
+    // Step 2: scaleX 0 → 1 over 280 ms, starts only after opacity finishes
     flipSX.value = withDelay(
-      spec.entranceDelay,
+      FLIP_START,
       withTiming(1, { duration: FLIP_DUR, easing: Easing.out(Easing.back(1.5)) }),
     );
     // Swap to face-up when the card is "edge-on" (halfway through the flip).
@@ -191,7 +198,7 @@ const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) 
         setFaceUp(true);
         faceUpRef.current = true;
       }
-    }, spec.entranceDelay + FLIP_DUR / 2);
+    }, FLIP_START + FLIP_DUR / 2);
 
     // ── Idle loops — deferred until after entrance ────────────────────────────
     offsetX.value = withDelay(IDLE_DELAY, withRepeat(
