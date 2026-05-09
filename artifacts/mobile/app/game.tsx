@@ -619,7 +619,7 @@ export default function GameScreen() {
 
             <View
               ref={selfHandRef}
-              style={[styles.playerSection, { marginLeft: '8%' }]}
+              style={[styles.playerSection, { width: '88%', alignSelf: 'flex-end', marginRight: '2%' }]}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };

@@ -114,9 +114,25 @@ export default function CardMosaic({ onAssembled, dissolving }: CardMosaicProps)
     const data: { delay: number; card: CardData; left: number; top: number; rotate: number }[] = [];
     let maxDelay = 0;
 
-    const shuffled: CardData[] = Array.from({ length: CARD_COUNT }, () => {
-      return CARD_POOL[Math.floor(rand() * CARD_POOL.length)]!;
-    });
+    // Build a cycling pool (repeats until CARD_COUNT) then Fisher-Yates shuffle
+    // so every card type appears proportionally rather than random-with-replacement.
+    const source: CardData[] = Array.from({ length: CARD_COUNT }, (_, i) => CARD_POOL[i % CARD_POOL.length]!);
+    for (let i = source.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      const tmp = source[i]!; source[i] = source[j]!; source[j] = tmp;
+    }
+    // Guarantee no two consecutive cards share the same rank (swap forward if needed)
+    for (let i = 1; i < source.length; i++) {
+      if (source[i]!.rank === source[i - 1]!.rank) {
+        for (let j = i + 1; j < source.length; j++) {
+          if (source[j]!.rank !== source[i - 1]!.rank) {
+            const tmp = source[i]!; source[i] = source[j]!; source[j] = tmp;
+            break;
+          }
+        }
+      }
+    }
+    const shuffled = source;
 
     for (let i = 0; i < CARD_COUNT; i++) {
       const delay = rand() * 1400;

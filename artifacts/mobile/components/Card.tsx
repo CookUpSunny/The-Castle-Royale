@@ -58,7 +58,7 @@ export function CardBack({
   skinOverride?: CardSkinId;
 }) {
   const cosmetics = useCosmetics();
-  const skin = skinOverride ?? cosmetics.cardSkin;
+  const skin = skinOverride ?? cosmetics.cardSkin ?? 'royal-gold';
   return <SkinnedCardBack skin={skin} size={size} style={style} />;
 }
 
