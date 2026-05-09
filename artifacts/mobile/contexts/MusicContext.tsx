@@ -32,6 +32,7 @@ const VOLUME_KEY          = '@castleroyale_volume';
 const SPLASH_FADE_STEPS   = 60;   // 60 × 100 ms = 6 000 ms (loop fade-out + stop fade-out)
 const SPLASH_FADE_IN_STEPS = 40;  // 40 × 100 ms = 4 000 ms (opening fade-in only)
 const MATCH_FADE_STEPS    = 30;   // 30 × 100 ms = 3 000 ms
+const FAST_STOP_STEPS     = 14;   // 14 × 100 ms = 1 400 ms (fast match-transition fade-out)
 const FADE_MS             = 100;
 const SPLASH_FADE_MS    = SPLASH_FADE_STEPS * FADE_MS; // 6 000 ms — fade-out trigger point
 const SPLASH_TRACK_IDX  = 1;    // track2.wav — Sparks Fly
@@ -105,6 +106,8 @@ interface MusicContextValue {
    */
   startMusic: (arenaId?: ArenaId) => void;
   stopMusic: () => void;
+  /** Fade out and stop in ~1 400 ms — use when transitioning into a match. */
+  stopMusicFast: () => void;
 }
 
 const MusicContext = createContext<MusicContextValue>({
@@ -116,6 +119,7 @@ const MusicContext = createContext<MusicContextValue>({
   playSplashTrack: () => {},
   startMusic: () => {},
   stopMusic: () => {},
+  stopMusicFast: () => {},
 });
 
 export function useMusicPlayer() {
@@ -204,17 +208,19 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Volume ramp.
-   *   direction +1  →  fade in  (0 → volumeLevel ceiling)
-   *   direction -1  →  fade out (volumeLevel ceiling → 0)
+   *   direction +1  →  fade in  (0 → ceiling)
+   *   direction -1  →  fade out (ceiling → 0)
    *   steps controls duration: default 60 (6 s); pass MATCH_FADE_STEPS for 3 s.
+   *   ceilingOverride — when set, uses this value instead of volumeLevelRef.current.
+   *     Used by the splash fade-in to always reach 1.0 regardless of user preference.
    */
-  const startFade = useCallback((direction: 1 | -1, onDone?: () => void, steps = SPLASH_FADE_STEPS) => {
+  const startFade = useCallback((direction: 1 | -1, onDone?: () => void, steps = SPLASH_FADE_STEPS, ceilingOverride?: number) => {
     clearFade();
     if (isMutedRef.current) {
       onDone?.();
       return;
     }
-    const ceiling = volumeLevelRef.current;
+    const ceiling = ceilingOverride ?? volumeLevelRef.current;
     let vol       = direction === 1 ? 0 : ceiling;
     const step    = ceiling / steps;
     fadeRef.current = setInterval(() => {
@@ -267,7 +273,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
       soundRef.current = sound;
       if (mountedRef.current) setIsPlaying(true);
-      startFade(1, undefined, SPLASH_FADE_IN_STEPS); // 4-second opening fade-in
+      startFade(1, undefined, SPLASH_FADE_IN_STEPS, 1.0); // 4-second fade-in to full volume
     } catch {
       // Audio is best-effort — never crash the app
     }
@@ -385,6 +391,49 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     }, FADE_MS);
   }, [clearFade]);
 
+  /**
+   * Fast version of stopMusic: fades out in ~1 400 ms.
+   * Use this when navigating into a match so the music is silent
+   * before the game screen appears.
+   */
+  const stopMusicFast = useCallback(() => {
+    modeRef.current = 'idle';
+    splashActiveRef.current = false;
+    arenaLoopIdxRef.current = null;
+
+    clearFade();
+    const sound = soundRef.current;
+    if (!sound) {
+      if (mountedRef.current) setIsPlaying(false);
+      return;
+    }
+
+    const ceiling = isMutedRef.current ? 0 : volumeLevelRef.current;
+    if (ceiling === 0) {
+      sound.stopAsync().catch(() => {}).finally(() => {
+        sound.unloadAsync().catch(() => {});
+        if (soundRef.current === sound) soundRef.current = null;
+        if (mountedRef.current) setIsPlaying(false);
+      });
+      return;
+    }
+
+    let vol: number = ceiling;
+    const step = ceiling / FAST_STOP_STEPS;
+    fadeRef.current = setInterval(() => {
+      vol = Math.max(0, vol - step);
+      sound.setVolumeAsync(vol).catch(() => {});
+      if (vol <= 0) {
+        clearFade();
+        sound.stopAsync().catch(() => {}).finally(() => {
+          sound.unloadAsync().catch(() => {});
+          if (soundRef.current === sound) soundRef.current = null;
+          if (mountedRef.current) setIsPlaying(false);
+        });
+      }
+    }, FADE_MS);
+  }, [clearFade]);
+
   const toggleMute = useCallback(() => {
     setIsMuted((m) => !m);
   }, []);
@@ -401,7 +450,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   return (
     <MusicContext.Provider value={{
       isMuted, isPlaying, volumeLevel: volumeLevelState,
-      toggleMute, setVolumeLevel, playSplashTrack, startMusic, stopMusic,
+      toggleMute, setVolumeLevel, playSplashTrack, startMusic, stopMusic, stopMusicFast,
     }}>
       {children}
     </MusicContext.Provider>

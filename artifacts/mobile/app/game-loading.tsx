@@ -98,7 +98,7 @@ function FloatingCard({
 
 export default function GameLoadingScreen() {
   const colors = useColors();
-  const { stopMusic, startMusic } = useMusicPlayer();
+  const { stopMusicFast, startMusic } = useMusicPlayer();
   const { gameView } = useGame();
   // Arena is read here (not in GameLandscape) because music starts on this
   // loading screen — before the /game route mounts — so arena must be
@@ -122,7 +122,7 @@ export default function GameLoadingScreen() {
       true,
     );
 
-    stopMusic();
+    stopMusicFast();
 
     const minT = setTimeout(() => setAnimationDone(true), LOADING_MS);
 
