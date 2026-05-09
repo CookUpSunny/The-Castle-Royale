@@ -46,6 +46,11 @@ export interface GameView {
   opponentReady?: boolean;
   /** True when this player owes a starter play after picking up the pile. They must commit one card (any value, no specials) to restart the pile. */
   mustPlayStarter?: boolean;
+  /**
+   * Set to the playerId of whoever drew from the deck on this update, or null/absent if no draw occurred.
+   * The client uses this to trigger the draw animation only for the local player.
+   */
+  drawPlayerId?: string | null;
 }
 
 interface GameContextType {

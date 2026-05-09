@@ -421,6 +421,7 @@ function scheduleBotTurn(io: Server, gameId: string): void {
       games.set(gameId, fallback.newState);
       emitGameView(io, fallback.newState, 'game_update', {
         lastEvent: { type: 'pickup', playerId: botId },
+        drawPlayerId: null,
       });
       if (fallback.newState.currentPlayerId === botId && fallback.newState.phase === 'playing') {
         scheduleBotTurn(io, gameId);
@@ -442,6 +443,7 @@ function scheduleBotTurn(io: Server, gameId: string): void {
           wasFaceDown: outcome.result.wasFaceDown,
           previousTop: outcome.result.previousTop,
         },
+        drawPlayerId: outcome.newState.deck.length < state.deck.length ? botId : null,
       });
 
       if (outcome.result.gameOver) {
@@ -455,6 +457,7 @@ function scheduleBotTurn(io: Server, gameId: string): void {
     } else {
       emitGameView(io, outcome.newState, 'game_update', {
         lastEvent: { type: 'pickup', playerId: botId },
+        drawPlayerId: null,
       });
     }
 
@@ -695,6 +698,7 @@ export function initSocketGame(httpServer: HttpServer): void {
           wasFaceDown: outcome.result.wasFaceDown,
           previousTop: outcome.result.previousTop,
         },
+        drawPlayerId: outcome.newState.deck.length < state.deck.length ? pid : null,
       });
 
       if (outcome.result.gameOver) {
@@ -787,6 +791,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       games.set(data.gameId, outcome.newState);
       emitGameView(io, outcome.newState, 'game_update', {
         lastEvent: { type: 'pickup', playerId: pid },
+        drawPlayerId: null,
       });
 
       if (isBotId(outcome.newState.currentPlayerId)) {

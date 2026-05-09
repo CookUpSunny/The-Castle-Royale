@@ -228,7 +228,6 @@ export default function GameLandscape(): React.JSX.Element | null {
   const drawAnimY = useSharedValue(0);
   const drawAnimOpacity = useSharedValue(0);
   const drawPileRef = useRef<DrawPileHandle>(null);
-  const prevDeckCountRef = useRef<number | null>(null);
 
   // Drag-and-drop state
   const dragX = useSharedValue(0);
@@ -341,41 +340,25 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
 
-  // Card draw animation: fires only when the LOCAL player draws a card.
-  //
-  // Strategy: the server stamps every action with `lastEvent.playerId`. We
-  // treat a draw as happening when BOTH:
-  //   1. `deckCount` decreased since last render (a card left the deck), AND
-  //   2. `lastEvent.playerId === myPlayerId` (the local player was the actor).
-  //
-  // This correctly handles the common case where hand size stays constant
-  // (e.g. play 1 card from a full hand of 3, then draw 1 — net hand size
-  // unchanged), while also correctly suppressing the animation on bot/opponent
-  // draws where lastEvent.playerId differs.
+  // Card draw animation: fires only when the server explicitly tells us the
+  // local player drew. `drawPlayerId` is set server-side at the moment the deck
+  // shrinks — it is null for every other update, including opponent/bot draws,
+  // pile pickups, and setup-phase state changes.
   useEffect(() => {
-    const currentDeck = gameView?.deckCount ?? 0;
-    const deckDecreased = prevDeckCountRef.current !== null && currentDeck < prevDeckCountRef.current;
-    const localPlayerActed =
-      !!gameView?.lastEvent &&
-      !!gameView.myPlayerId &&
-      gameView.lastEvent.playerId === gameView.myPlayerId;
-    if (deckDecreased && localPlayerActed) {
-      drawPileRef.current?.getPosition().then(({ x, y, width: w, height: h }) => {
-        const startX = x + w / 2;
-        const startY = y + h / 2;
-        const endX = width / 2;
-        const endY = height * 0.85;
-        // Teleport to start position, stay opaque for the 450ms flight, then fade near the end
-        drawAnimX.value = startX - 20;
-        drawAnimY.value = startY - 28;
-        drawAnimOpacity.value = 1;
-        drawAnimX.value = withTiming(endX - 20, { duration: 450, easing: Easing.out(Easing.quad) });
-        drawAnimY.value = withTiming(endY - 28, { duration: 450, easing: Easing.out(Easing.quad) });
-        drawAnimOpacity.value = withDelay(300, withTiming(0, { duration: 150 }));
-      }).catch(() => {});
-    }
-    prevDeckCountRef.current = currentDeck;
-  }, [gameView?.deckCount, gameView?.lastEvent?.playerId, gameView?.myPlayerId]);
+    if (!gameView?.drawPlayerId || gameView.drawPlayerId !== gameView.myPlayerId) return;
+    drawPileRef.current?.getPosition().then(({ x, y, width: w, height: h }) => {
+      const startX = x + w / 2;
+      const startY = y + h / 2;
+      const endX = width / 2;
+      const endY = height * 0.85;
+      drawAnimX.value = startX - 20;
+      drawAnimY.value = startY - 28;
+      drawAnimOpacity.value = 1;
+      drawAnimX.value = withTiming(endX - 20, { duration: 700, easing: Easing.out(Easing.cubic) });
+      drawAnimY.value = withTiming(endY - 28, { duration: 700, easing: Easing.out(Easing.cubic) });
+      drawAnimOpacity.value = withDelay(500, withTiming(0, { duration: 200 }));
+    }).catch(() => {});
+  }, [gameView?.drawPlayerId]);
 
   // Drag-and-drop handlers (passed to PlayerHand → HandCard)
   const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
