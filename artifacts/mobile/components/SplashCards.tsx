@@ -63,12 +63,13 @@ function buildSpecs(): CardSpec[] {
   const colW = W / cols;
   const rowH = H / rows;
 
-  // One golden card per vertical row-band — guarantees even screen spread.
+  // One golden card per GOLD_COUNT equal index-bands — guarantees even screen spread
+  // and stays correct if CARD_COUNT or grid dimensions change independently.
   const goldenSet = new Set<number>();
-  for (let r = 0; r < rows; r++) {
-    const firstInRow = r * cols;
-    const lastInRow  = Math.min(firstInRow + cols - 1, CARD_COUNT - 1);
-    const pick = firstInRow + Math.floor(Math.random() * (lastInRow - firstInRow + 1));
+  for (let g = 0; g < GOLD_COUNT; g++) {
+    const bandStart = Math.floor(g * CARD_COUNT / GOLD_COUNT);
+    const bandEnd   = Math.floor((g + 1) * CARD_COUNT / GOLD_COUNT) - 1;
+    const pick = bandStart + Math.floor(Math.random() * (bandEnd - bandStart + 1));
     goldenSet.add(pick);
   }
 
