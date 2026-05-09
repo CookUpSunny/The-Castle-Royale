@@ -19,13 +19,20 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const CARD_W = 54;
-const CARD_H = 76;
-const CARD_COUNT = 12;
+const CARD_W = 62;
+const CARD_H = 88;
+const CARD_COUNT = 17;
 const GOLD_COUNT = 3;
-const REVEAL_INTERVAL = 2800;
-const REVEAL_HOLD = 1400;
-const PROXIMITY = 175;
+
+// Entrance timing
+const STAGGER_MS = 120;    // delay between successive card entrances
+const FLIP_DUR   = 300;    // scaleX flip duration per card
+// Total entrance duration before golden cycle may start
+const ENTRANCE_TOTAL_MS = (CARD_COUNT - 1) * STAGGER_MS + FLIP_DUR; // ≈ 2 220 ms
+
+const REVEAL_INTERVAL = 3200;
+const REVEAL_HOLD     = 1600;
+const PROXIMITY       = 160;
 
 const SUITS: readonly string[] = ['♥', '♦', '♣', '♠'];
 const RED_SUITS = new Set(['♥', '♦']);
@@ -46,9 +53,8 @@ interface CardSpec {
   homeX: number;
   homeY: number;
   depth: number;
-  initX: number;
-  initY: number;
   initRot: number;
+  entranceDelay: number;
   driftAmpX: number; driftDurX: number;
   driftAmpY: number; driftDurY: number;
   rotAmp: number;    rotDur: number;
@@ -58,42 +64,51 @@ interface CardSpec {
 
 function buildSpecs(): CardSpec[] {
   const { width: W, height: H } = Dimensions.get('window');
-  const cols = 4;
-  const rows = Math.ceil(CARD_COUNT / cols);
-  const colW = W / cols;
-  const rowH = H / rows;
-
   const goldenSet = new Set<number>();
   while (goldenSet.size < GOLD_COUNT) goldenSet.add(Math.floor(Math.random() * CARD_COUNT));
 
+  // Vertical column down the screen centre.
+  // Card centres distributed evenly from PAD_TOP to H - PAD_BOT.
+  const PAD_TOP = 70;
+  const PAD_BOT = 70;
+  const usableH = H - PAD_TOP - PAD_BOT;
+  const spacing = CARD_COUNT > 1 ? usableH / (CARD_COUNT - 1) : usableH;
+
   return Array.from({ length: CARD_COUNT }, (_, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const jx = (Math.random() - 0.5) * colW * 0.5;
-    const jy = (Math.random() - 0.5) * rowH * 0.6;
-    const dAmpX = 12 + Math.random() * 14;
-    const dAmpY = 9  + Math.random() * 13;
-    const rAmp  = 3  + Math.random() * 6;
+    // Alternate left/right so neighbouring cards don't perfectly overlap.
+    const side = i % 2 === 0 ? 1 : -1;
+    const sideJitter = side * (6 + Math.random() * 10);
+    const yJitter    = (Math.random() - 0.5) * (spacing * 0.22);
+
+    const homeX = W / 2 + sideJitter;
+    const homeY = Math.max(
+      CARD_H / 2 + 8,
+      Math.min(H - CARD_H / 2 - 8, PAD_TOP + i * spacing + yJitter),
+    );
+
+    const dAmpX = 8  + Math.random() * 10;
+    const dAmpY = 6  + Math.random() * 10;
+    const rAmp  = 2  + Math.random() * 4;
+
     return {
       id: i,
       isGolden: goldenSet.has(i),
       rank: pickRank(),
       suit: SUITS[Math.floor(Math.random() * SUITS.length)],
-      homeX: Math.max(CARD_W / 2 + 8, Math.min(W - CARD_W / 2 - 8, col * colW + colW / 2 + jx)),
-      homeY: Math.max(CARD_H / 2 + 8, Math.min(H - CARD_H / 2 - 8, row * rowH + rowH / 2 + jy)),
+      homeX,
+      homeY,
       depth: 0.55 + Math.random() * 0.45,
-      initX: (Math.random() * 2 - 1) * dAmpX,
-      initY: (Math.random() * 2 - 1) * dAmpY,
-      initRot: (Math.random() * 2 - 1) * rAmp,
+      initRot: side * (2 + Math.random() * 5),
+      entranceDelay: i * STAGGER_MS,
       driftAmpX: dAmpX,
       driftDurX: 3800 + Math.random() * 2800,
       driftAmpY: dAmpY,
       driftDurY: 3400 + Math.random() * 3000,
       rotAmp: rAmp,
       rotDur: 4000 + Math.random() * 3000,
-      breathAmp: 0.02 + Math.random() * 0.025,
+      breathAmp: 0.015 + Math.random() * 0.02,
       breathDur: 3000 + Math.random() * 2200,
-      shineDelay: 600 + Math.random() * 2800,
+      shineDelay: 600  + Math.random() * 2800,
     };
   });
 }
@@ -139,59 +154,84 @@ export interface CardHandle {
 }
 
 const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) => {
-  const offsetX  = useSharedValue(spec.initX);
-  const offsetY  = useSharedValue(spec.initY);
-  const rot      = useSharedValue(spec.initRot);
-  const breath   = useSharedValue(1);
-  const flipSX   = useSharedValue(1);
-  const revSc    = useSharedValue(1);
-  const glowOp   = useSharedValue(spec.isGolden ? 0.2 : 0);
+  const offsetX    = useSharedValue(0);
+  const offsetY    = useSharedValue(0);
+  const rot        = useSharedValue(spec.initRot);
+  const breath     = useSharedValue(1);
+  const flipSX     = useSharedValue(0);    // 0 = collapsed; entrance flips to 1
+  const revSc      = useSharedValue(1);
+  const glowOp     = useSharedValue(spec.isGolden ? 0.2 : 0);
+  const entranceOp = useSharedValue(0);    // transparent until card's entrance fires
 
-  const faceUpRef  = useRef(!spec.isGolden);
+  const faceUpRef  = useRef(false);        // all cards start face-down
   const mountedRef = useRef(true);
-  const [faceUp, setFaceUp] = useState(!spec.isGolden);
+  const [faceUp, setFaceUp] = useState(false);
 
   const baseScale   = 0.74 + spec.depth * 0.26;
   const cardOpacity = 0.44 + spec.depth * 0.51;
 
+  // Idle loops must wait until this card's own entrance has finished.
+  const IDLE_DELAY = spec.entranceDelay + FLIP_DUR + 160;
+
   useEffect(() => {
     mountedRef.current = true;
 
-    offsetX.value = withRepeat(
+    // ── Entrance: fade in, then scaleX flip back → face ──────────────────────
+    entranceOp.value = withDelay(
+      spec.entranceDelay,
+      withTiming(1, { duration: 90, easing: Easing.out(Easing.quad) }),
+    );
+    flipSX.value = withDelay(
+      spec.entranceDelay,
+      withTiming(1, { duration: FLIP_DUR, easing: Easing.out(Easing.cubic) }),
+    );
+    // Swap to face-up when the card is "edge-on" (halfway through the flip).
+    const faceTimer = setTimeout(() => {
+      if (mountedRef.current) {
+        setFaceUp(true);
+        faceUpRef.current = true;
+      }
+    }, spec.entranceDelay + FLIP_DUR / 2);
+
+    // ── Idle loops — deferred until after entrance ────────────────────────────
+    offsetX.value = withDelay(IDLE_DELAY, withRepeat(
       withSequence(
         withTiming( spec.driftAmpX, { duration: spec.driftDurX, easing: Easing.inOut(Easing.sin) }),
         withTiming(-spec.driftAmpX, { duration: spec.driftDurX, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    );
-    offsetY.value = withRepeat(
+    ));
+    offsetY.value = withDelay(IDLE_DELAY, withRepeat(
       withSequence(
         withTiming(-spec.driftAmpY, { duration: spec.driftDurY, easing: Easing.inOut(Easing.sin) }),
         withTiming( spec.driftAmpY, { duration: spec.driftDurY, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    );
-    rot.value = withRepeat(
+    ));
+    rot.value = withDelay(IDLE_DELAY, withRepeat(
       withSequence(
         withTiming( spec.rotAmp, { duration: spec.rotDur, easing: Easing.inOut(Easing.sin) }),
         withTiming(-spec.rotAmp, { duration: spec.rotDur, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    );
-    breath.value = withRepeat(
+    ));
+    breath.value = withDelay(IDLE_DELAY, withRepeat(
       withSequence(
         withTiming(1 + spec.breathAmp, { duration: spec.breathDur, easing: Easing.inOut(Easing.sin) }),
         withTiming(1 - spec.breathAmp, { duration: spec.breathDur, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    );
+    ));
+
     if (spec.isGolden) {
-      glowOp.value = withRepeat(
+      glowOp.value = withDelay(IDLE_DELAY, withRepeat(
         withSequence(
           withTiming(0.55, { duration: 1600 }),
           withTiming(0.25, { duration: 1600 }),
         ), -1, false,
-      );
+      ));
     }
 
     return () => {
+      clearTimeout(faceTimer);
       mountedRef.current = false;
+      cancelAnimation(entranceOp);
       cancelAnimation(offsetX);
       cancelAnimation(offsetY);
       cancelAnimation(rot);
@@ -238,7 +278,7 @@ const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) 
     top:  spec.homeY - CARD_H / 2 + offsetY.value,
     width: CARD_W,
     height: CARD_H,
-    opacity: cardOpacity,
+    opacity: cardOpacity * entranceOp.value,
     pointerEvents: 'none' as const,
     transform: [
       { rotate: `${rot.value}deg` },
@@ -331,7 +371,8 @@ export default function SplashCards() {
       cycleTimer.current = setTimeout(runCycle, REVEAL_INTERVAL);
     };
 
-    cycleTimer.current = setTimeout(runCycle, 900);
+    // Golden cycle only fires after all entrance animations have completed.
+    cycleTimer.current = setTimeout(runCycle, ENTRANCE_TOTAL_MS + 800);
 
     return () => {
       if (cycleTimer.current) clearTimeout(cycleTimer.current);
@@ -354,40 +395,40 @@ const styles = StyleSheet.create({
   cardBox: {
     width: CARD_W,
     height: CARD_H,
-    borderRadius: 8,
+    borderRadius: 9,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.65,
+    shadowRadius: 12,
+    elevation: 10,
   },
   face: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cornerTL: {
     position: 'absolute',
     top: 4,
-    left: 6,
-    fontSize: 13,
+    left: 7,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 16,
+    lineHeight: 17,
   },
   cornerBR: {
     position: 'absolute',
     bottom: 4,
-    right: 6,
-    fontSize: 13,
+    right: 7,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 16,
+    lineHeight: 17,
     transform: [{ rotate: '180deg' }],
   },
   suitCenter: {
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 28,
+    lineHeight: 34,
   },
   backInner: {
     position: 'absolute',
@@ -395,14 +436,14 @@ const styles = StyleSheet.create({
     left: 5,
     right: 5,
     bottom: 5,
-    borderRadius: 5,
+    borderRadius: 6,
     borderWidth: 1,
   },
   backInnerPurple: { borderColor: 'rgba(168,85,247,0.5)' },
   backInnerGold:   { borderColor: 'rgba(240,199,88,0.55)' },
   crownText: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 24,
+    lineHeight: 30,
   },
   crownGold: {
     color: '#F0C758',
