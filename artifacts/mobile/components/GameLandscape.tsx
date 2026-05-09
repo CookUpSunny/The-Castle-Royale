@@ -341,10 +341,25 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
 
-  // Card draw animation: fires only when deckCount decreases by exactly 1
+  // Card draw animation: fires only when the LOCAL player draws a card.
+  //
+  // Strategy: the server stamps every action with `lastEvent.playerId`. We
+  // treat a draw as happening when BOTH:
+  //   1. `deckCount` decreased since last render (a card left the deck), AND
+  //   2. `lastEvent.playerId === myPlayerId` (the local player was the actor).
+  //
+  // This correctly handles the common case where hand size stays constant
+  // (e.g. play 1 card from a full hand of 3, then draw 1 — net hand size
+  // unchanged), while also correctly suppressing the animation on bot/opponent
+  // draws where lastEvent.playerId differs.
   useEffect(() => {
-    const current = gameView?.deckCount ?? 0;
-    if (prevDeckCountRef.current !== null && current === prevDeckCountRef.current - 1) {
+    const currentDeck = gameView?.deckCount ?? 0;
+    const deckDecreased = prevDeckCountRef.current !== null && currentDeck < prevDeckCountRef.current;
+    const localPlayerActed =
+      !!gameView?.lastEvent &&
+      !!gameView.myPlayerId &&
+      gameView.lastEvent.playerId === gameView.myPlayerId;
+    if (deckDecreased && localPlayerActed) {
       drawPileRef.current?.getPosition().then(({ x, y, width: w, height: h }) => {
         const startX = x + w / 2;
         const startY = y + h / 2;
@@ -359,8 +374,8 @@ export default function GameLandscape(): React.JSX.Element | null {
         drawAnimOpacity.value = withDelay(300, withTiming(0, { duration: 150 }));
       }).catch(() => {});
     }
-    prevDeckCountRef.current = current;
-  }, [gameView?.deckCount]);
+    prevDeckCountRef.current = currentDeck;
+  }, [gameView?.deckCount, gameView?.lastEvent?.playerId, gameView?.myPlayerId]);
 
   // Drag-and-drop handlers (passed to PlayerHand → HandCard)
   const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
