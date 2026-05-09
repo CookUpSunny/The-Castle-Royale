@@ -4,22 +4,55 @@ import Animated, {
   Easing,
   cancelAnimation,
   runOnJS,
+  useAnimatedStyle,
   useSharedValue,
   withDelay,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import CardComponent from '@/components/Card';
+import { CardBack } from '@/components/Card';
 import { type Card as CardType } from '@/contexts/GameContext';
 
-// ── Curtain card identities ────────────────────────────────────────────────
-// Ace of Spades for portrait → landscape, 10 of Diamonds for landscape → portrait.
-const ACE_OF_SPADES: CardType   = { id: 'curtain-ace-spades',    suit: 'S', value: 1  };
-const TEN_OF_DIAMONDS: CardType = { id: 'curtain-ten-diamonds', suit: 'D', value: 10 };
+// ── Card definitions ────────────────────────────────────────────────────────
+// 5-card spread: 3 face-up, 2 face-down; index 0 is the golden card.
+interface CurtainCardDef {
+  card: CardType;
+  faceDown: boolean;
+  golden: boolean;
+  glowColor: string;
+  // Position as fraction of screen dimensions (card centre)
+  xFrac: number;
+  yFrac: number;
+  // Rotation in degrees (applied as CSS-style string)
+  rot: number;
+}
 
-// Dimensions of the `lg` size used by CardComponent (from Card.tsx SIZES map).
-const CARD_LG_W = 66;
-const CARD_LG_H = 92;
+const CURTAIN_CARDS: CurtainCardDef[] = [
+  // ── Golden Ace of Spades — screen centre, slight left tilt ────────────────
+  { card: { id: 'curtain-0', suit: 'S', value: 1  } as CardType, faceDown: false, golden: true,  glowColor: '#f59e0b', xFrac: 0.50, yFrac: 0.50, rot: -6  },
+  // ── King of Hearts — upper-left, sharp left tilt ─────────────────────────
+  { card: { id: 'curtain-1', suit: 'H', value: 13 } as CardType, faceDown: false, golden: false, glowColor: '#ef4444', xFrac: 0.22, yFrac: 0.30, rot: -18 },
+  // ── Queen of Diamonds — lower-right, right tilt ───────────────────────────
+  { card: { id: 'curtain-2', suit: 'D', value: 12 } as CardType, faceDown: false, golden: false, glowColor: '#f97316', xFrac: 0.76, yFrac: 0.65, rot: 14  },
+  // ── 10 of Clubs — upper-right, face-down ──────────────────────────────────
+  { card: { id: 'curtain-3', suit: 'C', value: 10 } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.73, yFrac: 0.27, rot: 10  },
+  // ── 7 of Spades — lower-left, face-down ───────────────────────────────────
+  { card: { id: 'curtain-4', suit: 'S', value: 7  } as CardType, faceDown: true,  golden: false, glowColor: '#a855f7', xFrac: 0.24, yFrac: 0.72, rot: -12 },
+];
+
+// Card face dimensions for `lg` size (matches Card.tsx SIZES map)
+const CARD_W = 66;
+const CARD_H = 92;
+
+// ── Timing constants ─────────────────────────────────────────────────────────
+const STAGGER_IN_MS   = 80;   // delay between each card popping in
+const MIDPOINT_MS     = 700;  // layout swap fires here (screen fully dark)
+const POPOUT_START_MS = 760;  // cards start exiting after midpoint
+const STAGGER_OUT_MS  = 55;   // delay between each card popping out
+const DIMOUT_DELAY_MS = 300;  // wait after last card exits before lifting dim
+const DIMOUT_DUR_MS   = 350;  // black dim fades back to transparent
 
 interface OrientationCurtainProps {
   toDirection: 'landscape' | 'portrait';
@@ -28,146 +61,179 @@ interface OrientationCurtainProps {
 }
 
 /**
- * Full-screen card curtain that masks the orientation layout swap.
+ * Cascade Pop-In orientation curtain.
  *
- * Two-layer architecture:
+ * Timeline (~1 500 ms total):
+ *   0–300 ms         Black overlay fades in (ease-out)
+ *   0–500 ms         5 cards pop in, staggered 80 ms each
+ *                    Each card: scale 0 → 1.15 (spring overshoot) → 1.0
+ *   700 ms           onMidpoint fires → layout committed while screen is dark
+ *   760–1 020 ms     Cards pop out, reverse stagger (last in, first out)
+ *   1 060–1 410 ms   Black overlay fades out → onComplete fires
  *
- *   Layer 1 — opaque background (absoluteFill, white card colour #f8f4ff).
- *     A single composed withSequence animates opacity: 0 → 1 (300ms fade-in),
- *     then holds at 1 (1100ms while card crosses), then 1 → 0 (800ms fade-out).
- *     This guarantees 100 % opaque coverage for every frame while the curtain
- *     is active, hiding the old layout immediately and revealing the new one
- *     only as the background fades out at the end.
- *
- *   Layer 2 — oversized card face (2 × screenWidth × screenHeight).
- *     Uses the existing CardComponent (lg size: 66 × 92 px) and stretches it
- *     via scaleX / scaleY transforms to fill a 2 W × H container. Because the
- *     card face is twice the screen width, its leading edge always covers the
- *     full viewport during the crossing phase (tx ∈ [−W, 0]).
- *
- *     Ace of Spades  → toDirection = 'landscape'
- *     10 of Diamonds → toDirection = 'portrait'
- *
- * Animation timeline (~2 200 ms total):
- *   0 – 300 ms       background fades in  (opacity 0 → 1, ease-out)
- *   0 – 400 ms       card face enters fast (tx: −2W → −W, ease-out)
- *   400 – 1 400 ms   card face crosses slowly (tx: −W → 0, ease-in-out)
- *   900 ms           midpoint fires → layout committed behind opaque background
- *   1 400 – 1 800 ms card face exits fast  (tx: 0 → +W, ease-in)
- *   1 400 – 2 200 ms background fades out  (opacity 1 → 0, ease-in)
- *
- * pointerEvents="none" — curtain never intercepts touches.
- * Cleanup on unmount cancels all in-flight Reanimated animations + the midpoint
- * timer so rapid re-rotation (key bump in game.tsx) is safe.
+ * pointerEvents="none" throughout — curtain never intercepts user touches.
+ * Cleanup on unmount cancels all animations + the midpoint timer.
  */
 export default function OrientationCurtain({
-  toDirection,
   onMidpoint,
   onComplete,
 }: OrientationCurtainProps) {
   const { width: W, height: H } = useWindowDimensions();
 
-  const bgOpacity      = useSharedValue(0);
-  const cardTranslateX = useSharedValue(-2 * W);
+  // ── Shared values ─────────────────────────────────────────────────────────
+  const dimOpacity = useSharedValue(0);
 
-  const card = toDirection === 'landscape' ? ACE_OF_SPADES : TEN_OF_DIAMONDS;
+  // Five card scales — must be declared individually (hooks rule)
+  const scale0 = useSharedValue(0);
+  const scale1 = useSharedValue(0);
+  const scale2 = useSharedValue(0);
+  const scale3 = useSharedValue(0);
+  const scale4 = useSharedValue(0);
+  const scales = [scale0, scale1, scale2, scale3, scale4];
 
-  // Scale factors to stretch the lg card to fill the 2W × H face container.
-  const scaleX = (W * 2) / CARD_LG_W;
-  const scaleY = H        / CARD_LG_H;
-
-  const PHASE_ENTRY = 400;   // ms: fast entry
-  const PHASE_CROSS = 1000;  // ms: slow crossing
-  const PHASE_EXIT  = 400;   // ms: fast exit
-  const FADE_IN     = 300;   // ms: bg fade-in (runs concurrently with entry)
-  const FADE_HOLD   = PHASE_ENTRY + PHASE_CROSS - FADE_IN; // ms: hold at full opacity
-  const FADE_OUT    = 800;   // ms: bg fade-out (starts when card begins exiting)
-
-  const MIDPOINT_MS = PHASE_ENTRY + PHASE_CROSS / 2; // 900ms
+  // ── Animated styles ───────────────────────────────────────────────────────
+  const dimStyle   = useAnimatedStyle(() => ({ opacity: dimOpacity.value }));
+  const cardStyle0 = useAnimatedStyle(() => ({ transform: [{ scale: scale0.value }] }));
+  const cardStyle1 = useAnimatedStyle(() => ({ transform: [{ scale: scale1.value }] }));
+  const cardStyle2 = useAnimatedStyle(() => ({ transform: [{ scale: scale2.value }] }));
+  const cardStyle3 = useAnimatedStyle(() => ({ transform: [{ scale: scale3.value }] }));
+  const cardStyle4 = useAnimatedStyle(() => ({ transform: [{ scale: scale4.value }] }));
+  const cardStyles = [cardStyle0, cardStyle1, cardStyle2, cardStyle3, cardStyle4];
 
   useEffect(() => {
-    // ── Background: single composed sequence — no double-assignment risk ──
-    // fade-in → hold at 1 → fade-out → call onComplete from worklet callback.
-    bgOpacity.value = withSequence(
-      withTiming(1, { duration: FADE_IN, easing: Easing.out(Easing.quad) }),
-      withDelay(
-        FADE_HOLD,
-        withTiming(0, { duration: FADE_OUT, easing: Easing.in(Easing.quad) }, (finished) => {
+    // ── Dim in ────────────────────────────────────────────────────────────
+    dimOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) });
+
+    // ── Cards pop in (staggered) ──────────────────────────────────────────
+    scales.forEach((s, i) => {
+      s.value = withDelay(
+        i * STAGGER_IN_MS,
+        withSequence(
+          withSpring(1.15, { damping: 10, stiffness: 260 }),
+          withSpring(1.0,  { damping: 18, stiffness: 320 }),
+        ),
+      );
+    });
+
+    // ── Midpoint → pop-out → dim-out ──────────────────────────────────────
+    const midTimer = setTimeout(() => {
+      onMidpoint();
+
+      // Cards pop out in reverse order (last card pops out first → cascade feel)
+      scales.forEach((s, i) => {
+        const reverseI = CURTAIN_CARDS.length - 1 - i;
+        s.value = withDelay(
+          reverseI * STAGGER_OUT_MS,
+          withTiming(0, { duration: 180, easing: Easing.in(Easing.quad) }),
+        );
+      });
+
+      // After all cards have exited, lift the dim
+      const lastCardExitMs = (CURTAIN_CARDS.length - 1) * STAGGER_OUT_MS + 180;
+      dimOpacity.value = withDelay(
+        lastCardExitMs + DIMOUT_DELAY_MS,
+        withTiming(0, { duration: DIMOUT_DUR_MS, easing: Easing.in(Easing.quad) }, (finished) => {
           'worklet';
           if (finished) runOnJS(onComplete)();
         }),
-      ),
-    );
-
-    // ── Card face: fast entry → slow cross → fast exit ────────────────────
-    cardTranslateX.value = -2 * W;
-    cardTranslateX.value = withSequence(
-      withTiming(-W, { duration: PHASE_ENTRY, easing: Easing.out(Easing.cubic) }),
-      withTiming(0,  { duration: PHASE_CROSS, easing: Easing.inOut(Easing.quad) }),
-      withTiming(W,  { duration: PHASE_EXIT,  easing: Easing.in(Easing.cubic) }),
-    );
-
-    // ── Midpoint: called directly from the JS timer (no runOnJS needed here
-    //    since setTimeout callbacks already run on the JS thread).
-    const midTimer = setTimeout(() => {
-      onMidpoint();
+      );
     }, MIDPOINT_MS);
 
     return () => {
       clearTimeout(midTimer);
-      cancelAnimation(bgOpacity);
-      cancelAnimation(cardTranslateX);
+      cancelAnimation(dimOpacity);
+      scales.forEach((s) => cancelAnimation(s));
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    // ── Layer 1: opaque background ────────────────────────────────────────
     <Animated.View
-      style={[StyleSheet.absoluteFill, styles.bg, { opacity: bgOpacity }]}
+      style={[StyleSheet.absoluteFill, styles.overlay, dimStyle]}
       pointerEvents="none"
     >
-      {/* ── Layer 2: oversized card face that sweeps across ──────────────── */}
-      <Animated.View
-        style={[
-          styles.cardWrapper,
-          { width: W * 2, height: H, transform: [{ translateX: cardTranslateX }] },
-        ]}
-        pointerEvents="none"
-      >
-        {/*
-         * CardComponent (lg: 66 × 92) is scaled with scaleX / scaleY transforms
-         * to visually fill the 2W × H container. overflow: 'hidden' on the
-         * wrapper clips any rounding artefacts at the edges.
-         */}
-        <View
-          style={{
-            width: CARD_LG_W,
-            height: CARD_LG_H,
-            transform: [{ scaleX }, { scaleY }],
-          }}
-        >
-          <CardComponent card={card} size="lg" disabled />
-        </View>
-      </Animated.View>
+      {CURTAIN_CARDS.map((def, i) => {
+        const left = W * def.xFrac - CARD_W / 2;
+        const top  = H * def.yFrac - CARD_H / 2;
+
+        return (
+          <Animated.View
+            key={def.card.id}
+            style={[
+              styles.cardAnchor,
+              { left, top },
+              cardStyles[i],
+            ]}
+            pointerEvents="none"
+          >
+            {/* Glow halo behind the card */}
+            <View
+              style={[
+                styles.glowHalo,
+                {
+                  shadowColor: def.golden ? '#f59e0b' : def.glowColor,
+                  shadowOpacity: def.golden ? 1 : 0.85,
+                  shadowRadius: def.golden ? 32 : 22,
+                  backgroundColor: def.golden ? '#f59e0b22' : `${def.glowColor}18`,
+                  transform: [{ rotate: `${def.rot}deg` }],
+                },
+              ]}
+            />
+
+            {/* Card itself, rotated */}
+            <View style={{ transform: [{ rotate: `${def.rot}deg` }] }}>
+              {def.golden ? (
+                // Golden Ace: extra gold border + intense amber glow wrapper
+                <View style={styles.goldenWrapper}>
+                  {def.faceDown
+                    ? <CardBack size="lg" />
+                    : <CardComponent card={def.card} size="lg" disabled />
+                  }
+                </View>
+              ) : def.faceDown ? (
+                <CardBack size="lg" />
+              ) : (
+                <CardComponent card={def.card} size="lg" disabled />
+              )}
+            </View>
+          </Animated.View>
+        );
+      })}
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: {
+  overlay: {
     zIndex: 9999,
     elevation: 9999,
-    backgroundColor: '#f8f4ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+    backgroundColor: '#000000',
   },
-  cardWrapper: {
+  cardAnchor: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    overflow: 'hidden',
-    justifyContent: 'center',
+    // Origin is top-left corner of the card; width/height kept at card size
+    // so rotate transform pivots around the card centre correctly.
+    width: CARD_W,
+    height: CARD_H,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowHalo: {
+    position: 'absolute',
+    width: CARD_W + 24,
+    height: CARD_H + 24,
+    borderRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
+  goldenWrapper: {
+    borderRadius: 8,
+    borderWidth: 2.5,
+    borderColor: '#fbbf24',
+    shadowColor: '#f59e0b',
+    shadowOpacity: 1,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 20,
   },
 });
