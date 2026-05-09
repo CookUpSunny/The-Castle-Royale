@@ -15,7 +15,7 @@
  *   oasis.wav    — Underground Kingdom  ← lightning arena  ("An Oasis in the Cave")
  *   flamingo.wav — Go! Go! Go!          ← classic arena   ("The Flamingo Floor")
  *   olympus.wav  — Winning Man Anthem   ← royal arena     ("Olympus Throne")
- *   cosmic.wav   — [replace with track] ← cosmic arena    ("Cosmic Sanctum")
+ *   cosmic.wav   — All In               ← cosmic arena    ("Cosmic Sanctum")
  *
  * To add a new arena track: copy the .wav into assets/music/, require() it in
  * TRACKS below, and add one line to ARENA_TRACK mapping the ArenaId → index.
@@ -40,7 +40,7 @@ const FLAMINGO_TRACK_IDX = 5;    // flamingo.wav — Go! Go! Go!
 const OLYMPUS_TRACK_IDX  = 6;    // olympus.wav  — Winning Man Anthem
 
 const CASINO_TRACK_IDX  = 0;    // track1.wav — Low Energy 2nd Wind
-const COSMIC_TRACK_IDX  = 7;    // cosmic.wav  — [replace placeholder with real track]
+const COSMIC_TRACK_IDX  = 7;    // cosmic.wav  — All In
 
 /**
  * Arena → TRACKS index.
