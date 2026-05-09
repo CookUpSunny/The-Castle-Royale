@@ -8,7 +8,7 @@
  *              seamless loop); otherwise shuffled playlist of tracks 1–4.
  *
  * ─── TRACKS ──────────────────────────────────────────────────────────────────
- *   track1.wav   — Low Energy 2nd Wind  ← greenTable arena ("Casino Green")
+ *   track1.wav   — Sparks In These Eyes  ← greenTable arena ("Casino Green")
  *   track2.wav   — Sparks Fly           ← splash screen track
  *   track3.wav   — Wife Changing Money  ┐ shuffled playlist for arenas
  *   track4.wav   — Go! Go! Go!          ┘ without a dedicated track
