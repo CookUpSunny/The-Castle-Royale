@@ -945,7 +945,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     // Lift the hand above the absolutely-positioned chat/emote buttons so
     // the bottom corners of the cards aren't clipped by the screen edge.
-    paddingBottom: 56,
+    paddingBottom: 36,
   },
 
   chatRow: {

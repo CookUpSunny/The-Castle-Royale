@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
+  SharedValue,
   cancelAnimation,
   runOnJS,
   useAnimatedStyle,
@@ -11,6 +12,7 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
@@ -51,7 +53,8 @@ function HandCard({
   multiplicity,
   onTap,
   onLongPress,
-  overlap,
+  overlapSV,
+  isFirst,
   index,
   total,
   isStarterPick,
@@ -66,7 +69,8 @@ function HandCard({
   multiplicity: number;
   onTap: (card: CardType) => void;
   onLongPress: (card: CardType) => void;
-  overlap: number;
+  overlapSV: SharedValue<number>;
+  isFirst: boolean;
   index: number;
   total: number;
   isStarterPick?: boolean;
@@ -97,6 +101,7 @@ function HandCard({
   const arcRise = Math.abs(index - center) * 3;
 
   const animStyle = useAnimatedStyle(() => ({
+    marginLeft: isFirst ? 0 : overlapSV.value,
     transform: [
       { translateY: bounce.value - arcRise },
       { rotateZ: `${fanAngle}deg` },
@@ -139,21 +144,19 @@ function HandCard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggable, isMyTurn, isPlayable, card]);
 
+  const starterGlowStyle = isStarterPick
+    ? ({
+        shadowColor: '#fde047',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 16,
+        elevation: 18,
+        borderRadius: 10,
+      } as const)
+    : undefined;
+
   const cardNode = (
-    <Animated.View
-      style={[
-        { marginLeft: overlap },
-        isStarterPick && {
-          shadowColor: '#fde047',
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 1,
-          shadowRadius: 16,
-          elevation: 18,
-          borderRadius: 10,
-        },
-        animStyle,
-      ]}
-    >
+    <Animated.View style={[starterGlowStyle, animStyle]}>
       <CardComponent
         card={card}
         size="lg"
@@ -164,22 +167,10 @@ function HandCard({
       />
     </Animated.View>
   );
+
   const cardNodeFinal = dragGesture
     ? (
-      <Animated.View
-        style={[
-          { marginLeft: overlap },
-          isStarterPick && {
-            shadowColor: '#fde047',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 1,
-            shadowRadius: 16,
-            elevation: 18,
-            borderRadius: 10,
-          },
-          animStyle,
-        ]}
-      >
+      <Animated.View style={[starterGlowStyle, animStyle]}>
         <CardComponent
           card={card}
           size="lg"
@@ -197,8 +188,12 @@ function HandCard({
   return cardNode;
 }
 
+const CARD_WIDTH = 66;
+const SCROLL_PADDING_H = 48; // paddingHorizontal 24 each side in scrollContent
+
 export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, discardPile, isMyTurn, onPlayCard, onPlayCards, mustPlayStarter, draggable, onDragStart, onDragMove, onDragEnd }: PlayerHandProps) {
   const colors = useColors();
+  const { width: screenWidth } = useWindowDimensions();
   const showHand = hand.length > 0;
   const showFaceUp = hand.length === 0 && faceUp.length > 0;
   const showFaceDown = hand.length === 0 && faceUp.length === 0 && faceDownCount > 0;
@@ -256,7 +251,44 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
     return counts;
   }, [activeCards]);
 
-  const overlap = totalCards > 5 ? -28 : -10;
+  // Compute the tightest overlap needed to keep all cards on screen.
+  // The comfortable defaults (-10 for ≤5 cards, -28 for >5) are only made
+  // tighter when the natural fan would overflow the screen.
+  const staticOverlap = useMemo(() => {
+    if (totalCards <= 1) return 0;
+    const comfortableOverlap = totalCards > 5 ? -28 : -10;
+    const availableWidth = screenWidth - SCROLL_PADDING_H;
+    // Total width = CARD_WIDTH + (n-1) * (CARD_WIDTH + overlapValue)
+    // Solve for overlapValue at the boundary:
+    const requiredOverlap = (availableWidth - CARD_WIDTH * totalCards) / (totalCards - 1);
+    // Use whichever is more compressed (more negative)
+    return Math.min(comfortableOverlap, requiredOverlap);
+  }, [totalCards, screenWidth]);
+
+  // Animated shared value for live bunching during drag
+  const liveOverlapSV = useSharedValue(staticOverlap);
+
+  // Keep the shared value in sync when card count / screen width changes
+  useEffect(() => {
+    liveOverlapSV.value = withSpring(staticOverlap, { stiffness: 200, damping: 20 });
+  }, [staticOverlap, liveOverlapSV]);
+
+  // Wrap drag callbacks to animate bunching near screen edges
+  const wrappedOnDragMove = useCallback((x: number, y: number) => {
+    const edgeThreshold = 80;
+    if (x < edgeThreshold || x > screenWidth - edgeThreshold) {
+      // Tighten by 14px more than the static overlap, but never compress past -44
+      // Math.max picks the less-negative value (the cap) when tightening would overshoot
+      const tightened = Math.max(staticOverlap - 14, -44);
+      liveOverlapSV.value = withTiming(tightened, { duration: 80 });
+    }
+    onDragMove?.(x, y);
+  }, [onDragMove, screenWidth, staticOverlap, liveOverlapSV]);
+
+  const wrappedOnDragEnd = useCallback((x: number, y: number) => {
+    liveOverlapSV.value = withSpring(staticOverlap, { stiffness: 180, damping: 18 });
+    onDragEnd?.(x, y);
+  }, [onDragEnd, staticOverlap, liveOverlapSV]);
 
   const handleTap = useCallback((card: CardType) => {
     onPlayCard(card.id);
@@ -392,14 +424,15 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
                 multiplicity={multiplicity}
                 onTap={handleTap}
                 onLongPress={handleLongPress}
-                overlap={i === 0 ? 0 : overlap}
+                overlapSV={liveOverlapSV}
+                isFirst={i === 0}
                 index={i}
                 total={activeCards.length}
                 isStarterPick={card.id === starterPickId}
                 draggable={draggable}
                 onDragStart={onDragStart}
-                onDragMove={onDragMove}
-                onDragEnd={onDragEnd}
+                onDragMove={draggable ? wrappedOnDragMove : onDragMove}
+                onDragEnd={draggable ? wrappedOnDragEnd : onDragEnd}
               />
             );
           })}
@@ -561,8 +594,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 36,
-    paddingBottom: 32,
-    alignItems: 'flex-end',
+    paddingTop: 14,
+    paddingBottom: 16,
+    alignItems: 'center',
+    paddingLeft: 36,
   },
 });
