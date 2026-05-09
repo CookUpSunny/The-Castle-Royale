@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -32,6 +32,7 @@ import FaceDownReveal from '@/components/FaceDownReveal';
 import GameLandscape from '@/components/GameLandscape';
 import GlowPile from '@/components/GlowPile';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
+import OrientationCurtain from '@/components/OrientationCurtain';
 import PlayerHand from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
 
@@ -224,6 +225,42 @@ export default function GameScreen() {
   // Switch to the cinematic landscape layout whenever the device is wider than tall.
   // Lobby/setup/portrait stays unchanged so existing flows are unaffected.
   const isLandscape = width > height;
+
+  // ── Orientation curtain state ──────────────────────────────────────────────
+  // `committedLandscape` tracks which layout is actually rendered behind the
+  // curtain. It lags behind `isLandscape` by the curtain's midpoint timing,
+  // so the layout swap always happens while the card covers the screen.
+  const [committedLandscape, setCommittedLandscape] = useState(isLandscape);
+  const [curtain, setCurtain] = useState<{ toDirection: 'landscape' | 'portrait'; key: number } | null>(null);
+  const prevIsLandscapeRef = useRef(isLandscape);
+  const curtainKeyRef = useRef(0);
+  // Capture the target orientation so the midpoint callback can commit to the
+  // correct value even if isLandscape changes again before midpoint fires.
+  const pendingLandscapeRef = useRef(isLandscape);
+
+  useEffect(() => {
+    if (prevIsLandscapeRef.current === isLandscape) return;
+    prevIsLandscapeRef.current = isLandscape;
+    pendingLandscapeRef.current = isLandscape;
+
+    // Incrementing the key unmounts the previous OrientationCurtain (which
+    // cancels its Reanimated animations via the cleanup effect inside it) and
+    // mounts a fresh one for the new rotation direction.
+    curtainKeyRef.current += 1;
+    setCurtain({ toDirection: isLandscape ? 'landscape' : 'portrait', key: curtainKeyRef.current });
+  }, [isLandscape]);
+
+  const handleCurtainMidpoint = useCallback(() => {
+    // Commit to the target layout — deterministically, not a toggle.
+    // Hidden behind the opaque card background, so the seam is never visible.
+    setCommittedLandscape(pendingLandscapeRef.current);
+  }, []);
+
+  const handleCurtainComplete = useCallback(() => {
+    setCurtain(null);
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const { 
     gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
     opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
@@ -274,16 +311,18 @@ export default function GameScreen() {
     // When landscape is active, <GameLandscape /> owns these side effects.
     // Skipping here prevents double haptics, double victory navigation, and
     // duplicate reveal animations across the two components.
-    if (isLandscape) return;
+    // Guard on committedLandscape (what's actually rendered) so that during a
+    // rotation transition the correct component owns the effect.
+    if (committedLandscape) return;
     if (!gameView) {
       router.replace('/');
     }
-  }, [gameView, isLandscape]);
+  }, [gameView, committedLandscape]);
 
   // Hold on the final board state long enough for the player to see the winning
   // card actually land + the opponent's empty hand state, before transitioning.
   useEffect(() => {
-    if (isLandscape) return;
+    if (committedLandscape) return;
     if (gameView?.phase === 'finished') {
       const t = setTimeout(() => {
         router.replace({
@@ -293,10 +332,10 @@ export default function GameScreen() {
       }, 2700);
       return () => clearTimeout(t);
     }
-  }, [gameView?.phase, isLandscape]);
+  }, [gameView?.phase, committedLandscape]);
 
   useEffect(() => {
-    if (isLandscape) return;
+    if (committedLandscape) return;
     if (gameView?.lastEvent) {
       setLastEventType(gameView.lastEvent.type);
 
@@ -365,7 +404,7 @@ export default function GameScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
     }
-  }, [gameView?.lastEvent, isLandscape]);
+  }, [gameView?.lastEvent, committedLandscape]);
 
   const fireStyle = useAnimatedStyle(() => ({ transform: [{ scale: fireScale.value }], opacity: fireOpacity.value }));
   const ring1Style = useAnimatedStyle(() => ({ transform: [{ scale: ring1Scale.value }], opacity: ring1Opacity.value }));
@@ -382,11 +421,7 @@ export default function GameScreen() {
     return <SetupScreen />;
   }
 
-  // Landscape: render the cinematic over-the-shoulder layout.
-  if (isLandscape) {
-    return <GameLandscape />;
-  }
-
+  // All portrait-specific derived values. gameView is non-null here (guarded above).
   const {
     myHand, myFaceUp, myFaceDownCount, myFaceDownIds, opponentHandCount, opponentFaceUp, opponentFaceDownCount,
     opponentName, discardPile, deckCount, isMyTurn, canFastPlay,
@@ -416,230 +451,247 @@ export default function GameScreen() {
     if (sameIds.length > 0) playCards(sameIds);
   };
 
+  // ── Unified single-root return ───────────────────────────────────────────
+  // Both landscape and portrait branches live inside the same root View so
+  // the OrientationCurtain is always at tree position [1] regardless of which
+  // layout is active. This prevents it from unmounting when committedLandscape
+  // flips at the curtain midpoint.
   return (
-    <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
-      <SceneBackground />
-      <View style={[styles.gameLayout, { paddingTop: insets.top + webTopPad + 6, paddingBottom: insets.bottom || 12 }]}>
+    <View style={styles.container}>
+      {/* Active game layout — switches at curtain midpoint behind opaque card */}
+      {committedLandscape ? (
+        <GameLandscape />
+      ) : (
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
+          <SceneBackground />
+          <View style={[styles.gameLayout, { paddingTop: insets.top + webTopPad + 6, paddingBottom: insets.bottom || 12 }]}>
 
-        <View style={styles.topNavRow}>
-          <BackButton label="← EXIT" onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })} />
-        </View>
-
-        <View style={styles.headerRow}>
-          <View style={styles.playerSlot}>
-            <PlayerInfoCard
-              name={playerName}
-              level="Lv. 34"
-              coins="125,000"
-              gems="8,450"
-              isActive={isMyTurn}
-              align="left"
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setPlayerMenuOpen((o) => !o);
-              }}
-              showMenuDots
-            />
-          </View>
-          <View style={styles.playerSlot}>
-            <PlayerInfoCard
-              name={opponentName}
-              level="Lv. 28"
-              coins={opponentCoins}
-              isActive={!isMyTurn}
-              align="right"
-            />
-          </View>
-        </View>
-
-        <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
-
-        <View style={styles.tableCenter}>
-          <View style={styles.pileRow}>
-            <View style={{ flex: 1 }} />
-            <GlowPile pile={discardPile} lastEventType={lastEventType} />
-            <View style={styles.deckSlot}>
-              <DeckBadge count={deckCount} />
+            <View style={styles.topNavRow}>
+              <BackButton label="← EXIT" onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })} />
             </View>
+
+            <View style={styles.headerRow}>
+              <View style={styles.playerSlot}>
+                <PlayerInfoCard
+                  name={playerName}
+                  level="Lv. 34"
+                  coins="125,000"
+                  gems="8,450"
+                  isActive={isMyTurn}
+                  align="left"
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setPlayerMenuOpen((o) => !o);
+                  }}
+                  showMenuDots
+                />
+              </View>
+              <View style={styles.playerSlot}>
+                <PlayerInfoCard
+                  name={opponentName}
+                  level="Lv. 28"
+                  coins={opponentCoins}
+                  isActive={!isMyTurn}
+                  align="right"
+                />
+              </View>
+            </View>
+
+            <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
+
+            <View style={styles.tableCenter}>
+              <View style={styles.pileRow}>
+                <View style={{ flex: 1 }} />
+                <GlowPile pile={discardPile} lastEventType={lastEventType} />
+                <View style={styles.deckSlot}>
+                  <DeckBadge count={deckCount} />
+                </View>
+              </View>
+
+              {/* Action buttons are hidden during STARTER mode — the player must
+                  tap a hand card directly; pickup/burn/reset don't apply. */}
+              {!gameView.mustPlayStarter && (
+                <ActionButtons
+                  canPickup={discardPile.length > 0}
+                  hasBurn={hasBurn}
+                  hasReset={hasReset}
+                  canFastPlay={canFastPlay}
+                  isMyTurn={isMyTurn}
+                  onPickup={doPickup}
+                  onPlayBurn={handlePlayBurn}
+                  onPlayReset={handlePlayReset}
+                  onFastPlay={handleFastPlay}
+                />
+              )}
+            </View>
+
+            <View style={styles.playerSection}>
+              <PlayerHand
+                hand={myHand}
+                faceUp={myFaceUp}
+                faceDownCount={myFaceDownCount}
+                faceDownIds={myFaceDownIds ?? []}
+                discardPile={discardPile}
+                isMyTurn={isMyTurn}
+                onPlayCard={playCard}
+                onPlayCards={playCards}
+                mustPlayStarter={gameView.mustPlayStarter}
+              />
+            </View>
+
+            <EmotePicker onSend={sendEmote} />
           </View>
 
-          {/* Action buttons are hidden during STARTER mode — the player must
-              tap a hand card directly; pickup/burn/reset don't apply. */}
-          {!gameView.mustPlayStarter && (
-            <ActionButtons
-              canPickup={discardPile.length > 0}
-              hasBurn={hasBurn}
-              hasReset={hasReset}
-              canFastPlay={canFastPlay}
-              isMyTurn={isMyTurn}
-              onPickup={doPickup}
-              onPlayBurn={handlePlayBurn}
-              onPlayReset={handlePlayReset}
-              onFastPlay={handleFastPlay}
-            />
-          )}
-        </View>
-
-        <View style={styles.playerSection}>
-          <PlayerHand
-            hand={myHand}
-            faceUp={myFaceUp}
-            faceDownCount={myFaceDownCount}
-            faceDownIds={myFaceDownIds ?? []}
-            discardPile={discardPile}
-            isMyTurn={isMyTurn}
-            onPlayCard={playCard}
-            onPlayCards={playCards}
-            mustPlayStarter={gameView.mustPlayStarter}
-          />
-        </View>
-
-        <EmotePicker onSend={sendEmote} />
-      </View>
-
-      {/* Player menu popover — opens when you tap your own name card.
-          Tucked in the top-left right under the player plate. Tap the
-          backdrop or anywhere outside the menu to dismiss. */}
-      {playerMenuOpen && (
-        <>
-          <Pressable
-            onPress={() => setPlayerMenuOpen(false)}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={[styles.playerMenu, { top: insets.top + webTopPad + 96, left: 16 }]}>
-            {editingName ? (
-              <View style={styles.nameEditRow}>
-                <TextInput
-                  value={nameDraft}
-                  onChangeText={setNameDraft}
-                  style={[styles.nameEditInput, { color: colors.foreground, borderColor: colors.primary }]}
-                  autoFocus
-                  maxLength={16}
-                  placeholder="Your name"
-                  placeholderTextColor={colors.mutedForeground}
-                  returnKeyType="done"
-                  onSubmitEditing={() => {
-                    const trimmed = nameDraft.trim();
-                    if (trimmed) setPlayerName(trimmed);
-                    setEditingName(false);
-                    setPlayerMenuOpen(false);
-                  }}
-                />
+          {/* Player menu popover — opens when you tap your own name card.
+              Tucked in the top-left right under the player plate. Tap the
+              backdrop or anywhere outside the menu to dismiss. */}
+          {playerMenuOpen && (
+            <>
+              <Pressable
+                onPress={() => setPlayerMenuOpen(false)}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={[styles.playerMenu, { top: insets.top + webTopPad + 96, left: 16 }]}>
+                {editingName ? (
+                  <View style={styles.nameEditRow}>
+                    <TextInput
+                      value={nameDraft}
+                      onChangeText={setNameDraft}
+                      style={[styles.nameEditInput, { color: colors.foreground, borderColor: colors.primary }]}
+                      autoFocus
+                      maxLength={16}
+                      placeholder="Your name"
+                      placeholderTextColor={colors.mutedForeground}
+                      returnKeyType="done"
+                      onSubmitEditing={() => {
+                        const trimmed = nameDraft.trim();
+                        if (trimmed) setPlayerName(trimmed);
+                        setEditingName(false);
+                        setPlayerMenuOpen(false);
+                      }}
+                    />
+                    <Pressable
+                      onPress={() => {
+                        const trimmed = nameDraft.trim();
+                        if (trimmed) setPlayerName(trimmed);
+                        setEditingName(false);
+                        setPlayerMenuOpen(false);
+                      }}
+                      style={[styles.nameEditConfirm, { backgroundColor: colors.primary }]}
+                    >
+                      <Text style={styles.nameEditConfirmText}>✓</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => { setNameDraft(playerName); setEditingName(true); }}
+                    style={styles.playerMenuItem}
+                  >
+                    <Text style={styles.playerMenuIcon}>✎</Text>
+                    <Text style={[styles.playerMenuLabel, { color: '#e0c8ff' }]}>CHANGE NAME</Text>
+                  </Pressable>
+                )}
                 <Pressable
                   onPress={() => {
-                    const trimmed = nameDraft.trim();
-                    if (trimmed) setPlayerName(trimmed);
-                    setEditingName(false);
-                    setPlayerMenuOpen(false);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    toggleMute();
                   }}
-                  style={[styles.nameEditConfirm, { backgroundColor: colors.primary }]}
+                  style={styles.playerMenuItem}
                 >
-                  <Text style={styles.nameEditConfirmText}>✓</Text>
+                  <Text style={styles.playerMenuIcon}>{isMuted ? '🔇' : '🔊'}</Text>
+                  <Text style={[styles.playerMenuLabel, { color: isMuted ? colors.mutedForeground : '#e0c8ff' }]}>
+                    {isMuted ? 'SOUND OFF' : 'SOUND ON'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setPlayerMenuOpen(false);
+                    setEditingName(false);
+                    confirmLeave(() => { leaveGame(); router.replace('/'); });
+                  }}
+                  style={styles.playerMenuItem}
+                >
+                  <Text style={styles.playerMenuIcon}>🚪</Text>
+                  <Text style={styles.playerMenuLabel}>EXIT GAME</Text>
                 </Pressable>
               </View>
-            ) : (
-              <Pressable
-                onPress={() => { setNameDraft(playerName); setEditingName(true); }}
-                style={styles.playerMenuItem}
-              >
-                <Text style={styles.playerMenuIcon}>✎</Text>
-                <Text style={[styles.playerMenuLabel, { color: '#e0c8ff' }]}>CHANGE NAME</Text>
+            </>
+          )}
+
+          {reveal && (
+            <FaceDownReveal
+              key={reveal.key}
+              card={reveal.card}
+              topCard={reveal.topCard}
+              busted={reveal.busted}
+              who={reveal.who}
+              onComplete={() => setReveal(null)}
+            />
+          )}
+
+          {burst && (
+            <MultiPlayBurst
+              key={burst.key}
+              card={burst.card}
+              count={burst.count}
+              who={burst.who}
+              onComplete={() => setBurst(null)}
+            />
+          )}
+
+          {opponentReconnecting && !opponentDisconnected && (
+            <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.neonGold }]}>
+              <Text style={[styles.disconnectText, { color: colors.neonGold }]}>Opponent reconnecting…</Text>
+              <Pressable onPress={() => { leaveGame(); router.replace('/'); }}>
+                <Text style={[styles.disconnectLeave, { color: colors.mutedForeground }]}>Give up</Text>
               </Pressable>
-            )}
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                toggleMute();
-              }}
-              style={styles.playerMenuItem}
-            >
-              <Text style={styles.playerMenuIcon}>{isMuted ? '🔇' : '🔊'}</Text>
-              <Text style={[styles.playerMenuLabel, { color: isMuted ? colors.mutedForeground : '#e0c8ff' }]}>
-                {isMuted ? 'SOUND OFF' : 'SOUND ON'}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setPlayerMenuOpen(false);
-                setEditingName(false);
-                confirmLeave(() => { leaveGame(); router.replace('/'); });
-              }}
-              style={styles.playerMenuItem}
-            >
-              <Text style={styles.playerMenuIcon}>🚪</Text>
-              <Text style={styles.playerMenuLabel}>EXIT GAME</Text>
-            </Pressable>
-          </View>
-        </>
+            </View>
+          )}
+
+          {opponentDisconnected && (
+            <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.accent }]}>
+              <Text style={[styles.disconnectText, { color: colors.accent }]}>Opponent disconnected</Text>
+              <Pressable onPress={() => { clearGame(); router.replace('/'); }}>
+                <Text style={[styles.disconnectLeave, { color: colors.primary }]}>Leave</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {myEmote ? (
+            <EmoteBubble key={`me_${myEmote.key}`} emote={myEmote.emote} side="left" />
+          ) : null}
+          {opponentEmote ? (
+            <EmoteBubble key={`op_${opponentEmote.key}`} emote={opponentEmote.emote} side="right" />
+          ) : null}
+          {/* Fire burst + ripple — radial scale, NO translateX/Y shake */}
+          <Animated.View style={[styles.fireOverlay, fireStyle]} pointerEvents="none">
+            <LinearGradient colors={['#ff7f0000', '#ff7f00cc', '#ff000090']} style={StyleSheet.absoluteFill} />
+          </Animated.View>
+          <Animated.View style={[styles.ringOverlay, ring1Style]} pointerEvents="none">
+            <LinearGradient colors={['transparent', '#ff6b00a0', 'transparent']} style={StyleSheet.absoluteFill} />
+          </Animated.View>
+          <Animated.View style={[styles.ringOverlay, ring2Style]} pointerEvents="none">
+            <LinearGradient colors={['transparent', '#ff4d0070', 'transparent']} style={StyleSheet.absoluteFill} />
+          </Animated.View>
+          <Animated.View style={[styles.ringOverlay, ring3Style]} pointerEvents="none">
+            <LinearGradient colors={['transparent', '#ff000050', 'transparent']} style={StyleSheet.absoluteFill} />
+          </Animated.View>
+        </Animated.View>
       )}
 
-      {reveal && (
-        <FaceDownReveal
-          key={reveal.key}
-          card={reveal.card}
-          topCard={reveal.topCard}
-          busted={reveal.busted}
-          who={reveal.who}
-          onComplete={() => setReveal(null)}
+      {/* Curtain always at tree position [1] — never remounts when the layout
+          branch switches at midpoint. Key changes only when a NEW rotation
+          starts, which unmounts the old curtain (cancelling animations) and
+          mounts a fresh one for the new direction. */}
+      {curtain && (
+        <OrientationCurtain
+          key={curtain.key}
+          toDirection={curtain.toDirection}
+          onMidpoint={handleCurtainMidpoint}
+          onComplete={handleCurtainComplete}
         />
       )}
-
-      {burst && (
-        <MultiPlayBurst
-          key={burst.key}
-          card={burst.card}
-          count={burst.count}
-          who={burst.who}
-          onComplete={() => setBurst(null)}
-        />
-      )}
-
-      {opponentReconnecting && !opponentDisconnected && (
-        <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.neonGold }]}>
-          <Text style={[styles.disconnectText, { color: colors.neonGold }]}>Opponent reconnecting…</Text>
-          <Pressable onPress={() => { leaveGame(); router.replace('/'); }}>
-            <Text style={[styles.disconnectLeave, { color: colors.mutedForeground }]}>Give up</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {opponentDisconnected && (
-        <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.accent }]}>
-          <Text style={[styles.disconnectText, { color: colors.accent }]}>Opponent disconnected</Text>
-          <Pressable onPress={() => { clearGame(); router.replace('/'); }}>
-            <Text style={[styles.disconnectLeave, { color: colors.primary }]}>Leave</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {myEmote ? (
-        <EmoteBubble
-          key={`me_${myEmote.key}`}
-          emote={myEmote.emote}
-          side="left"
-        />
-      ) : null}
-      {opponentEmote ? (
-        <EmoteBubble
-          key={`op_${opponentEmote.key}`}
-          emote={opponentEmote.emote}
-          side="right"
-        />
-      ) : null}
-      {/* Fire burst + ripple — radial scale, NO translateX/Y shake */}
-      <Animated.View style={[styles.fireOverlay, fireStyle]} pointerEvents="none">
-        <LinearGradient colors={['#ff7f0000', '#ff7f00cc', '#ff000090']} style={StyleSheet.absoluteFill} />
-      </Animated.View>
-      <Animated.View style={[styles.ringOverlay, ring1Style]} pointerEvents="none">
-        <LinearGradient colors={['transparent', '#ff6b00a0', 'transparent']} style={StyleSheet.absoluteFill} />
-      </Animated.View>
-      <Animated.View style={[styles.ringOverlay, ring2Style]} pointerEvents="none">
-        <LinearGradient colors={['transparent', '#ff4d0070', 'transparent']} style={StyleSheet.absoluteFill} />
-      </Animated.View>
-      <Animated.View style={[styles.ringOverlay, ring3Style]} pointerEvents="none">
-        <LinearGradient colors={['transparent', '#ff000050', 'transparent']} style={StyleSheet.absoluteFill} />
-      </Animated.View>
-    </Animated.View>
+    </View>
   );
 }
 
