@@ -49,7 +49,6 @@ const CARD_H = 92;
 // ── Timing constants ─────────────────────────────────────────────────────────
 const STAGGER_IN_MS   = 80;   // delay between each card popping in
 const MIDPOINT_MS     = 700;  // layout swap fires here (screen fully dark)
-const POPOUT_START_MS = 760;  // cards start exiting after midpoint
 const STAGGER_OUT_MS  = 55;   // delay between each card popping out
 const DIMOUT_DELAY_MS = 300;  // wait after last card exits before lifting dim
 const DIMOUT_DUR_MS   = 350;  // black dim fades back to transparent
@@ -63,13 +62,18 @@ interface OrientationCurtainProps {
 /**
  * Cascade Pop-In orientation curtain.
  *
- * Timeline (~1 500 ms total):
+ * Timeline (~1 410 ms total):
  *   0–300 ms         Black overlay fades in (ease-out)
- *   0–500 ms         5 cards pop in, staggered 80 ms each
+ *   0–480 ms         5 cards pop in, staggered 80 ms each
  *                    Each card: scale 0 → 1.15 (spring overshoot) → 1.0
- *   700 ms           onMidpoint fires → layout committed while screen is dark
- *   760–1 020 ms     Cards pop out, reverse stagger (last in, first out)
- *   1 060–1 410 ms   Black overlay fades out → onComplete fires
+ *   700 ms           onMidpoint fires → layout committed while screen is dark;
+ *                    card pop-out begins immediately (reverse stagger, 55 ms apart)
+ *   700–975 ms       Cards exit (5 × 55 ms stagger + 180 ms each)
+ *   1 060–1 410 ms   Black overlay fades out → onComplete fires via runOnJS
+ *
+ * `toDirection` is accepted for API compatibility with game.tsx (callers always
+ * pass it) but does not currently influence which cards are shown — all rotations
+ * use the same 5-card spread. Extend this prop if direction-specific art is added.
  *
  * pointerEvents="none" throughout — curtain never intercepts user touches.
  * Cleanup on unmount cancels all animations + the midpoint timer.
