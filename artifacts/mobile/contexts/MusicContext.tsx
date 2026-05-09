@@ -8,10 +8,10 @@
  *              seamless loop); otherwise shuffled playlist of tracks 1–4.
  *
  * ─── TRACKS ──────────────────────────────────────────────────────────────────
- *   track1.wav — Low Energy 2nd Wind
- *   track2.wav — Sparks Fly  ← splash screen track
- *   track3.wav — Wife Changing Money
- *   track4.wav — Go! Go! Go!
+ *   track1.wav   — Low Energy 2nd Wind  ← greenTable arena ("Casino Green")
+ *   track2.wav   — Sparks Fly           ← splash screen track
+ *   track3.wav   — Wife Changing Money  ┐ shuffled playlist for arenas
+ *   track4.wav   — Go! Go! Go!          ┘ without a dedicated track
  *   oasis.wav    — Underground Kingdom  ← lightning arena ("An Oasis in the Cave")
  *   flamingo.wav — Go! Go! Go!          ← classic arena ("The Flamingo Floor")
  *   olympus.wav  — Winning Man Anthem   ← royal arena ("Olympus Throne")
@@ -38,14 +38,17 @@ const OASIS_TRACK_IDX    = 4;    // oasis.wav    — Underground Kingdom
 const FLAMINGO_TRACK_IDX = 5;    // flamingo.wav — Go! Go! Go!
 const OLYMPUS_TRACK_IDX  = 6;    // olympus.wav  — Winning Man Anthem
 
+const CASINO_TRACK_IDX = 0;    // track1.wav — Low Energy 2nd Wind
+
 /**
  * Arena → TRACKS index.
  * Add one entry per new arena track — everything else is automatic.
  */
 const ARENA_TRACK: Partial<Record<ArenaId, number>> = {
-  lightning: OASIS_TRACK_IDX,
-  classic:   FLAMINGO_TRACK_IDX,
-  royal:     OLYMPUS_TRACK_IDX,
+  greenTable: CASINO_TRACK_IDX,
+  lightning:  OASIS_TRACK_IDX,
+  classic:    FLAMINGO_TRACK_IDX,
+  royal:      OLYMPUS_TRACK_IDX,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
