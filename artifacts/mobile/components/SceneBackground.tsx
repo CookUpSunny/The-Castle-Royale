@@ -49,7 +49,6 @@ const COSMIC_HTML = `<!DOCTYPE html>
         radial-gradient(ellipse at 50% 45%, rgba(120,0,180,0.55) 0%, rgba(40,0,80,0.70) 30%, rgba(3,0,8,0.90) 65%, #030008 100%),
         conic-gradient(from 200deg at 50% 45%, #0a0018 0deg, #1a0040 60deg, #0d0030 120deg, #050015 180deg, #1a0040 240deg, #0a0018 360deg);
       animation: bgPulse 7s ease-in-out infinite;
-      z-index: -10;
     }
 
     .blackhole-glow {
@@ -67,7 +66,6 @@ const COSMIC_HTML = `<!DOCTYPE html>
       filter: blur(10px);
       animation: pulseCore 2.8s ease-in-out infinite;
       mix-blend-mode: screen;
-      z-index: -8;
     }
 
     .spiral {
@@ -89,7 +87,6 @@ const COSMIC_HTML = `<!DOCTYPE html>
       filter: blur(18px);
       animation: spin 18s linear infinite;
       mix-blend-mode: screen;
-      z-index: -7;
     }
 
     .grid {
@@ -103,7 +100,6 @@ const COSMIC_HTML = `<!DOCTYPE html>
       animation: gridVacuum 10s linear infinite;
       opacity: .38;
       mix-blend-mode: screen;
-      z-index: -6;
     }
 
     .stars {
@@ -117,14 +113,12 @@ const COSMIC_HTML = `<!DOCTYPE html>
         radial-gradient(circle at 55% 50%, white 0 1px, transparent 2px);
       opacity: .6;
       animation: starPull 5s linear infinite;
-      z-index: -5;
     }
 
     .particles {
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: -4;
     }
 
     .particle {
