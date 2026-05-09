@@ -703,19 +703,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   gameLayout: { flex: 1 },
   topNavRow: { paddingHorizontal: 14, paddingBottom: 2 },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingTop: 6,
-    gap: 8,
-  },
-  // Wraps each PlayerInfoCard so its emote bubble can position itself
-  // absolutely relative to the player's card without disturbing layout.
-  playerSlot: {
-    flex: 1,
-    position: 'relative',
-  },
   hudChip: {
     position: 'absolute',
     zIndex: 20,
