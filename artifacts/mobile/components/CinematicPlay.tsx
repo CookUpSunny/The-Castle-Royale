@@ -7,7 +7,6 @@ import type { LayoutRect } from '@/components/CardPlayFlight';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import CinematicSpotlight, { type SpotlightStrength } from '@/components/CinematicSpotlight';
 import HandPlaceOverlay from '@/components/HandPlaceOverlay';
-import BurnEffect from '@/components/BurnEffect';
 
 const SM = { w: 40, h: 56 };
 
@@ -53,7 +52,7 @@ function tiltRotY(t: number, sideDir: number): number {
 
 /**
  * Orchestrates a cinematic play timeline (spotlight + optional hand + flight +
- * impact sparks). Presentation-only; authoritative game state still comes from
+ * impact ring). Presentation-only; authoritative game state still comes from
  * `gameView`.
  */
 export default function CinematicPlay({
@@ -98,8 +97,6 @@ export default function CinematicPlay({
   const sideDir = useSharedValue(1);
 
   const [spotTrigger, setSpotTrigger] = useState(0);
-  const [impactVisible, setImpactVisible] = useState(false);
-  const [explodeVisible, setExplodeVisible] = useState(false);
 
   useEffect(() => {
     if (isFirstMountRef.current) {
@@ -145,19 +142,8 @@ export default function CinematicPlay({
     setFlight({ card, key, side, kind: k });
     setSpotTrigger((n) => n + 1);
 
-    const isBurn = ev.type === 'burn' || ev.type === 'set_complete';
-
     const finish = () => {
       setFlight((cur) => (cur?.key === key ? null : cur));
-      setImpactVisible(false);
-    };
-    const showImpact = () => {
-      if (isBurn) {
-        setExplodeVisible(true);
-      } else {
-        setImpactVisible(true);
-        setTimeout(() => setImpactVisible(false), 720);
-      }
     };
 
     const flightMs = k === 'big' ? 480 : 420;
@@ -172,7 +158,6 @@ export default function CinematicPlay({
           withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) }),
           withTiming(0, { duration: 220, easing: Easing.in(Easing.cubic) }),
         );
-        runOnJS(showImpact)();
         runOnJS(finish)();
       }),
     );
@@ -256,50 +241,29 @@ export default function CinematicPlay({
   const trail1 = trailStyle(0.06);
   const trail2 = trailStyle(0.12);
 
-  if (!flight && !explodeVisible) {
+  if (!flight) {
     return null;
   }
 
-  const impactColor =
-    lastEvent?.type === 'burn' || lastEvent?.type === 'set_complete'
-      ? '#ff7f00'
-      : lastEvent?.type === 'reset'
-        ? '#c084fc'
-        : '#ffd700';
-
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {flight && (
-        <>
-          <CinematicSpotlight targetRect={pileRect} strength={spotlightStrength} trigger={spotTrigger} />
-          <HandPlaceOverlay targetRect={pileRect} enabled={enableHand} trigger={spotTrigger} />
+      <CinematicSpotlight targetRect={pileRect} strength={spotlightStrength} trigger={spotTrigger} />
+      <HandPlaceOverlay targetRect={pileRect} enabled={enableHand} trigger={spotTrigger} />
 
-          {/* Motion blur illusion */}
-          <Animated.View style={trail2}>
-            <Card card={flight.card} size="sm" />
-          </Animated.View>
-          <Animated.View style={trail1}>
-            <Card card={flight.card} size="sm" />
-          </Animated.View>
+      {/* Motion blur illusion */}
+      <Animated.View style={trail2}>
+        <Card card={flight.card} size="sm" />
+      </Animated.View>
+      <Animated.View style={trail1}>
+        <Card card={flight.card} size="sm" />
+      </Animated.View>
 
-          <Animated.View style={flightStyle0}>
-            <Card card={flight.card} size="sm" />
-          </Animated.View>
+      <Animated.View style={flightStyle0}>
+        <Card card={flight.card} size="sm" />
+      </Animated.View>
 
-          {/* Standard spark burst for non-burn impacts */}
-          <BurnEffect visible={impactVisible} color={impactColor} center={centerOf(pileRect)} />
-
-          {/* Subtle impact ring */}
-          <ImpactRing pileRect={pileRect} pulse={spotTrigger} />
-        </>
-      )}
-
-      {/* Burn flash — sparks on 10 / 4-of-a-kind burns */}
-      <BurnEffect
-        visible={explodeVisible}
-        center={centerOf(pileRect)}
-        onComplete={() => setExplodeVisible(false)}
-      />
+      {/* Subtle impact ring */}
+      <ImpactRing pileRect={pileRect} pulse={spotTrigger} />
     </View>
   );
 }
