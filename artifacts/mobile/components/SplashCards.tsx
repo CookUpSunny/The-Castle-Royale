@@ -22,7 +22,7 @@ import Animated, {
 const CARD_W = 62;
 const CARD_H = 88;
 const CARD_COUNT = 17;
-const GOLD_COUNT = 3;
+const GOLD_COUNT = 5;
 const REVEAL_INTERVAL = 2800;
 const REVEAL_HOLD = 1400;
 const PROXIMITY = 175;
@@ -63,8 +63,14 @@ function buildSpecs(): CardSpec[] {
   const colW = W / cols;
   const rowH = H / rows;
 
+  // One golden card per vertical row-band — guarantees even screen spread.
   const goldenSet = new Set<number>();
-  while (goldenSet.size < GOLD_COUNT) goldenSet.add(Math.floor(Math.random() * CARD_COUNT));
+  for (let r = 0; r < rows; r++) {
+    const firstInRow = r * cols;
+    const lastInRow  = Math.min(firstInRow + cols - 1, CARD_COUNT - 1);
+    const pick = firstInRow + Math.floor(Math.random() * (lastInRow - firstInRow + 1));
+    goldenSet.add(pick);
+  }
 
   return Array.from({ length: CARD_COUNT }, (_, i) => {
     const col = i % cols;
