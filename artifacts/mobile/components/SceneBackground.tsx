@@ -33,6 +33,151 @@ function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] 
   return ['#120010', '#22002a', '#07000f'];
 }
 
+// ── Cosmic Sanctum blackhole HTML — adapted from the design brief ─────────────
+const COSMIC_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #030008; }
+
+    .arena-bg {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 45%, rgba(120,0,180,0.55) 0%, rgba(40,0,80,0.70) 30%, rgba(3,0,8,0.90) 65%, #030008 100%),
+        conic-gradient(from 200deg at 50% 45%, #0a0018 0deg, #1a0040 60deg, #0d0030 120deg, #050015 180deg, #1a0040 240deg, #0a0018 360deg);
+      animation: bgPulse 7s ease-in-out infinite;
+      z-index: -10;
+    }
+
+    .blackhole-glow {
+      position: fixed;
+      left: 50%; top: 45%;
+      width: 42vmin; height: 42vmin;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255,255,255,.95) 0%,
+        rgba(220,160,255,.65) 10%,
+        rgba(160,40,255,.38) 24%,
+        rgba(40,0,80,.15) 42%,
+        transparent 65%);
+      filter: blur(10px);
+      animation: pulseCore 2.8s ease-in-out infinite;
+      mix-blend-mode: screen;
+      z-index: -8;
+    }
+
+    .spiral {
+      position: fixed;
+      left: 50%; top: 45%;
+      width: 120vmax; height: 120vmax;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(180,60,255,.22) 45deg,
+        transparent 90deg,
+        rgba(255,120,255,.28) 145deg,
+        transparent 210deg,
+        rgba(80,180,255,.18) 285deg,
+        transparent 360deg
+      );
+      filter: blur(18px);
+      animation: spin 18s linear infinite;
+      mix-blend-mode: screen;
+      z-index: -7;
+    }
+
+    .grid {
+      position: fixed;
+      inset: -50%;
+      background-image:
+        linear-gradient(rgba(180,80,255,.14) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(180,80,255,.14) 1px, transparent 1px);
+      background-size: 70px 70px;
+      transform-origin: center;
+      animation: gridVacuum 10s linear infinite;
+      opacity: .38;
+      mix-blend-mode: screen;
+      z-index: -6;
+    }
+
+    .stars {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 25%, white 0 1px, transparent 2px),
+        radial-gradient(circle at 70% 20%, white 0 1px, transparent 2px),
+        radial-gradient(circle at 80% 70%, white 0 1px, transparent 2px),
+        radial-gradient(circle at 35% 80%, white 0 1px, transparent 2px),
+        radial-gradient(circle at 55% 50%, white 0 1px, transparent 2px);
+      opacity: .6;
+      animation: starPull 5s linear infinite;
+      z-index: -5;
+    }
+
+    .particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -4;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 12px #d86cff, 0 0 22px #8f3cff;
+      animation: fallIn linear infinite;
+    }
+
+    @keyframes bgPulse {
+      0%, 100% { filter: brightness(1) saturate(1.1); transform: scale(1); }
+      50%       { filter: brightness(1.18) saturate(1.45); transform: scale(1.035); }
+    }
+    @keyframes pulseCore {
+      0%, 100% { transform: translate(-50%,-50%) scale(.92); opacity: .65; }
+      50%       { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
+    }
+    @keyframes spin {
+      from { transform: translate(-50%,-50%) rotate(0deg) scale(1); }
+      to   { transform: translate(-50%,-50%) rotate(360deg) scale(1.05); }
+    }
+    @keyframes gridVacuum {
+      from { transform: rotate(0deg) scale(1.25); background-position: 0 0; }
+      to   { transform: rotate(360deg) scale(.75); background-position: 140px 140px; }
+    }
+    @keyframes starPull {
+      from { transform: scale(1.1) rotate(0deg); opacity: .8; }
+      to   { transform: scale(.55) rotate(30deg); opacity: .15; }
+    }
+    @keyframes fallIn {
+      0%   { transform: translate(var(--x), var(--y)) scale(1); opacity: 1; }
+      100% { transform: translate(50vw, 45vh) scale(.1); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="arena-bg"></div>
+  <div class="blackhole-glow"></div>
+  <div class="spiral"></div>
+  <div class="grid"></div>
+  <div class="stars"></div>
+  <div class="particles">
+    <span class="particle" style="--x:10vw;--y:10vh;animation-duration:4s;"></span>
+    <span class="particle" style="--x:80vw;--y:15vh;animation-duration:6s;"></span>
+    <span class="particle" style="--x:20vw;--y:75vh;animation-duration:5s;"></span>
+    <span class="particle" style="--x:90vw;--y:80vh;animation-duration:7s;"></span>
+    <span class="particle" style="--x:50vw;--y:5vh;animation-duration:3.5s;"></span>
+  </div>
+</body>
+</html>`;
+
 // ── Matrix rain HTML — embedded verbatim from the design brief ────────────────
 const MATRIX_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -220,12 +365,16 @@ function FlamingoFloorAmbience() {
 
 function CosmicAmbience() {
   return (
-    <View style={[StyleSheet.absoluteFill, { opacity: 0.28 }]} pointerEvents="none">
-      <LinearGradient
-        colors={['rgba(120,80,255,0.22)', 'rgba(180,40,255,0.08)', 'rgba(60,20,180,0.20)']}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={StyleSheet.absoluteFill}
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <WebView
+        source={{ html: COSMIC_HTML }}
+        style={StyleSheet.absoluteFillObject}
+        scrollEnabled={false}
+        bounces={false}
+        overScrollMode="never"
+        pointerEvents="none"
+        javaScriptEnabled
+        originWhitelist={['*']}
       />
     </View>
   );
