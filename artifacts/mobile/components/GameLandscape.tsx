@@ -334,11 +334,9 @@ export default function GameLandscape(): React.JSX.Element | null {
       }
     }
     if (ev.type === 'burn' || ev.type === 'set_complete') {
-      // 3× Heavy haptic at 0, 200, 700 ms — iOS only (Android ignores impact style)
+      // Single Medium haptic on burn/set_complete
       if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 700);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       }
     } else if (ev.type === 'pickup') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

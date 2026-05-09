@@ -8,7 +8,6 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import CinematicSpotlight, { type SpotlightStrength } from '@/components/CinematicSpotlight';
 import HandPlaceOverlay from '@/components/HandPlaceOverlay';
 import BurnEffect from '@/components/BurnEffect';
-import LegendaryExplosion from '@/components/LegendaryExplosion';
 
 const SM = { w: 40, h: 56 };
 
@@ -295,13 +294,11 @@ export default function CinematicPlay({
         </>
       )}
 
-      {/* GPU particle system — legendary explosion for 10 / 4-of-a-kind burns */}
-      <LegendaryExplosion
+      {/* Burn flash — sparks on 10 / 4-of-a-kind burns */}
+      <BurnEffect
         visible={explodeVisible}
         center={centerOf(pileRect)}
         onComplete={() => setExplodeVisible(false)}
-        rarity="legendary"
-        variant="fire"
       />
     </View>
   );
