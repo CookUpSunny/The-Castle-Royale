@@ -8,6 +8,7 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import CinematicSpotlight, { type SpotlightStrength } from '@/components/CinematicSpotlight';
 import HandPlaceOverlay from '@/components/HandPlaceOverlay';
 import BurnEffect from '@/components/BurnEffect';
+import LegendaryExplosion from '@/components/LegendaryExplosion';
 
 const SM = { w: 40, h: 56 };
 
@@ -99,6 +100,7 @@ export default function CinematicPlay({
 
   const [spotTrigger, setSpotTrigger] = useState(0);
   const [impactVisible, setImpactVisible] = useState(false);
+  const [explodeVisible, setExplodeVisible] = useState(false);
 
   useEffect(() => {
     if (isFirstMountRef.current) {
@@ -144,13 +146,19 @@ export default function CinematicPlay({
     setFlight({ card, key, side, kind: k });
     setSpotTrigger((n) => n + 1);
 
+    const isBurn = ev.type === 'burn' || ev.type === 'set_complete';
+
     const finish = () => {
       setFlight((cur) => (cur?.key === key ? null : cur));
       setImpactVisible(false);
     };
     const showImpact = () => {
-      setImpactVisible(true);
-      setTimeout(() => setImpactVisible(false), 720);
+      if (isBurn) {
+        setExplodeVisible(true);
+      } else {
+        setImpactVisible(true);
+        setTimeout(() => setImpactVisible(false), 720);
+      }
     };
 
     const flightMs = k === 'big' ? 480 : 420;
@@ -249,7 +257,7 @@ export default function CinematicPlay({
   const trail1 = trailStyle(0.06);
   const trail2 = trailStyle(0.12);
 
-  if (!flight) {
+  if (!flight && !explodeVisible) {
     return null;
   }
 
@@ -262,26 +270,39 @@ export default function CinematicPlay({
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <CinematicSpotlight targetRect={pileRect} strength={spotlightStrength} trigger={spotTrigger} />
-      <HandPlaceOverlay targetRect={pileRect} enabled={enableHand} trigger={spotTrigger} />
+      {flight && (
+        <>
+          <CinematicSpotlight targetRect={pileRect} strength={spotlightStrength} trigger={spotTrigger} />
+          <HandPlaceOverlay targetRect={pileRect} enabled={enableHand} trigger={spotTrigger} />
 
-      {/* Motion blur illusion */}
-      <Animated.View style={trail2}>
-        <Card card={flight.card} size="sm" />
-      </Animated.View>
-      <Animated.View style={trail1}>
-        <Card card={flight.card} size="sm" />
-      </Animated.View>
+          {/* Motion blur illusion */}
+          <Animated.View style={trail2}>
+            <Card card={flight.card} size="sm" />
+          </Animated.View>
+          <Animated.View style={trail1}>
+            <Card card={flight.card} size="sm" />
+          </Animated.View>
 
-      <Animated.View style={flightStyle0}>
-        <Card card={flight.card} size="sm" />
-      </Animated.View>
+          <Animated.View style={flightStyle0}>
+            <Card card={flight.card} size="sm" />
+          </Animated.View>
 
-      {/* Impact sparks centered at the target pile */}
-      <BurnEffect visible={impactVisible} color={impactColor} center={centerOf(pileRect)} />
+          {/* Standard spark burst for non-burn impacts */}
+          <BurnEffect visible={impactVisible} color={impactColor} center={centerOf(pileRect)} />
 
-      {/* Subtle impact ring (cheap) */}
-      <ImpactRing pileRect={pileRect} pulse={spotTrigger} />
+          {/* Subtle impact ring */}
+          <ImpactRing pileRect={pileRect} pulse={spotTrigger} />
+        </>
+      )}
+
+      {/* GPU particle system — legendary explosion for 10 / 4-of-a-kind burns */}
+      <LegendaryExplosion
+        visible={explodeVisible}
+        center={centerOf(pileRect)}
+        onComplete={() => setExplodeVisible(false)}
+        rarity="legendary"
+        variant="fire"
+      />
     </View>
   );
 }
