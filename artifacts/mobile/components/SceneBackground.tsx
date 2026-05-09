@@ -37,138 +37,118 @@ function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] 
 const COSMIC_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <style>
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #030008; }
-
-    .arena-bg {
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse at 50% 45%, rgba(120,0,180,0.55) 0%, rgba(40,0,80,0.70) 30%, rgba(3,0,8,0.90) 65%, #030008 100%),
-        conic-gradient(from 200deg at 50% 45%, #0a0018 0deg, #1a0040 60deg, #0d0030 120deg, #050015 180deg, #1a0040 240deg, #0a0018 360deg);
-      animation: bgPulse 7s ease-in-out infinite;
-    }
-
-    .blackhole-glow {
-      position: fixed;
-      left: 50%; top: 45%;
-      width: 42vmin; height: 42vmin;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: radial-gradient(circle,
-        rgba(255,255,255,.95) 0%,
-        rgba(220,160,255,.65) 10%,
-        rgba(160,40,255,.38) 24%,
-        rgba(40,0,80,.15) 42%,
-        transparent 65%);
-      filter: blur(10px);
-      animation: pulseCore 2.8s ease-in-out infinite;
-      mix-blend-mode: screen;
-    }
-
-    .spiral {
-      position: fixed;
-      left: 50%; top: 45%;
-      width: 120vmax; height: 120vmax;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: conic-gradient(
-        from 0deg,
-        transparent 0deg,
-        rgba(180,60,255,.22) 45deg,
-        transparent 90deg,
-        rgba(255,120,255,.28) 145deg,
-        transparent 210deg,
-        rgba(80,180,255,.18) 285deg,
-        transparent 360deg
-      );
-      filter: blur(18px);
-      animation: spin 18s linear infinite;
-      mix-blend-mode: screen;
-    }
-
-    .grid {
-      position: fixed;
-      inset: -50%;
-      background-image:
-        linear-gradient(rgba(180,80,255,.14) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(180,80,255,.14) 1px, transparent 1px);
-      background-size: 70px 70px;
-      transform-origin: center;
-      animation: gridVacuum 10s linear infinite;
-      opacity: .38;
-      mix-blend-mode: screen;
-    }
-
-    .stars {
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(circle at 20% 25%, white 0 1px, transparent 2px),
-        radial-gradient(circle at 70% 20%, white 0 1px, transparent 2px),
-        radial-gradient(circle at 80% 70%, white 0 1px, transparent 2px),
-        radial-gradient(circle at 35% 80%, white 0 1px, transparent 2px),
-        radial-gradient(circle at 55% 50%, white 0 1px, transparent 2px);
-      opacity: .6;
-      animation: starPull 5s linear infinite;
-    }
-
-    .particles {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .particle {
-      position: absolute;
-      width: 4px; height: 4px;
-      border-radius: 50%;
-      background: white;
-      box-shadow: 0 0 12px #d86cff, 0 0 22px #8f3cff;
-      animation: fallIn linear infinite;
-    }
-
-    @keyframes bgPulse {
-      0%, 100% { filter: brightness(1) saturate(1.1); transform: scale(1); }
-      50%       { filter: brightness(1.18) saturate(1.45); transform: scale(1.035); }
-    }
-    @keyframes pulseCore {
-      0%, 100% { transform: translate(-50%,-50%) scale(.92); opacity: .65; }
-      50%       { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
-    }
-    @keyframes spin {
-      from { transform: translate(-50%,-50%) rotate(0deg) scale(1); }
-      to   { transform: translate(-50%,-50%) rotate(360deg) scale(1.05); }
-    }
-    @keyframes gridVacuum {
-      from { transform: rotate(0deg) scale(1.25); background-position: 0 0; }
-      to   { transform: rotate(360deg) scale(.75); background-position: 140px 140px; }
-    }
-    @keyframes starPull {
-      from { transform: scale(1.1) rotate(0deg); opacity: .8; }
-      to   { transform: scale(.55) rotate(30deg); opacity: .15; }
-    }
-    @keyframes fallIn {
-      0%   { transform: translate(var(--x), var(--y)) scale(1); opacity: 1; }
-      100% { transform: translate(50vw, 45vh) scale(.1); opacity: 0; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+html, body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#020008;
+}
+body{
+  background:
+    radial-gradient(circle at center,
+      rgba(180,60,255,.18) 0%,
+      rgba(70,0,120,.25) 20%,
+      rgba(10,0,30,1) 65%),
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.2) 0 1px, transparent 2px),
+    radial-gradient(circle at 80% 40%, rgba(255,255,255,.15) 0 1px, transparent 2px),
+    radial-gradient(circle at 60% 70%, rgba(255,255,255,.2) 0 1px, transparent 2px),
+    #030008;
+  background-size: cover;
+}
+.blackhole{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:300px;
+  height:300px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:
+    radial-gradient(circle,
+      #000 10%,
+      rgba(255,255,255,.95) 13%,
+      rgba(200,100,255,.9) 18%,
+      rgba(120,0,255,.45) 28%,
+      transparent 55%);
+  filter:blur(1px);
+  animation: pulse 4s ease-in-out infinite;
+  z-index:5;
+}
+.spiral{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:120vmax;
+  height:120vmax;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(255,120,255,.2) 30deg,
+      transparent 60deg,
+      rgba(120,80,255,.22) 120deg,
+      transparent 180deg,
+      rgba(255,255,255,.08) 240deg,
+      transparent 360deg
+    );
+  mix-blend-mode:screen;
+  filter:blur(25px);
+  animation: spin 18s linear infinite;
+  z-index:2;
+}
+.grid{
+  position:absolute;
+  inset:-50%;
+  background-image:
+    linear-gradient(rgba(180,100,255,.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,100,255,.12) 1px, transparent 1px);
+  background-size:80px 80px;
+  animation: vortex 10s linear infinite;
+  opacity:.4;
+  z-index:1;
+}
+.star{
+  position:absolute;
+  width:2px;
+  height:2px;
+  background:white;
+  border-radius:50%;
+  box-shadow: 0 0 6px white, 0 0 12px #bb66ff;
+  animation: fall linear infinite;
+}
+@keyframes spin{
+  from{ transform:translate(-50%,-50%) rotate(0deg) scale(1); }
+  to{   transform:translate(-50%,-50%) rotate(360deg) scale(1.15); }
+}
+@keyframes vortex{
+  from{ transform:scale(1.2) rotate(0deg); }
+  to{   transform:scale(.7) rotate(360deg); }
+}
+@keyframes pulse{
+  0%,100%{ transform:translate(-50%,-50%) scale(1);    opacity:.8; }
+  50%{     transform:translate(-50%,-50%) scale(1.15); opacity:1; }
+}
+@keyframes fall{
+  from{ transform:translate(var(--x), var(--y)) scale(1); opacity:1; }
+  to{   transform:translate(50vw,50vh) scale(.1); opacity:0; }
+}
+</style>
 </head>
 <body>
-  <div class="arena-bg"></div>
-  <div class="blackhole-glow"></div>
-  <div class="spiral"></div>
-  <div class="grid"></div>
-  <div class="stars"></div>
-  <div class="particles">
-    <span class="particle" style="--x:10vw;--y:10vh;animation-duration:4s;"></span>
-    <span class="particle" style="--x:80vw;--y:15vh;animation-duration:6s;"></span>
-    <span class="particle" style="--x:20vw;--y:75vh;animation-duration:5s;"></span>
-    <span class="particle" style="--x:90vw;--y:80vh;animation-duration:7s;"></span>
-    <span class="particle" style="--x:50vw;--y:5vh;animation-duration:3.5s;"></span>
-  </div>
+<div class="grid"></div>
+<div class="spiral"></div>
+<div class="blackhole"></div>
+<div class="star" style="--x:10vw;--y:10vh;left:10vw;top:10vh;animation-duration:4s;"></div>
+<div class="star" style="--x:90vw;--y:15vh;left:90vw;top:15vh;animation-duration:6s;"></div>
+<div class="star" style="--x:20vw;--y:80vh;left:20vw;top:80vh;animation-duration:5s;"></div>
+<div class="star" style="--x:80vw;--y:75vh;left:80vw;top:75vh;animation-duration:7s;"></div>
+<div class="star" style="--x:50vw;--y:0vh;left:50vw;top:0vh;animation-duration:3s;"></div>
 </body>
 </html>`;
 
