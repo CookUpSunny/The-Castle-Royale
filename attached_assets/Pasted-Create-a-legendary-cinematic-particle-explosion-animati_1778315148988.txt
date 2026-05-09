@@ -1,0 +1,121 @@
+Create a legendary cinematic particle explosion animation for a luxury multiplayer mobile card game called “Castle Royale.”
+
+The explosion is triggered when a player successfully plays a “10 four-of-a-kind” combo. This is one of the rarest and most powerful moments in the game, so the visual effect must feel mythic, explosive, luxurious, and unforgettable.
+
+STYLE:
+
+* AAA game-quality motion graphics
+* Premium casino mythology aesthetic
+* Unreal Engine / high-end mobile VFX feel
+* Smooth 60fps
+* Hyper-polished cinematic animation
+* Not cartoony
+* Volumetric and layered with realistic depth
+
+SCENE:
+The four “10” cards slam together in the center of the arena table.
+There is a brief anticipation pause before detonation.
+The environment darkens slightly.
+A glowing magical golden rune appears beneath the cards.
+
+Then:
+A massive explosion erupts outward from the center.
+
+PARTICLE SYSTEM:
+Use hundreds or thousands of independently simulated particles.
+
+Every particle should have:
+
+* randomized velocity
+* randomized scale
+* unique direction
+* rotation
+* motion blur
+* fade timing
+* drag/friction
+* lifespan decay
+* turbulence influence
+
+PARTICLE TYPES:
+
+* golden sparks
+* glowing embers
+* smoke wisps
+* magical rune fragments
+* floating ash
+* card fragments
+* neon energy shards
+* plasma trails
+* glowing dust
+* lightning arcs
+* energy streaks
+
+MOTION:
+
+* explosive radial burst
+* particles spiral naturally
+* layered turbulence fields
+* secondary micro explosions
+* subtle vortex motion near the blast center
+* some particles travel extremely fast
+* others drift cinematically in slow motion
+
+LIGHTING:
+
+* white-hot center flash
+* gold/orange/red/emerald energy tones
+* dynamic bloom
+* volumetric lighting
+* cinematic glow
+* light scattering through smoke
+* reflective highlights on nearby cards
+* pulsing illumination from explosion core
+
+SMOKE & ENERGY:
+
+* dense cinematic smoke cloud
+* smoke curls realistically
+* energy trails stretch behind particles
+* subtle heat distortion/refraction
+* magical energy waves ripple through the environment
+
+CAMERA FX:
+
+* cinematic camera shake
+* subtle zoom-in during impact
+* motion blur during detonation
+* temporary exposure bloom
+* dramatic depth-of-field shift
+
+ENVIRONMENT REACTION:
+
+* nearby cards react to shockwave
+* loose cards lift from table slightly
+* arena lights pulse from the explosion
+* glossy surfaces reflect the blast
+* UI elements glow dynamically from emitted light
+
+COLOR PALETTE:
+
+* gold
+* white-hot energy
+* crimson red
+* emerald green
+* electric orange
+* black smoke
+* subtle cosmic purple accents
+
+TIMING:
+
+* anticipation pause: 0.15 seconds
+* main detonation: 0.4 seconds
+* debris/smoke linger: 2 seconds
+
+OVERALL FEELING:
+The player should instantly feel:
+“Legendary move activated.”
+“The pile has been obliterated.”
+“Casino god power.”
+“Rare combo achieved.”
+
+The effect should feel addictive, elite, rewarding, cinematic, and worthy of replay moments in a premium competitive mobile game.
