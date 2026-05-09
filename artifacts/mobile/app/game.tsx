@@ -381,14 +381,6 @@ export default function GameScreen() {
   // mount/unmount + dedupe pattern as the face-down reveal above.
   const [burst, setBurst] = useState<{ card: CardType; count: number; who: string; key: string } | null>(null);
   const lastBurstKeyRef = React.useRef<string | null>(null);
-  const fireScale = useSharedValue(0.3);
-  const fireOpacity = useSharedValue(0);
-  const ring1Scale = useSharedValue(0.3);
-  const ring1Opacity = useSharedValue(0);
-  const ring2Scale = useSharedValue(0.3);
-  const ring2Opacity = useSharedValue(0);
-  const ring3Scale = useSharedValue(0.3);
-  const ring3Opacity = useSharedValue(0);
   // Tap-your-own-name-card popover. Holds the in-game player menu (Exit, etc).
   const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
   // Inline name editor inside the player menu popover.
@@ -481,34 +473,11 @@ export default function GameScreen() {
           setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
           setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 700);
         }
-        // Fire burst (radial scale — NO translateX/Y shake)
-        fireScale.value = 0.3;
-        fireOpacity.value = 0.9;
-        fireScale.value = withTiming(2.5, { duration: 850 });
-        fireOpacity.value = withTiming(0, { duration: 850 });
-        ring1Scale.value = 0.3; ring1Opacity.value = 0.8;
-        ring1Scale.value = withTiming(2.0, { duration: 700 });
-        ring1Opacity.value = withTiming(0, { duration: 700 });
-        setTimeout(() => {
-          ring2Scale.value = 0.3; ring2Opacity.value = 0.7;
-          ring2Scale.value = withTiming(2.0, { duration: 700 });
-          ring2Opacity.value = withTiming(0, { duration: 700 });
-        }, 120);
-        setTimeout(() => {
-          ring3Scale.value = 0.3; ring3Opacity.value = 0.6;
-          ring3Scale.value = withTiming(2.0, { duration: 700 });
-          ring3Opacity.value = withTiming(0, { duration: 700 });
-        }, 240);
       } else if (gameView.lastEvent.type === 'pickup') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
     }
   }, [gameView?.lastEvent, committedLandscape]);
-
-  const fireStyle = useAnimatedStyle(() => ({ transform: [{ scale: fireScale.value }], opacity: fireOpacity.value }));
-  const ring1Style = useAnimatedStyle(() => ({ transform: [{ scale: ring1Scale.value }], opacity: ring1Opacity.value }));
-  const ring2Style = useAnimatedStyle(() => ({ transform: [{ scale: ring2Scale.value }], opacity: ring2Opacity.value }));
-  const ring3Style = useAnimatedStyle(() => ({ transform: [{ scale: ring3Scale.value }], opacity: ring3Opacity.value }));
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
   const opponentAvatarPortrait = useMemo(
@@ -811,19 +780,6 @@ export default function GameScreen() {
           {opponentEmote ? (
             <EmoteBubble key={`op_${opponentEmote.key}`} emote={opponentEmote.emote} side="right" />
           ) : null}
-          {/* Fire burst + ripple — radial scale, NO translateX/Y shake */}
-          <Animated.View style={[styles.fireOverlay, fireStyle]} pointerEvents="none">
-            <LinearGradient colors={['#ff7f0000', '#ff7f00cc', '#ff000090']} style={StyleSheet.absoluteFill} />
-          </Animated.View>
-          <Animated.View style={[styles.ringOverlay, ring1Style]} pointerEvents="none">
-            <LinearGradient colors={['transparent', '#ff6b00a0', 'transparent']} style={StyleSheet.absoluteFill} />
-          </Animated.View>
-          <Animated.View style={[styles.ringOverlay, ring2Style]} pointerEvents="none">
-            <LinearGradient colors={['transparent', '#ff4d0070', 'transparent']} style={StyleSheet.absoluteFill} />
-          </Animated.View>
-          <Animated.View style={[styles.ringOverlay, ring3Style]} pointerEvents="none">
-            <LinearGradient colors={['transparent', '#ff000050', 'transparent']} style={StyleSheet.absoluteFill} />
-          </Animated.View>
         </Animated.View>
       )}
 
@@ -1125,24 +1081,6 @@ const styles = StyleSheet.create({
     color: '#ff4d6d',
   },
 
-  fireOverlay: {
-    position: 'absolute',
-    top: '30%',
-    left: '25%',
-    right: '25%',
-    bottom: '30%',
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  ringOverlay: {
-    position: 'absolute',
-    top: '20%',
-    left: '15%',
-    right: '15%',
-    bottom: '20%',
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
   disconnectBanner: {
     position: 'absolute',
     bottom: 80,
