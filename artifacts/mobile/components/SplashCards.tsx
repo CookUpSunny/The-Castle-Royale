@@ -23,19 +23,9 @@ const CARD_W = 62;
 const CARD_H = 88;
 const CARD_COUNT = 17;
 const GOLD_COUNT = 3;
-
-// Entrance timing
-// STAGGER_MS is tuned so 17 cards finish in ≈2 s:
-//   (CARD_COUNT-1) × STAGGER_MS + OPACITY_DUR + FLIP_DUR
-//   = 16 × 110 + 80 + 280 = 2 120 ms  ≈ 2 s  ✓
-const STAGGER_MS   = 110;   // per-card entrance stagger (110 ms → ~2 s total for 17 cards)
-const OPACITY_DUR  = 80;    // fade-in precedes the flip
-const FLIP_DUR     = 280;   // scaleX flip (matches curtain-card feel, Easing.out(Easing.back))
-const ENTRANCE_TOTAL_MS = (CARD_COUNT - 1) * STAGGER_MS + OPACITY_DUR + FLIP_DUR; // ≈ 2 120 ms
-
-const REVEAL_INTERVAL = 3200;
-const REVEAL_HOLD     = 1600;
-const PROXIMITY       = 160;
+const REVEAL_INTERVAL = 2800;
+const REVEAL_HOLD = 1400;
+const PROXIMITY = 175;
 
 const SUITS: readonly string[] = ['♥', '♦', '♣', '♠'];
 const RED_SUITS = new Set(['♥', '♦']);
@@ -56,8 +46,9 @@ interface CardSpec {
   homeX: number;
   homeY: number;
   depth: number;
+  initX: number;
+  initY: number;
   initRot: number;
-  entranceDelay: number;
   driftAmpX: number; driftDurX: number;
   driftAmpY: number; driftDurY: number;
   rotAmp: number;    rotDur: number;
@@ -67,51 +58,42 @@ interface CardSpec {
 
 function buildSpecs(): CardSpec[] {
   const { width: W, height: H } = Dimensions.get('window');
+  const cols = 4;
+  const rows = Math.ceil(CARD_COUNT / cols);
+  const colW = W / cols;
+  const rowH = H / rows;
+
   const goldenSet = new Set<number>();
   while (goldenSet.size < GOLD_COUNT) goldenSet.add(Math.floor(Math.random() * CARD_COUNT));
 
-  // Vertical column down the screen centre.
-  // Card centres distributed evenly from PAD_TOP to H - PAD_BOT.
-  const PAD_TOP = 70;
-  const PAD_BOT = 70;
-  const usableH = H - PAD_TOP - PAD_BOT;
-  const spacing = CARD_COUNT > 1 ? usableH / (CARD_COUNT - 1) : usableH;
-
   return Array.from({ length: CARD_COUNT }, (_, i) => {
-    // Alternate left/right so neighbouring cards don't perfectly overlap.
-    const side = i % 2 === 0 ? 1 : -1;
-    const sideJitter = side * (6 + Math.random() * 10);
-    const yJitter    = (Math.random() - 0.5) * (spacing * 0.22);
-
-    const homeX = W / 2 + sideJitter;
-    const homeY = Math.max(
-      CARD_H / 2 + 8,
-      Math.min(H - CARD_H / 2 - 8, PAD_TOP + i * spacing + yJitter),
-    );
-
-    const dAmpX = 8  + Math.random() * 10;
-    const dAmpY = 6  + Math.random() * 10;
-    const rAmp  = 2  + Math.random() * 4;
-
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const jx = (Math.random() - 0.5) * colW * 0.5;
+    const jy = (Math.random() - 0.5) * rowH * 0.6;
+    const dAmpX = 12 + Math.random() * 14;
+    const dAmpY = 9  + Math.random() * 13;
+    const rAmp  = 3  + Math.random() * 6;
     return {
       id: i,
       isGolden: goldenSet.has(i),
       rank: pickRank(),
       suit: SUITS[Math.floor(Math.random() * SUITS.length)],
-      homeX,
-      homeY,
+      homeX: Math.max(CARD_W / 2 + 8, Math.min(W - CARD_W / 2 - 8, col * colW + colW / 2 + jx)),
+      homeY: Math.max(CARD_H / 2 + 8, Math.min(H - CARD_H / 2 - 8, row * rowH + rowH / 2 + jy)),
       depth: 0.55 + Math.random() * 0.45,
-      initRot: side * (2 + Math.random() * 5),
-      entranceDelay: i * STAGGER_MS,
+      initX: (Math.random() * 2 - 1) * dAmpX,
+      initY: (Math.random() * 2 - 1) * dAmpY,
+      initRot: (Math.random() * 2 - 1) * rAmp,
       driftAmpX: dAmpX,
       driftDurX: 3800 + Math.random() * 2800,
       driftAmpY: dAmpY,
       driftDurY: 3400 + Math.random() * 3000,
       rotAmp: rAmp,
       rotDur: 4000 + Math.random() * 3000,
-      breathAmp: 0.015 + Math.random() * 0.02,
+      breathAmp: 0.02 + Math.random() * 0.025,
       breathDur: 3000 + Math.random() * 2200,
-      shineDelay: 600  + Math.random() * 2800,
+      shineDelay: 600 + Math.random() * 2800,
     };
   });
 }
@@ -157,88 +139,59 @@ export interface CardHandle {
 }
 
 const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) => {
-  const offsetX    = useSharedValue(0);
-  const offsetY    = useSharedValue(0);
-  const rot        = useSharedValue(spec.initRot);
-  const breath     = useSharedValue(1);
-  const flipSX     = useSharedValue(0);    // 0 = collapsed; entrance flips to 1
-  const revSc      = useSharedValue(1);
-  const glowOp     = useSharedValue(spec.isGolden ? 0.2 : 0);
-  const entranceOp = useSharedValue(0);    // transparent until card's entrance fires
+  const offsetX  = useSharedValue(spec.initX);
+  const offsetY  = useSharedValue(spec.initY);
+  const rot      = useSharedValue(spec.initRot);
+  const breath   = useSharedValue(1);
+  const flipSX   = useSharedValue(1);
+  const revSc    = useSharedValue(1);
+  const glowOp   = useSharedValue(spec.isGolden ? 0.2 : 0);
 
-  const faceUpRef  = useRef(false);        // all cards start face-down
+  const faceUpRef  = useRef(!spec.isGolden);
   const mountedRef = useRef(true);
-  const [faceUp, setFaceUp] = useState(false);
+  const [faceUp, setFaceUp] = useState(!spec.isGolden);
 
   const baseScale   = 0.74 + spec.depth * 0.26;
   const cardOpacity = 0.44 + spec.depth * 0.51;
 
-  // Sequential entrance: opacity fires first, flip starts after opacity finishes.
-  const FLIP_START  = spec.entranceDelay + OPACITY_DUR;
-  // Idle loops start after this card's full entrance (opacity + flip) is done.
-  const IDLE_DELAY  = FLIP_START + FLIP_DUR + 120;
-
   useEffect(() => {
     mountedRef.current = true;
 
-    // ── Entrance: fade in first, then scaleX flip back → face ────────────────
-    // Step 1: opacity 0 → 1 over 80 ms
-    entranceOp.value = withDelay(
-      spec.entranceDelay,
-      withTiming(1, { duration: OPACITY_DUR, easing: Easing.out(Easing.quad) }),
-    );
-    // Step 2: scaleX 0 → 1 over 280 ms, starts only after opacity finishes
-    flipSX.value = withDelay(
-      FLIP_START,
-      withTiming(1, { duration: FLIP_DUR, easing: Easing.out(Easing.back(1.5)) }),
-    );
-    // Swap to face-up when the card is "edge-on" (halfway through the flip).
-    const faceTimer = setTimeout(() => {
-      if (mountedRef.current) {
-        setFaceUp(true);
-        faceUpRef.current = true;
-      }
-    }, FLIP_START + FLIP_DUR / 2);
-
-    // ── Idle loops — deferred until after entrance ────────────────────────────
-    offsetX.value = withDelay(IDLE_DELAY, withRepeat(
+    offsetX.value = withRepeat(
       withSequence(
         withTiming( spec.driftAmpX, { duration: spec.driftDurX, easing: Easing.inOut(Easing.sin) }),
         withTiming(-spec.driftAmpX, { duration: spec.driftDurX, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    ));
-    offsetY.value = withDelay(IDLE_DELAY, withRepeat(
+    );
+    offsetY.value = withRepeat(
       withSequence(
         withTiming(-spec.driftAmpY, { duration: spec.driftDurY, easing: Easing.inOut(Easing.sin) }),
         withTiming( spec.driftAmpY, { duration: spec.driftDurY, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    ));
-    rot.value = withDelay(IDLE_DELAY, withRepeat(
+    );
+    rot.value = withRepeat(
       withSequence(
         withTiming( spec.rotAmp, { duration: spec.rotDur, easing: Easing.inOut(Easing.sin) }),
         withTiming(-spec.rotAmp, { duration: spec.rotDur, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    ));
-    breath.value = withDelay(IDLE_DELAY, withRepeat(
+    );
+    breath.value = withRepeat(
       withSequence(
         withTiming(1 + spec.breathAmp, { duration: spec.breathDur, easing: Easing.inOut(Easing.sin) }),
         withTiming(1 - spec.breathAmp, { duration: spec.breathDur, easing: Easing.inOut(Easing.sin) }),
       ), -1, false,
-    ));
-
+    );
     if (spec.isGolden) {
-      glowOp.value = withDelay(IDLE_DELAY, withRepeat(
+      glowOp.value = withRepeat(
         withSequence(
           withTiming(0.55, { duration: 1600 }),
           withTiming(0.25, { duration: 1600 }),
         ), -1, false,
-      ));
+      );
     }
 
     return () => {
-      clearTimeout(faceTimer);
       mountedRef.current = false;
-      cancelAnimation(entranceOp);
       cancelAnimation(offsetX);
       cancelAnimation(offsetY);
       cancelAnimation(rot);
@@ -285,7 +238,7 @@ const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) 
     top:  spec.homeY - CARD_H / 2 + offsetY.value,
     width: CARD_W,
     height: CARD_H,
-    opacity: cardOpacity * entranceOp.value,
+    opacity: cardOpacity,
     pointerEvents: 'none' as const,
     transform: [
       { rotate: `${rot.value}deg` },
@@ -378,8 +331,7 @@ export default function SplashCards() {
       cycleTimer.current = setTimeout(runCycle, REVEAL_INTERVAL);
     };
 
-    // Golden cycle starts shortly after all entrance animations have finished.
-    cycleTimer.current = setTimeout(runCycle, ENTRANCE_TOTAL_MS + 300);
+    cycleTimer.current = setTimeout(runCycle, 900);
 
     return () => {
       if (cycleTimer.current) clearTimeout(cycleTimer.current);
