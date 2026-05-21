@@ -20,6 +20,34 @@ import ArenaBackground from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 
 
+const OUTLINE_OFFSETS: [number, number][] = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1,  0],          [1,  0],
+  [-1,  1], [0,  1], [1,  1],
+];
+
+type OutlinedTextProps = React.ComponentProps<typeof Text> & {
+  outlineColor?: string;
+  outlineWidth?: number;
+};
+
+function OutlinedText({ style, outlineColor = 'white', outlineWidth = 1, children, ...rest }: OutlinedTextProps) {
+  return (
+    <View>
+      {OUTLINE_OFFSETS.map(([dx, dy], i) => (
+        <Text
+          key={i}
+          style={[style, { position: 'absolute', color: outlineColor, left: dx * outlineWidth, top: dy * outlineWidth }]}
+          {...rest}
+        >
+          {children}
+        </Text>
+      ))}
+      <Text style={style} {...rest}>{children}</Text>
+    </View>
+  );
+}
+
 export default function ArenaPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode: string }>();
   const { arena, setArena, avatarId, setAvatar } = useCosmetics();
@@ -157,7 +185,7 @@ export default function ArenaPickerScreen() {
                     source={av.portrait}
                     style={styles.avatarImage}
                     contentFit="contain"
-                    contentPosition="top center"
+                    contentPosition="top right"
                   />
                   {isSelected ? (
                     <View style={[styles.selectedBadge, { position: 'absolute', top: 10, right: 10 }]}>
@@ -168,9 +196,9 @@ export default function ArenaPickerScreen() {
                     <Text style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
                       {av.name}
                     </Text>
-                    <Text style={[styles.avatarQuote, { color: 'rgba(20,0,50,0.65)' }]} numberOfLines={1}>
+                    <OutlinedText style={[styles.avatarQuote, { color: 'rgba(20,0,50,0.65)' }]} numberOfLines={1}>
                       "{av.quote}"
-                    </Text>
+                    </OutlinedText>
                   </View>
                 </Pressable>
               );
@@ -320,10 +348,9 @@ const styles = StyleSheet.create({
   avatarImage: {
     position: 'absolute',
     top: 0,
-    left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
+    width: '68%',
     height: '100%',
   },
   avatarNameWrap: {
@@ -340,6 +367,7 @@ const styles = StyleSheet.create({
   avatarQuote: {
     fontSize: 11,
     fontStyle: 'italic',
+    fontWeight: '700',
     letterSpacing: 0.2,
   },
   dotsRow: {
