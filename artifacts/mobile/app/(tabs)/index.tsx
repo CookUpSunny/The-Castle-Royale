@@ -1,7 +1,8 @@
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -23,6 +24,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useGameCenter } from '@/contexts/GameCenterContext';
+import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import SplashCards from '@/components/SplashCards';
@@ -93,6 +95,11 @@ export default function LobbyScreen() {
   const { playerName, setPlayerName, isInQueue, connectionStatus, gameView, onlineCount } = useGame();
   const { isAuthenticated, profile } = useGameCenter();
   const { playSplashTrack, isMuted, toggleMute, volumeLevel, setVolumeLevel } = useMusicPlayer();
+  const cosmetics = useCosmetics();
+  const avatarPortrait = useMemo(
+    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.portrait ?? null,
+    [cosmetics.avatarId],
+  );
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
   const [showPicker, setShowPicker] = useState(false);
@@ -293,6 +300,16 @@ export default function LobbyScreen() {
 
         <View style={styles.bottomGroup}>
           <View style={styles.nameSection}>
+            {avatarPortrait && (
+              <View style={styles.lobbyAvatar}>
+                <Image
+                  source={avatarPortrait}
+                  style={StyleSheet.absoluteFillObject}
+                  contentFit="cover"
+                  contentPosition="top"
+                />
+              </View>
+            )}
             <BlurView intensity={55} tint="dark" style={styles.glassTag}>
               <View style={styles.glassTagInner}>
                 {editingName ? (
@@ -494,7 +511,18 @@ const styles = StyleSheet.create({
   logoTitle: { fontSize: 64, fontWeight: '900', letterSpacing: 8, lineHeight: 68 },
   logoRoyale: { fontSize: 52, fontWeight: '900', letterSpacing: 6, fontStyle: 'italic', lineHeight: 58 },
   logoTagline: { marginTop: 8, fontSize: 11, letterSpacing: 3, fontWeight: '500' },
-  nameSection: { marginTop: -22, alignItems: 'center' },
+  nameSection: { marginTop: -22, alignItems: 'center', gap: 0 },
+  lobbyAvatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    overflow: 'hidden',
+    borderWidth: 2.5,
+    borderColor: 'rgba(212,168,32,0.55)',
+    backgroundColor: '#1a0535',
+    marginBottom: -10,
+    zIndex: 1,
+  },
   glassTag: {
     borderRadius: 20,
     overflow: 'hidden',
@@ -511,7 +539,7 @@ const styles = StyleSheet.create({
   nameInput: { height: 40, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1.5, fontSize: 16, minWidth: 140 },
   nameConfirm: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   nameConfirmText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  playerName: { fontSize: 14, fontWeight: '600', letterSpacing: 1 },
+  playerName: { fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
   eloText: { fontSize: 11, fontWeight: '700', letterSpacing: 2, marginTop: 3 },
   menuSection: { width: '100%', gap: 10 },
   gcButton: {

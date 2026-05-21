@@ -148,21 +148,19 @@ function OpponentArea({ handCount, faceUp, faceDownCount }: { handCount: number;
 
   return (
     <View style={styles.opponentArea}>
-      {handCount > 0 && (
-        <View style={styles.opponentHandRow}>
-          {Array.from({ length: handCount }).map((_, i) => (
-            <View
-              key={i}
-              style={{
-                marginLeft: i === 0 ? 0 : handOverlap,
-                transform: [{ rotate: `${(i - (handCount - 1) / 2) * 4}deg` }],
-              }}
-            >
-              <CardBack size="sm" />
-            </View>
-          ))}
-        </View>
-      )}
+      <View style={styles.opponentHandRow}>
+        {handCount > 0 && Array.from({ length: handCount }).map((_, i) => (
+          <View
+            key={i}
+            style={{
+              marginLeft: i === 0 ? 0 : handOverlap,
+              transform: [{ rotate: `${(i - (handCount - 1) / 2) * 4}deg` }],
+            }}
+          >
+            <CardBack size="sm" />
+          </View>
+        ))}
+      </View>
 
       <View style={styles.opponentBoardRow}>
         <View style={styles.boardCol}>
