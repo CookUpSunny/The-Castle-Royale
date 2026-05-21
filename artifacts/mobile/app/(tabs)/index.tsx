@@ -91,7 +91,7 @@ export default function LobbyScreen() {
   const insets = useSafeAreaInsets();
   const { playerName, setPlayerName, isInQueue, connectionStatus, gameView, onlineCount } = useGame();
   const { isAuthenticated, profile } = useGameCenter();
-  const { playSplashTrack } = useMusicPlayer();
+  const { playSplashTrack, isMuted, toggleMute, volumeLevel, setVolumeLevel } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
   const lastNavigatedGameIdRef = useRef<string | null>(null);
@@ -379,6 +379,38 @@ export default function LobbyScreen() {
               : connectionStatus.toUpperCase()}
           </Text>
         </View>
+
+        <View style={styles.musicRow}>
+          <Pressable
+            onPress={toggleMute}
+            style={({ pressed }) => [styles.muteBtn, pressed && { opacity: 0.6 }]}
+            hitSlop={8}
+          >
+            <Text style={styles.muteIcon}>{isMuted ? '🔇' : '🔊'}</Text>
+          </Pressable>
+          {([0.25, 0.5, 1.0] as const).map((v) => {
+            const active = !isMuted && volumeLevel === v;
+            return (
+              <Pressable
+                key={v}
+                onPress={() => {
+                  setVolumeLevel(v);
+                  if (isMuted) toggleMute();
+                }}
+                style={({ pressed }) => [
+                  styles.musicPill,
+                  active && styles.musicPillActive,
+                  pressed && { opacity: 0.6 },
+                ]}
+                hitSlop={6}
+              >
+                <Text style={[styles.musicPillText, active && styles.musicPillTextActive]}>
+                  {v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -447,4 +479,21 @@ const styles = StyleSheet.create({
   connectionDot: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   connectionText: { fontSize: 10, fontWeight: '600', letterSpacing: 1.5 },
+  musicRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  muteBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  muteIcon: { fontSize: 18 },
+  musicPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  musicPillActive: {
+    borderColor: '#d4a820',
+    backgroundColor: 'rgba(212,168,32,0.15)',
+  },
+  musicPillText: { fontSize: 11, fontWeight: '700', letterSpacing: 1, color: 'rgba(255,255,255,0.35)' },
+  musicPillTextActive: { color: '#ffd700' },
 });
