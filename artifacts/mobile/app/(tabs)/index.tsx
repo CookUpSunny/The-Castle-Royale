@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   logoTitle: { fontSize: 64, fontWeight: '900', letterSpacing: 8, lineHeight: 68 },
   logoRoyale: { fontSize: 52, fontWeight: '900', letterSpacing: 6, fontStyle: 'italic', lineHeight: 58 },
   logoTagline: { marginTop: 8, fontSize: 11, letterSpacing: 3, fontWeight: '500' },
-  nameSection: { marginTop: 8, alignItems: 'center' },
+  nameSection: { marginTop: -22, alignItems: 'center' },
   glassTag: {
     borderRadius: 20,
     overflow: 'hidden',
