@@ -56,24 +56,24 @@ function fakeCoins(name: string): string {
 }
 
 /** Compact name + coins plate for landscape header corners. */
-function NamePlate({ name, level, coins, gems, isActive, align, portraitArt, onPress, showMenuDots, compact }: {
+function NamePlate({ name, isActive, align, portraitArt, onPress, showMenuDots, compact }: {
   name: string;
-  level: string;
-  coins: string;
+  level?: string;
+  coins?: string;
   gems?: string;
   isActive: boolean;
   align: 'left' | 'right';
   portraitArt?: number | null;
   onPress?: () => void;
   showMenuDots?: boolean;
-  /** Compact pill variant: smaller avatar, single subtitle line. Used for opponent top-right. */
+  /** Compact pill variant: smaller avatar, single name line. Used for opponent top-right. */
   compact?: boolean;
 }) {
   const colors = useColors();
   const initial = name.charAt(0).toUpperCase();
   const Wrapper: React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }> = onPress ? (Pressable as React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }>) : View;
 
-  const avatarSize = compact ? 36 : 52;
+  const avatarSize = compact ? 44 : 60;
 
   return (
     <Wrapper
@@ -86,10 +86,8 @@ function NamePlate({ name, level, coins, gems, isActive, align, portraitArt, onP
           shadowOpacity: isActive ? 0.8 : 0,
           shadowRadius: 10,
           elevation: isActive ? 8 : 0,
-          flexDirection: align === 'left' ? 'row' : 'row-reverse',
-          paddingVertical: compact ? 4 : 6,
-          paddingHorizontal: compact ? 6 : 8,
-          gap: compact ? 6 : 8,
+          paddingVertical: compact ? 6 : 8,
+          paddingHorizontal: compact ? 8 : 10,
         },
       ]}
     >
@@ -101,32 +99,34 @@ function NamePlate({ name, level, coins, gems, isActive, align, portraitArt, onP
             overflow: 'hidden',
             width: avatarSize,
             height: avatarSize,
-            borderRadius: compact ? 8 : 10,
+            borderRadius: compact ? 10 : 14,
           },
         ]}
       >
         {portraitArt ? (
           <Image source={portraitArt} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="top" />
         ) : (
-          <Text style={[styles.avatarText, { color: isActive ? colors.neonGold : colors.neonPurple, fontSize: compact ? 13 : 16 }]}>{initial}</Text>
+          <Text style={[styles.avatarText, { color: isActive ? colors.neonGold : colors.neonPurple, fontSize: compact ? 16 : 22 }]}>{initial}</Text>
         )}
       </View>
-      <View style={[styles.nameTextWrap, align === 'right' && { alignItems: 'flex-end' }]}>
-        <Text style={[styles.nameText, { color: colors.foreground, fontSize: compact ? 12 : 13 }]} numberOfLines={1}>{name}</Text>
-        {compact ? (
-          <Text style={[styles.levelText, { color: colors.mutedForeground, marginTop: 1 }]} numberOfLines={1}>
-            {level} · 🪙 {coins}
-          </Text>
-        ) : (
-          <>
-            <Text style={[styles.levelText, { color: colors.mutedForeground }]}>{level}</Text>
-            <View style={[styles.statsRow, align === 'right' && { flexDirection: 'row-reverse' }]}>
-              <Text style={[styles.statText, { color: colors.neonGold }]}>🪙 {coins}</Text>
-              {gems ? <Text style={[styles.statText, { color: colors.electric }]}>💎 {gems}</Text> : null}
-            </View>
-          </>
-        )}
-      </View>
+      <Text
+        style={[
+          styles.nameText,
+          {
+            color: '#ffffff',
+            fontSize: compact ? 11 : 13,
+            fontWeight: '900',
+            marginTop: 5,
+            textAlign: 'center',
+            textShadowColor: '#000000',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 4,
+          },
+        ]}
+        numberOfLines={1}
+      >
+        {name}
+      </Text>
       {showMenuDots ? (
         <View style={styles.menuDotsBadgeLs} pointerEvents="none">
           <Text style={styles.menuDotsTextLs}>⋯</Text>
@@ -469,11 +469,9 @@ export default function GameLandscape(): React.JSX.Element | null {
       />
 
       {/* Opponent gamer tag — top-right corner, compact pill so it doesn't droop over cards */}
-      <View style={{ position: 'absolute', top: insets.top + webTopPad + 8, right: insets.right + 14, zIndex: 50, maxWidth: 200 }}>
+      <View style={{ position: 'absolute', top: insets.top + webTopPad + 8, right: insets.right + 14, zIndex: 50, maxWidth: 84 }}>
         <NamePlate
           name={opponentName}
-          level="Lv. 28"
-          coins={opponentCoins}
           isActive={!isMyTurn}
           align="right"
           portraitArt={opponentAvatarPortrait}
@@ -482,12 +480,9 @@ export default function GameLandscape(): React.JSX.Element | null {
       </View>
 
       {/* Player gamer tag — bottom-left, raised so it sits near the action buttons */}
-      <View style={{ position: 'absolute', bottom: insets.bottom + 72, left: insets.left + 14, zIndex: 50, maxWidth: 220 }}>
+      <View style={{ position: 'absolute', bottom: insets.bottom + 72, left: insets.left + 14, zIndex: 50, maxWidth: 96 }}>
         <NamePlate
           name={playerName}
-          level="Lv. 34"
-          coins="125,000"
-          gems="8,450"
           isActive={isMyTurn}
           align="left"
           portraitArt={myAvatarPortrait}
@@ -893,13 +888,12 @@ const styles = StyleSheet.create({
   playerHandSection: { paddingHorizontal: 4, marginBottom: 14, overflow: 'visible' },
 
   namePlate: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 8,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
     backgroundColor: '#0d001ad9',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1.5,
     width: '100%',
   },
