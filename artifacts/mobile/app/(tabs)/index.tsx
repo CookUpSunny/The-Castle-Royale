@@ -94,7 +94,30 @@ export default function LobbyScreen() {
   const { playSplashTrack, isMuted, toggleMute, volumeLevel, setVolumeLevel } = useMusicPlayer();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
+  const [showPicker, setShowPicker] = useState(false);
   const lastNavigatedGameIdRef = useRef<string | null>(null);
+
+  const pillOpacity = useSharedValue(0);
+  const pillTranslateX = useSharedValue(-20);
+
+  const openPicker = useCallback(() => {
+    setShowPicker(true);
+    pillOpacity.value = withTiming(1, { duration: 180 });
+    pillTranslateX.value = withTiming(0, { duration: 200 });
+  }, [pillOpacity, pillTranslateX]);
+
+  const closePicker = useCallback(() => {
+    pillOpacity.value = withTiming(0, { duration: 150 });
+    pillTranslateX.value = withTiming(-20, { duration: 160 }, () => {
+      'worklet';
+      runOnJS(setShowPicker)(false);
+    });
+  }, [pillOpacity, pillTranslateX]);
+
+  const pillsAnimStyle = useAnimatedStyle(() => ({
+    opacity: pillOpacity.value,
+    transform: [{ translateX: pillTranslateX.value }],
+  }));
 
   // Start splash music on focus. The MusicContext guards re-entry, so this is a
   // no-op if splash is already playing — letting the lobby track carry through
@@ -385,34 +408,54 @@ export default function LobbyScreen() {
 
           <View style={styles.musicRow}>
             <Pressable
-              onPress={toggleMute}
+              onPress={() => {
+                if (isMuted) {
+                  toggleMute();
+                } else if (showPicker) {
+                  closePicker();
+                } else {
+                  openPicker();
+                }
+              }}
+              onLongPress={() => {
+                if (!isMuted) {
+                  if (showPicker) closePicker();
+                  toggleMute();
+                }
+              }}
+              delayLongPress={400}
               style={({ pressed }) => [styles.muteBtn, pressed && { opacity: 0.6 }]}
               hitSlop={8}
             >
               <Text style={styles.muteIcon}>{isMuted ? '🔇' : '🔊'}</Text>
             </Pressable>
-            {([0.25, 0.5, 1.0] as const).map((v) => {
-              const active = !isMuted && volumeLevel === v;
-              return (
-                <Pressable
-                  key={v}
-                  onPress={() => {
-                    setVolumeLevel(v);
-                    if (isMuted) toggleMute();
-                  }}
-                  style={({ pressed }) => [
-                    styles.musicPill,
-                    active && styles.musicPillActive,
-                    pressed && { opacity: 0.6 },
-                  ]}
-                  hitSlop={6}
-                >
-                  <Text style={[styles.musicPillText, active && styles.musicPillTextActive]}>
-                    {v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {showPicker && (
+              <Animated.View style={[styles.musicPills, pillsAnimStyle]}>
+                {([0.25, 0.5, 1.0] as const).map((v) => {
+                  const active = !isMuted && volumeLevel === v;
+                  return (
+                    <Pressable
+                      key={v}
+                      onPress={() => {
+                        setVolumeLevel(v);
+                        if (isMuted) toggleMute();
+                        closePicker();
+                      }}
+                      style={({ pressed }) => [
+                        styles.musicPill,
+                        active && styles.musicPillActive,
+                        pressed && { opacity: 0.6 },
+                      ]}
+                      hitSlop={6}
+                    >
+                      <Text style={[styles.musicPillText, active && styles.musicPillTextActive]}>
+                        {v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </Animated.View>
+            )}
           </View>
         </View>
       </View>
@@ -497,6 +540,7 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
   connectionText: { fontSize: 10, fontWeight: '600', letterSpacing: 1.5 },
   musicRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  musicPills: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   muteBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
   muteIcon: { fontSize: 18 },
   musicPill: {
