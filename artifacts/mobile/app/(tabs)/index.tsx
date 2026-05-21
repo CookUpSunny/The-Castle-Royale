@@ -289,6 +289,9 @@ export default function LobbyScreen() {
             <Text style={[styles.logoTagline, { color: colors.mutedForeground }]}>RISK IT ALL · WIN IT ALL</Text>
           </Animated.View>
 
+        </View>
+
+        <View style={styles.bottomGroup}>
           <View style={styles.nameSection}>
             <BlurView intensity={55} tint="dark" style={styles.glassTag}>
               <View style={styles.glassTagInner}>
@@ -322,9 +325,6 @@ export default function LobbyScreen() {
               </View>
             </BlurView>
           </View>
-        </View>
-
-        <View style={styles.bottomGroup}>
           <View style={styles.menuSection}>
             <Animated.View style={playStyle}>
               <Pressable
