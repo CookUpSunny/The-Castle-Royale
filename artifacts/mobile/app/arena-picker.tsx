@@ -83,16 +83,12 @@ export default function ArenaPickerScreen() {
   const selectedAvatarData = AVATARS.find((a) => a.id === selectedAvatar);
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#1a0030', '#0a0018', '#07000f']}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.container, { backgroundColor: '#ffffff' }]}>
 
       <View style={[styles.header, { paddingTop: insets.top + webTopPad + 8 }]}>
-        <BackButton label="← BACK" onPress={() => router.back()} />
-        <Text style={[styles.title, { color: colors.foreground }]}>YOUR LOADOUT</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+        <BackButton label="← BACK" onPress={() => router.back()} labelStyle={styles.backLabelShadow} />
+        <Text style={[styles.title, { color: colors.foreground, textShadowColor: '#000000', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 2 }]}>YOUR LOADOUT</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground, textShadowColor: '#000000', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 2 }]}>
           {mode === 'bot' ? 'Quick Play · Bot' : mode === 'private' ? 'Private Room · Pick Your Look' : 'Ranked Match'}
         </Text>
       </View>
@@ -335,17 +331,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: '#fff',
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
   },
   avatarQuote: {
     fontSize: 11,
     fontStyle: 'italic',
     letterSpacing: 0.2,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -385,6 +381,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.5,
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
   },
   selectedBadge: {
     backgroundColor: 'rgba(255,215,0,0.22)',
@@ -406,18 +405,18 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 2,
     marginBottom: 5,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
   },
   arenaDesc: {
     color: 'rgba(255,255,255,0.70)',
     fontSize: 11,
     lineHeight: 16,
     letterSpacing: 0.2,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
   },
   confirmBar: {
     position: 'absolute',
@@ -426,9 +425,14 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 24,
     paddingTop: 14,
-    backgroundColor: 'rgba(7,0,15,0.94)',
+    backgroundColor: 'rgba(255,255,255,0.96)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
+    borderTopColor: 'rgba(0,0,0,0.08)',
+  },
+  backLabelShadow: {
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
   },
   confirmOuter: {
     borderRadius: 32,
