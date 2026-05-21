@@ -360,8 +360,6 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, { color: colors.neonGold }]}>{activeLabel}</Text>
-
       {/* Multi-play chips: one per duplicate group. Disabled (greyed out) when not your turn or not playable.
           In starter mode every duplicate group is legal (no pile-match), so chips light up for free.
           Also shown in face-up mode — players can play doubles/triples from face-up cards too. */}
@@ -402,19 +400,6 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
             );
           })}
         </View>
-      )}
-
-      {(showHand || showFaceUp) && !mustPlayStarter && duplicateGroups.length > 0 && (
-        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          {draggable
-            ? 'Tap a card to play · tap a chip to play multiples · hold & drag to pile'
-            : 'Tap a chip to play multiples · or long-press a card'}
-        </Text>
-      )}
-      {mustPlayStarter && (
-        <Text style={[styles.hint, { color: '#fde047' }]}>
-          Picked up the pile — tap any card or a chip to play doubles/triples
-        </Text>
       )}
 
       {showFaceUp ? (
@@ -585,21 +570,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
   },
-  label: {
-    textAlign: 'center',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginBottom: 2,
-  },
-  hint: {
-    textAlign: 'center',
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1,
-    marginBottom: 4,
-    fontStyle: 'italic',
-  },
   multiRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -627,7 +597,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 14,
+    paddingTop: 4,
     paddingBottom: 16,
     alignItems: 'center',
     paddingLeft: 36,

@@ -909,8 +909,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     position: 'relative',
-    paddingTop: 18,
-    gap: 14,
+    paddingTop: 6,
+    gap: 8,
   },
   pileRow: {
     flexDirection: 'row',
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
 
   playerSection: {
     paddingHorizontal: 4,
-    paddingBottom: 10,
+    paddingBottom: 2,
   },
 
   chatRow: {
