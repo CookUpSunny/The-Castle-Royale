@@ -19,6 +19,34 @@ import { useColors } from '@/hooks/useColors';
 import ArenaBackground from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 
+const OUTLINE_OFFSETS: [number, number][] = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1,  0],          [1,  0],
+  [-1,  1], [0,  1], [1,  1],
+];
+
+type OutlinedTextProps = React.ComponentProps<typeof Text> & {
+  outlineColor?: string;
+  outlineWidth?: number;
+};
+
+function OutlinedText({ style, outlineColor = 'white', outlineWidth = 1, children, ...rest }: OutlinedTextProps) {
+  return (
+    <View>
+      {OUTLINE_OFFSETS.map(([dx, dy], i) => (
+        <Text
+          key={i}
+          style={[style, { position: 'absolute', color: outlineColor, left: dx * outlineWidth, top: dy * outlineWidth }]}
+          {...rest}
+        >
+          {children}
+        </Text>
+      ))}
+      <Text style={style} {...rest}>{children}</Text>
+    </View>
+  );
+}
+
 export default function ArenaPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode: string }>();
   const { arena, setArena, avatarId, setAvatar } = useCosmetics();
@@ -164,12 +192,12 @@ export default function ArenaPickerScreen() {
                     </View>
                   ) : null}
                   <View style={styles.avatarNameWrap}>
-                    <Text style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
+                    <OutlinedText style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
                       {av.name}
-                    </Text>
-                    <Text style={[styles.avatarQuote, { color: 'rgba(20,0,50,0.65)' }]} numberOfLines={1}>
+                    </OutlinedText>
+                    <OutlinedText style={[styles.avatarQuote, { color: 'rgba(20,0,50,0.65)' }]} numberOfLines={1}>
                       "{av.quote}"
-                    </Text>
+                    </OutlinedText>
                   </View>
                 </Pressable>
               );
@@ -335,17 +363,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: '#fff',
     marginBottom: 4,
-    textShadowColor: 'rgba(255,255,255,0.95)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
   },
   avatarQuote: {
     fontSize: 11,
     fontStyle: 'italic',
     letterSpacing: 0.2,
-    textShadowColor: 'rgba(255,255,255,0.95)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
   },
   dotsRow: {
     flexDirection: 'row',
