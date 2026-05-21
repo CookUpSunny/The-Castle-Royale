@@ -83,7 +83,11 @@ export default function ArenaPickerScreen() {
   const selectedAvatarData = AVATARS.find((a) => a.id === selectedAvatar);
 
   return (
-    <View style={[styles.container, { backgroundColor: '#f0dfc0' }]}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#1a0030', '#0a0018', '#07000f']}
+        style={StyleSheet.absoluteFill}
+      />
 
       <View style={[styles.header, { paddingTop: insets.top + webTopPad + 8 }]}>
         <BackButton label="← BACK" onPress={() => router.back()} labelStyle={styles.backLabelShadow} />
@@ -425,9 +429,9 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 24,
     paddingTop: 14,
-    backgroundColor: 'rgba(240,223,192,0.98)',
+    backgroundColor: 'rgba(7,0,15,0.94)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.08)',
+    borderTopColor: 'rgba(255,255,255,0.07)',
   },
   backLabelShadow: {
     textShadowColor: '#000000',
