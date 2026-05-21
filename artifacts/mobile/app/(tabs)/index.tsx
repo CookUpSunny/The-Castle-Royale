@@ -310,6 +310,7 @@ export default function LobbyScreen() {
                 />
               </View>
             )}
+            <View style={styles.glassTagGlow}>
             <BlurView intensity={55} tint="dark" style={styles.glassTag}>
               <View style={styles.glassTagInner}>
                 {editingName ? (
@@ -341,6 +342,7 @@ export default function LobbyScreen() {
                 )}
               </View>
             </BlurView>
+            </View>
           </View>
           <View style={styles.menuSection}>
             <Animated.View style={playStyle}>
@@ -522,23 +524,36 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     overflow: 'hidden',
-    borderWidth: 2.5,
-    borderColor: 'rgba(212,168,32,0.55)',
+    borderWidth: 3,
+    borderColor: 'rgba(212,168,32,0.85)',
     backgroundColor: '#1a0535',
     marginBottom: -10,
     zIndex: 1,
+    shadowColor: '#d4a820',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  glassTagGlow: {
+    borderRadius: 20,
+    shadowColor: '#9b6dff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.65,
+    shadowRadius: 14,
+    elevation: 10,
   },
   glassTag: {
     borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(180,140,255,0.45)',
   },
   glassTagInner: {
     paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   nameEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nameInput: { height: 40, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1.5, fontSize: 16, minWidth: 140 },
