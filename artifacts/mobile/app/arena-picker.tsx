@@ -19,33 +19,6 @@ import { useColors } from '@/hooks/useColors';
 import ArenaBackground from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 
-const OUTLINE_OFFSETS: [number, number][] = [
-  [-1, -1], [0, -1], [1, -1],
-  [-1,  0],          [1,  0],
-  [-1,  1], [0,  1], [1,  1],
-];
-
-type OutlinedTextProps = React.ComponentProps<typeof Text> & {
-  outlineColor?: string;
-  outlineWidth?: number;
-};
-
-function OutlinedText({ style, outlineColor = 'white', outlineWidth = 1, children, ...rest }: OutlinedTextProps) {
-  return (
-    <View>
-      {OUTLINE_OFFSETS.map(([dx, dy], i) => (
-        <Text
-          key={i}
-          style={[style, { position: 'absolute', color: outlineColor, left: dx * outlineWidth, top: dy * outlineWidth }]}
-          {...rest}
-        >
-          {children}
-        </Text>
-      ))}
-      <Text style={style} {...rest}>{children}</Text>
-    </View>
-  );
-}
 
 export default function ArenaPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode: string }>();
@@ -192,12 +165,12 @@ export default function ArenaPickerScreen() {
                     </View>
                   ) : null}
                   <View style={styles.avatarNameWrap}>
-                    <OutlinedText style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
+                    <Text style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
                       {av.name}
-                    </OutlinedText>
-                    <OutlinedText style={[styles.avatarQuote, { color: 'rgba(20,0,50,0.65)' }]} numberOfLines={1}>
+                    </Text>
+                    <Text style={[styles.avatarQuote, { color: 'rgba(20,0,50,0.65)' }]} numberOfLines={1}>
                       "{av.quote}"
-                    </OutlinedText>
+                    </Text>
                   </View>
                 </Pressable>
               );
