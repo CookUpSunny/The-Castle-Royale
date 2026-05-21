@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    marginBottom: 6,
+    marginBottom: 16,
   },
   multiChip: {
     paddingHorizontal: 10,
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 4,
+    paddingTop: 20,
     paddingBottom: 16,
     alignItems: 'center',
     paddingLeft: 36,
