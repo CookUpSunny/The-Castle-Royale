@@ -145,18 +145,18 @@ export default function ArenaPickerScreen() {
                     },
                   ]}
                 >
+                  <LinearGradient
+                    colors={['transparent', 'rgba(255,255,255,0.30)']}
+                    start={{ x: 0, y: 0.45 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="none"
+                  />
                   <Image
                     source={av.portrait}
                     style={styles.avatarImage}
                     contentFit="contain"
                     contentPosition="top center"
-                  />
-                  <LinearGradient
-                    colors={['transparent', 'rgba(255,255,255,0.88)']}
-                    start={{ x: 0, y: 0.45 }}
-                    end={{ x: 0, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                    pointerEvents="none"
                   />
                   {isSelected ? (
                     <View style={[styles.selectedBadge, { position: 'absolute', top: 10, right: 10 }]}>
