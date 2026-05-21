@@ -1,3 +1,4 @@
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -289,33 +290,37 @@ export default function LobbyScreen() {
           </Animated.View>
 
           <View style={styles.nameSection}>
-            {editingName ? (
-              <View style={styles.nameEditRow}>
-                <TextInput
-                  value={nameInput}
-                  onChangeText={setNameInput}
-                  style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.card }]}
-                  autoFocus
-                  maxLength={16}
-                  onSubmitEditing={handleNameSave}
-                  returnKeyType="done"
-                />
-                <Pressable onPress={handleNameSave} style={[styles.nameConfirm, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.nameConfirmText}>✓</Text>
-                </Pressable>
+            <BlurView intensity={55} tint="dark" style={styles.glassTag}>
+              <View style={styles.glassTagInner}>
+                {editingName ? (
+                  <View style={styles.nameEditRow}>
+                    <TextInput
+                      value={nameInput}
+                      onChangeText={setNameInput}
+                      style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.card }]}
+                      autoFocus
+                      maxLength={16}
+                      onSubmitEditing={handleNameSave}
+                      returnKeyType="done"
+                    />
+                    <Pressable onPress={handleNameSave} style={[styles.nameConfirm, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.nameConfirmText}>✓</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable onPress={() => { setNameInput(playerName); setEditingName(true); }}>
+                    <Text style={[styles.playerName, { color: colors.mutedForeground }]}>
+                      ✎  {profile?.displayName ?? playerName}
+                    </Text>
+                  </Pressable>
+                )}
+                {isAuthenticated && displayElo !== null && (
+                  <Text style={[styles.eloText, { color: colors.accent }]}>
+                    ELO {displayElo}
+                  </Text>
+                )}
               </View>
-            ) : (
-              <Pressable onPress={() => { setNameInput(playerName); setEditingName(true); }}>
-                <Text style={[styles.playerName, { color: colors.mutedForeground }]}>
-                  ✎  {profile?.displayName ?? playerName}
-                </Text>
-              </Pressable>
-            )}
-            {isAuthenticated && displayElo !== null && (
-              <Text style={[styles.eloText, { color: colors.accent }]}>
-                ELO {displayElo}
-              </Text>
-            )}
+            </BlurView>
           </View>
         </View>
 
@@ -474,7 +479,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 20,
+    paddingBottom: 56,
   },
   bottomGroup: {
     flex: 1,
@@ -490,6 +495,18 @@ const styles = StyleSheet.create({
   logoRoyale: { fontSize: 52, fontWeight: '900', letterSpacing: 6, fontStyle: 'italic', lineHeight: 58 },
   logoTagline: { marginTop: 8, fontSize: 11, letterSpacing: 3, fontWeight: '500' },
   nameSection: { marginTop: 8, alignItems: 'center' },
+  glassTag: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  glassTagInner: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
   nameEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nameInput: { height: 40, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1.5, fontSize: 16, minWidth: 140 },
   nameConfirm: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
