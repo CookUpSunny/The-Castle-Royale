@@ -357,7 +357,7 @@ export default function LobbyScreen() {
                   style={styles.goldPill}
                 >
                   <Text style={[styles.goldPillText, connectionStatus !== 'connected' && { color: '#5a5030' }]}>
-                    {connectionStatus === 'connected' ? 'PLAY' : 'CONNECTING...'}
+                    {connectionStatus === 'connected' ? 'TAP TO PLAY' : 'CONNECTING...'}
                   </Text>
                 </LinearGradient>
               </Pressable>
@@ -453,15 +453,20 @@ export default function LobbyScreen() {
             </Pressable>
             {showPicker && (
               <Animated.View style={[styles.musicPills, pillsAnimStyle]}>
-                {([0.25, 0.5, 1.0] as const).map((v) => {
-                  const active = !isMuted && volumeLevel === v;
+                {([0, 0.25, 0.5, 1.0] as const).map((v) => {
+                  const active = v === 0 ? isMuted : (!isMuted && volumeLevel === v);
                   return (
                     <Pressable
                       key={v}
                       onPress={() => {
-                        setVolumeLevel(v);
-                        if (isMuted) toggleMute();
-                        closePicker();
+                        if (v === 0) {
+                          if (!isMuted) toggleMute();
+                          closePicker();
+                        } else {
+                          setVolumeLevel(v);
+                          if (isMuted) toggleMute();
+                          closePicker();
+                        }
                       }}
                       style={({ pressed }) => [
                         styles.musicPill,
@@ -471,7 +476,7 @@ export default function LobbyScreen() {
                       hitSlop={6}
                     >
                       <Text style={[styles.musicPillText, active && styles.musicPillTextActive]}>
-                        {v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
+                        {v === 0 ? '0%' : v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
                       </Text>
                     </Pressable>
                   );
