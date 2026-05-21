@@ -1,10 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
-  SharedValue,
   cancelAnimation,
   runOnJS,
   useAnimatedStyle,
@@ -12,7 +11,6 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
@@ -44,9 +42,54 @@ interface PlayerHandProps {
   onDragStart?: (card: CardType, x: number, y: number) => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd?: (x: number, y: number) => void;
-  /** Override the available width used for overlap + edge-clamp math (defaults to full screen width). Pass when the container is narrower than the screen. */
+  /** Override the available width used for fan arc math (defaults to full screen width). Pass when the container is narrower than the screen. */
   availableWidth?: number;
 }
+
+// ─── Fan arc constants ────────────────────────────────────────────────────────
+const CARD_WIDTH = 66;
+const CARD_HEIGHT = 100;
+/** Visible height of the fan container. Cards arc within this space. */
+const FAN_CONTAINER_H = 160;
+/** Radius of the imaginary circle whose arc the card bottoms follow. */
+const FAN_PIVOT_R = 220;
+/** Maximum half-spread in degrees (each side from center). */
+const MAX_HALF_SPREAD = 30;
+
+/**
+ * Compute the absolute position and rotation for card [index] of [total]
+ * in the pinched-accordion fan layout.
+ */
+function computeFanPosition(
+  index: number,
+  total: number,
+  containerWidth: number,
+): { left: number; top: number; rotationDeg: number } {
+  const center = (total - 1) / 2;
+  // Total spread grows with hand size, capped at ±MAX_HALF_SPREAD each side.
+  const totalSpreadDeg = total <= 1 ? 0 : Math.min(total * 7, MAX_HALF_SPREAD * 2);
+  const perCardDeg = total > 1 ? totalSpreadDeg / (total - 1) : 0;
+  const rotationDeg = (index - center) * perCardDeg;
+  const rotationRad = (rotationDeg * Math.PI) / 180;
+
+  // Pivot sits below the container so the arc curves nicely upward.
+  // pivotY is measured from the container top; setting it to
+  // (FAN_CONTAINER_H + FAN_PIVOT_R - 10) places the center card bottom
+  // 10 px above the container's bottom edge.
+  const pivotX = containerWidth / 2;
+  const pivotY = FAN_CONTAINER_H + FAN_PIVOT_R - 10;
+
+  const cardBottomX = pivotX + FAN_PIVOT_R * Math.sin(rotationRad);
+  const cardBottomY = pivotY - FAN_PIVOT_R * Math.cos(rotationRad);
+
+  return {
+    left: cardBottomX - CARD_WIDTH / 2,
+    top: cardBottomY - CARD_HEIGHT,
+    rotationDeg,
+  };
+}
+
+// ─── HandCard ─────────────────────────────────────────────────────────────────
 
 function HandCard({
   card,
@@ -55,10 +98,6 @@ function HandCard({
   multiplicity,
   onTap,
   onLongPress,
-  overlapSV,
-  isFirst,
-  index,
-  total,
   isStarterPick,
   draggable,
   onDragStart,
@@ -71,10 +110,6 @@ function HandCard({
   multiplicity: number;
   onTap: (card: CardType) => void;
   onLongPress: (card: CardType) => void;
-  overlapSV: SharedValue<number>;
-  isFirst: boolean;
-  index: number;
-  total: number;
   isStarterPick?: boolean;
   draggable?: boolean;
   onDragStart?: (card: CardType, x: number, y: number) => void;
@@ -112,20 +147,10 @@ function HandCard({
     shadowOpacity: glowOpacity.value,
   }));
 
-  // Fan curve: distribute rotation symmetrically from center.
-  // perCardDeg is capped so a large hand never exceeds ±12° total spread.
-  const center = (total - 1) / 2;
-  const perCardDeg = total > 1 ? Math.min(3, 20 / (total - 1)) : 0;
-  const fanAngle = (index - center) * perCardDeg;
-  // Edge cards arc upward (negative Y) — center is the lowest point.
-  const arcRise = Math.abs(index - center) * 3;
-
+  // Bounce is the only per-card animation — arc position + rotation are
+  // handled by the absolutely-positioned wrapper in the parent.
   const animStyle = useAnimatedStyle(() => ({
-    marginLeft: isFirst ? 0 : overlapSV.value,
-    transform: [
-      { translateY: bounce.value - arcRise },
-      { rotateZ: `${fanAngle}deg` },
-    ],
+    transform: [{ translateY: bounce.value }],
   }));
 
   const handlePress = useCallback(() => {
@@ -220,10 +245,24 @@ function HandCard({
   return cardNode;
 }
 
-const CARD_WIDTH = 66;
-const SCROLL_PADDING_H = 48; // paddingHorizontal 24 each side in scrollContent
+// ─── PlayerHand ───────────────────────────────────────────────────────────────
 
-export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, discardPile, isMyTurn, onPlayCard, onPlayCards, mustPlayStarter, draggable, onDragStart, onDragMove, onDragEnd, availableWidth }: PlayerHandProps) {
+export default function PlayerHand({
+  hand,
+  faceUp,
+  faceDownCount,
+  faceDownIds,
+  discardPile,
+  isMyTurn,
+  onPlayCard,
+  onPlayCards,
+  mustPlayStarter,
+  draggable,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  availableWidth,
+}: PlayerHandProps) {
   const colors = useColors();
   const { width: screenWidth } = useWindowDimensions();
   const containerWidth = availableWidth ?? screenWidth;
@@ -233,23 +272,10 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
 
   const activeCards: CardType[] = showHand ? hand : showFaceUp ? faceUp : [];
   const totalCards = showHand ? hand.length : showFaceUp ? faceUp.length : faceDownCount;
-  const discardLabel = (() => {
-    const n = discardPile.length;
-    if (n === 0) return 'DISCARD · EMPTY';
-    return `DISCARD · ${n} ${n === 1 ? 'CARD' : 'CARDS'}`;
-  })();
-
-  const activeLabel = mustPlayStarter
-    ? '🃏 PLAY YOUR STARTER · ANY CARD'
-    : showHand
-    ? discardLabel
-    : showFaceUp
-    ? `FACE-UP CARDS (${faceUp.length})`
-    : `FACE-DOWN — TAP BLIND (${faceDownCount})`;
 
   // In starter mode the LOWEST-VALUE card from the active zone gets a gold
   // glow so the player knows the strategically-correct sacrifice without being
-  // forced into it. No text badge — the glow speaks for itself.
+  // forced into it.
   const starterPickId: string | null = (() => {
     if (!mustPlayStarter || activeCards.length === 0) return null;
     const sorted = [...activeCards].sort((a, b) => a.value - b.value);
@@ -271,8 +297,6 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
       .map(([value, cards]) => ({
         value,
         cards,
-        // In starter mode every duplicate group is legal — pile is empty and
-        // the server accepts any same-value bundle. Otherwise check pile-match.
         playable: mustPlayStarter ? true : canPlayCardFn(cards[0]!, discardPile),
       }))
       .sort((a, b) => a.value - b.value);
@@ -283,45 +307,6 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
     for (const c of activeCards) counts.set(c.value, (counts.get(c.value) ?? 0) + 1);
     return counts;
   }, [activeCards]);
-
-  // Compute the tightest overlap needed to keep all cards on screen.
-  // The comfortable defaults (-10 for ≤5 cards, -28 for >5) are only made
-  // tighter when the natural fan would overflow the screen.
-  const staticOverlap = useMemo(() => {
-    if (totalCards <= 1) return 0;
-    const comfortableOverlap = totalCards > 5 ? -28 : -10;
-    const usableWidth = containerWidth - SCROLL_PADDING_H;
-    // Total width = CARD_WIDTH + (n-1) * (CARD_WIDTH + overlapValue)
-    // Solve for overlapValue at the boundary:
-    const requiredOverlap = (usableWidth - CARD_WIDTH * totalCards) / (totalCards - 1);
-    // Use whichever is more compressed (more negative)
-    return Math.min(comfortableOverlap, requiredOverlap);
-  }, [totalCards, containerWidth]);
-
-  // Animated shared value for live bunching during drag
-  const liveOverlapSV = useSharedValue(staticOverlap);
-
-  // Keep the shared value in sync when card count / screen width changes
-  useEffect(() => {
-    liveOverlapSV.value = withSpring(staticOverlap, { stiffness: 200, damping: 20 });
-  }, [staticOverlap, liveOverlapSV]);
-
-  // Wrap drag callbacks to animate bunching near screen edges
-  const wrappedOnDragMove = useCallback((x: number, y: number) => {
-    const edgeThreshold = 80;
-    if (x < edgeThreshold || x > containerWidth - edgeThreshold) {
-      // Tighten by 14px more than the static overlap, but never compress past -44
-      // Math.max picks the less-negative value (the cap) when tightening would overshoot
-      const tightened = Math.max(staticOverlap - 14, -44);
-      liveOverlapSV.value = withTiming(tightened, { duration: 80 });
-    }
-    onDragMove?.(x, y);
-  }, [onDragMove, containerWidth, staticOverlap, liveOverlapSV]);
-
-  const wrappedOnDragEnd = useCallback((x: number, y: number) => {
-    liveOverlapSV.value = withSpring(staticOverlap, { stiffness: 180, damping: 18 });
-    onDragEnd?.(x, y);
-  }, [onDragEnd, staticOverlap, liveOverlapSV]);
 
   const handleTap = useCallback((card: CardType) => {
     onPlayCard(card.id);
@@ -341,13 +326,7 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
     onPlayCards(ids);
   }, [activeCards, onPlayCards]);
 
-  // When the player is in the blind face-down stage, render a dedicated animated
-  // standout instead of the normal hand strip — cards lift up the screen, glow,
-  // and breathe so the final reveals feel cinematic and easy to tap.
-  // NOTE: This must be rendered AFTER all hooks have been called above (Rules
-  // of Hooks). Returning early before the hooks would crash the app with
-  // "Rendered fewer hooks than expected" the moment the player transitions
-  // from face-up → face-down (end of castle).
+  // Must be AFTER all hooks (Rules of Hooks — see comment in original code).
   if (showFaceDown) {
     return (
       <FaceDownStage
@@ -360,9 +339,7 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
 
   return (
     <View style={styles.container}>
-      {/* Multi-play chips: one per duplicate group. Disabled (greyed out) when not your turn or not playable.
-          In starter mode every duplicate group is legal (no pile-match), so chips light up for free.
-          Also shown in face-up mode — players can play doubles/triples from face-up cards too. */}
+      {/* Multi-play chips — one per duplicate group */}
       {(showHand || showFaceUp) && duplicateGroups.length > 0 && (
         <View style={styles.multiRow}>
           {duplicateGroups.map((g) => {
@@ -403,8 +380,7 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
       )}
 
       {showFaceUp ? (
-        /* Face-up final phase — cards are stationary and centered, same
-           treatment as the face-down stage so the player can tap clearly. */
+        /* Face-up final phase — stationary centered cards */
         <View style={styles.faceUpRow}>
           {activeCards.map((card, i) => {
             const isPlayable = canPlayCardFn(card, discardPile);
@@ -424,47 +400,49 @@ export default function PlayerHand({ hand, faceUp, faceDownCount, faceDownIds, d
           })}
         </View>
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          scrollEnabled={activeCards.length > 6 || faceDownCount > 6}
-        >
+        /* ── Pinched accordion fan ── */
+        <View style={[styles.fanContainer, { width: containerWidth }]}>
           {activeCards.map((card, i) => {
             const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
             const multiplicity = valueCounts.get(card.value) ?? 1;
+            const { left, top, rotationDeg } = computeFanPosition(i, totalCards, containerWidth);
             return (
-              <HandCard
+              <View
                 key={card.id}
-                card={card}
-                isPlayable={isPlayable}
-                isMyTurn={isMyTurn}
-                multiplicity={multiplicity}
-                onTap={handleTap}
-                onLongPress={handleLongPress}
-                overlapSV={liveOverlapSV}
-                isFirst={i === 0}
-                index={i}
-                total={activeCards.length}
-                isStarterPick={card.id === starterPickId}
-                draggable={draggable}
-                onDragStart={onDragStart}
-                onDragMove={draggable ? wrappedOnDragMove : onDragMove}
-                onDragEnd={draggable ? wrappedOnDragEnd : onDragEnd}
-              />
+                style={[
+                  styles.fanCardWrapper,
+                  {
+                    left,
+                    top,
+                    zIndex: i,
+                    transform: [{ rotate: `${rotationDeg}deg` }],
+                  },
+                ]}
+              >
+                <HandCard
+                  card={card}
+                  isPlayable={isPlayable}
+                  isMyTurn={isMyTurn}
+                  multiplicity={multiplicity}
+                  onTap={handleTap}
+                  onLongPress={handleLongPress}
+                  isStarterPick={card.id === starterPickId}
+                  draggable={draggable}
+                  onDragStart={onDragStart}
+                  onDragMove={onDragMove}
+                  onDragEnd={onDragEnd}
+                />
+              </View>
             );
           })}
-        </ScrollView>
+        </View>
       )}
     </View>
   );
 }
 
-/**
- * A single face-up card rendered stationary with a pulsing gold aura —
- * matching the cinematic treatment of the face-down stage so the final
- * face-up phase feels just as intentional and easy to tap.
- */
+// ─── FaceUpCardSlot ───────────────────────────────────────────────────────────
+
 function FaceUpCardSlot({
   card,
   index,
@@ -595,11 +573,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
   },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-    alignItems: 'center',
-    paddingLeft: 36,
+  fanContainer: {
+    height: FAN_CONTAINER_H,
+    overflow: 'visible',
+  },
+  fanCardWrapper: {
+    position: 'absolute',
   },
 });
