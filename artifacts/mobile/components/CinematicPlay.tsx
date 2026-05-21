@@ -15,17 +15,7 @@ function centerOf(r: LayoutRect | null): { x: number; y: number } | null {
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
 }
 
-type CinematicKind = 'normal' | 'big';
-
-function kindFromEvent(ev: LastEvent): CinematicKind {
-  if (ev.type === 'burn' || ev.type === 'set_complete') return 'big';
-  if ((ev.playedCount ?? 1) >= 2) return 'big';
-  return 'normal';
-}
-
 function spotlightFromEvent(ev: LastEvent): SpotlightStrength {
-  if (ev.type === 'burn' || ev.type === 'set_complete') return 'strong';
-  if ((ev.playedCount ?? 1) >= 2) return 'strong';
   if (ev.type === 'normal' || ev.type === 'reset') return 'soft';
   return 'off';
 }
@@ -74,7 +64,7 @@ export default function CinematicPlay({
   onAvatarPulse: (side: 'self' | 'opponent') => void;
   initialLastKey?: string | null;
 }) {
-  const [flight, setFlight] = useState<{ card: CardType; key: string; side: 'self' | 'opponent'; kind: CinematicKind } | null>(null);
+  const [flight, setFlight] = useState<{ card: CardType; key: string; side: 'self' | 'opponent' } | null>(null);
   const lastKeyRef = useRef<string | null>(initialLastKey ?? null);
 
   // Skip the gameId reset on first mount so the pre-seeded initialLastKey is
@@ -111,7 +101,7 @@ export default function CinematicPlay({
     const card = ev?.card;
     if (!ev || !card) return;
     if (ev.type === 'pickup' || ev.wasFaceDown) return;
-    if (ev.type !== 'normal' && ev.type !== 'reset' && ev.type !== 'burn' && ev.type !== 'set_complete') return;
+    if (ev.type !== 'normal' && ev.type !== 'reset') return;
 
     const key = lastEventIdentityKey(gameId, ev);
     if (lastKeyRef.current === key) return;
@@ -124,10 +114,9 @@ export default function CinematicPlay({
     lastKeyRef.current = key;
     onAvatarPulse(side);
 
-    const k = kindFromEvent(ev);
-    const arcLift = k === 'big' ? 124 : 84;
+    const arcLift = 84;
     const ctrlX = (start.x + end.x) / 2 + (side === 'self' ? 18 : -18);
-    const ctrlY = Math.min(start.y, end.y) - Math.max(arcLift, Math.abs(start.y - end.y) * (k === 'big' ? 0.5 : 0.35));
+    const ctrlY = Math.min(start.y, end.y) - Math.max(arcLift, Math.abs(start.y - end.y) * 0.35);
 
     sx.value = start.x - SM.w / 2;
     sy.value = start.y - SM.h / 2;
@@ -139,14 +128,14 @@ export default function CinematicPlay({
     impact.value = 0;
     sideDir.value = side === 'self' ? 1 : -1;
 
-    setFlight({ card, key, side, kind: k });
+    setFlight({ card, key, side });
     setSpotTrigger((n) => n + 1);
 
     const finish = () => {
       setFlight((cur) => (cur?.key === key ? null : cur));
     };
 
-    const flightMs = k === 'big' ? 480 : 420;
+    const flightMs = 420;
     const anticipationMs = 110;
 
     trigger.value = trigger.value + 1;
@@ -168,7 +157,7 @@ export default function CinematicPlay({
     ? (lastEvent ? spotlightFromEvent(lastEvent) : 'soft')
     : 'off';
 
-  const enableHand = !!flight && flight.side === 'self' && (flight.kind === 'big' || (lastEvent?.type === 'normal' || lastEvent?.type === 'reset'));
+  const enableHand = !!flight && flight.side === 'self' && (lastEvent?.type === 'normal' || lastEvent?.type === 'reset');
 
   // Lead card — full 3D tilt driven inline from progress.value.
   // rotateX: parabola 12° → −8° → 0°   rotateY: sin-bank in travel direction.
@@ -199,7 +188,7 @@ export default function CinematicPlay({
         { perspective: 800 },
         { rotateX: `${rX}deg` },
         { rotateY: `${rY}deg` },
-        { rotate: `${t * (flight?.kind === 'big' ? 22 : 16)}deg` },
+        { rotate: `${t * 16}deg` },
         { scale: baseScale + punch * 0.08 },
       ],
       zIndex: 120,

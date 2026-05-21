@@ -452,7 +452,7 @@ export default function GameScreen() {
       // Trigger the multi-play burst overlay (DOUBLE!/TRIPLE!/QUADRUPLE!)
       // whenever 2+ same-value cards were played in one move. Skip face-down
       // plays — those get their own dedicated reveal animation instead.
-      if (!ev.wasFaceDown && ev.card && (ev.playedCount ?? 1) >= 2) {
+      if (!ev.wasFaceDown && ev.card && (ev.playedCount ?? 1) >= 2 && ev.type !== 'set_complete') {
         const key = `${ev.playerId}_${ev.card.id}_${ev.playedCount}`;
         if (lastBurstKeyRef.current !== key) {
           lastBurstKeyRef.current = key;

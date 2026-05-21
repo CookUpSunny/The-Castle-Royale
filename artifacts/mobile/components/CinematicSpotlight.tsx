@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { LayoutRect } from '@/components/CardPlayFlight';
 
-export type SpotlightStrength = 'off' | 'soft' | 'strong';
+export type SpotlightStrength = 'off' | 'soft';
 
 function centerOf(r: LayoutRect | null): { x: number; y: number } | null {
   if (!r || r.width <= 0 || r.height <= 0) return null;
@@ -25,8 +25,8 @@ export default function CinematicSpotlight({
   const c = centerOf(targetRect);
 
   useEffect(() => {
-    const dimTo = strength === 'off' ? 0 : strength === 'soft' ? 0.35 : 0.55;
-    const spotTo = strength === 'off' ? 0 : strength === 'soft' ? 1 : 1;
+    const dimTo = strength === 'off' ? 0 : 0.35;
+    const spotTo = strength === 'off' ? 0 : 1;
 
     // A short “snap in”, then a slightly longer release.
     dim.value = withTiming(dimTo, { duration: 140, easing: Easing.out(Easing.cubic) });
@@ -45,7 +45,7 @@ export default function CinematicSpotlight({
 
   // Spotlight is “good enough” without a true radial gradient: we combine a
   // full-screen dim + a bright soft disc around the target.
-  const discSize = strength === 'soft' ? 260 : 340;
+  const discSize = 260;
   const left = (c?.x ?? 0) - discSize / 2;
   const top = (c?.y ?? 0) - discSize / 2;
 
