@@ -152,7 +152,7 @@ export default function ArenaPickerScreen() {
                     contentPosition="top center"
                   />
                   <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.82)']}
+                    colors={['transparent', 'rgba(255,255,255,0.88)']}
                     start={{ x: 0, y: 0.45 }}
                     end={{ x: 0, y: 1 }}
                     style={StyleSheet.absoluteFill}
@@ -164,10 +164,10 @@ export default function ArenaPickerScreen() {
                     </View>
                   ) : null}
                   <View style={styles.avatarNameWrap}>
-                    <Text style={[styles.avatarName, { color: isSelected ? av.color : '#fff' }]}>
+                    <Text style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
                       {av.name}
                     </Text>
-                    <Text style={[styles.avatarQuote, { color: 'rgba(255,255,255,0.60)' }]} numberOfLines={1}>
+                    <Text style={[styles.avatarQuote, { color: 'rgba(20,0,50,0.65)' }]} numberOfLines={1}>
                       "{av.quote}"
                     </Text>
                   </View>
