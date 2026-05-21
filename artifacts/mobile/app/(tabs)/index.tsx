@@ -246,170 +246,174 @@ export default function LobbyScreen() {
 
       <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 20, paddingBottom: insets.bottom + 34 }]}>
 
-        <Animated.View style={[styles.logoSection, logoStyle]}>
-          <Text style={styles.logoCrown}>♛</Text>
-          <OutlinedTitle
-            text="CASTLE"
-            textStyle={styles.logoTitle}
-            mainColor="#ffd700"
-            glowColor="#c8960a"
-          />
-          <OutlinedTitle
-            text="ROYALE"
-            textStyle={styles.logoRoyale}
-            mainColor="#a855f7"
-            glowColor="#a855f7"
-          />
-          <Text style={[styles.logoTagline, { color: colors.mutedForeground }]}>RISK IT ALL · WIN IT ALL</Text>
-        </Animated.View>
+        <View style={styles.topGroup}>
+          <Animated.View style={[styles.logoSection, logoStyle]}>
+            <Text style={styles.logoCrown}>♛</Text>
+            <Text style={styles.logoThe}>THE</Text>
+            <OutlinedTitle
+              text="CASTLE"
+              textStyle={styles.logoTitle}
+              mainColor="#ffd700"
+              glowColor="#c8960a"
+            />
+            <OutlinedTitle
+              text="ROYALE"
+              textStyle={styles.logoRoyale}
+              mainColor="#a855f7"
+              glowColor="#a855f7"
+            />
+            <Text style={[styles.logoTagline, { color: colors.mutedForeground }]}>RISK IT ALL · WIN IT ALL</Text>
+          </Animated.View>
 
-        <View style={styles.nameSection}>
-          {editingName ? (
-            <View style={styles.nameEditRow}>
-              <TextInput
-                value={nameInput}
-                onChangeText={setNameInput}
-                style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.card }]}
-                autoFocus
-                maxLength={16}
-                onSubmitEditing={handleNameSave}
-                returnKeyType="done"
-              />
-              <Pressable onPress={handleNameSave} style={[styles.nameConfirm, { backgroundColor: colors.primary }]}>
-                <Text style={styles.nameConfirmText}>✓</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable onPress={() => { setNameInput(playerName); setEditingName(true); }}>
-              <Text style={[styles.playerName, { color: colors.mutedForeground }]}>
-                ✎  {profile?.displayName ?? playerName}
-              </Text>
-            </Pressable>
-          )}
-          {isAuthenticated && displayElo !== null && (
-            <Text style={[styles.eloText, { color: colors.accent }]}>
-              ELO {displayElo}
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.menuSection}>
-          <Animated.View style={playStyle}>
-            <Pressable
-              onPress={handlePlay}
-              disabled={connectionStatus !== 'connected'}
-              style={({ pressed }) => [styles.goldPillOuter, pressed && { opacity: 0.88 }]}
-            >
-              <LinearGradient
-                colors={connectionStatus === 'connected'
-                  ? ['#f5e070', '#d4a820', '#f5e070']
-                  : ['#3a3020', '#1e1a0a', '#3a3020']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.goldPill}
-              >
-                <Text style={[styles.goldPillText, connectionStatus !== 'connected' && { color: '#5a5030' }]}>
-                  {connectionStatus === 'connected' ? 'PLAY' : 'CONNECTING...'}
+          <View style={styles.nameSection}>
+            {editingName ? (
+              <View style={styles.nameEditRow}>
+                <TextInput
+                  value={nameInput}
+                  onChangeText={setNameInput}
+                  style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.card }]}
+                  autoFocus
+                  maxLength={16}
+                  onSubmitEditing={handleNameSave}
+                  returnKeyType="done"
+                />
+                <Pressable onPress={handleNameSave} style={[styles.nameConfirm, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.nameConfirmText}>✓</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => { setNameInput(playerName); setEditingName(true); }}>
+                <Text style={[styles.playerName, { color: colors.mutedForeground }]}>
+                  ✎  {profile?.displayName ?? playerName}
                 </Text>
-              </LinearGradient>
-            </Pressable>
-          </Animated.View>
-
-          <Animated.View
-            style={[styles.goldPillOuter, styles.goldPillSmall, styles.morphPillOuter, morphContainerStyle]}
-            onLayout={(e) => { buttonWidthRef.current = e.nativeEvent.layout.width; }}
-          >
-            <Pressable
-              onPress={handleHowToPlay}
-              style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.88 }]}
-            >
-              <LinearGradient
-                colors={['#e8d060', '#b89018', '#e8d060']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.morphGradient}
-              >
-                <Animated.View style={[styles.pillRow, morphTextStyle]}>
-                  <Text style={styles.pillIcon}>?</Text>
-                  <Text style={[styles.goldPillText, styles.goldPillTextSm]}>HOW TO PLAY</Text>
-                </Animated.View>
-                <Animated.View style={morphGoldStyle} />
-              </LinearGradient>
-            </Pressable>
-          </Animated.View>
-
-        </View>
-
-        <View style={styles.statsRow}>
-          {displayCoins !== null ? (
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.accent }]}>
-                {displayCoins.toLocaleString()}
+              </Pressable>
+            )}
+            {isAuthenticated && displayElo !== null && (
+              <Text style={[styles.eloText, { color: colors.accent }]}>
+                ELO {displayElo}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>COINS</Text>
-            </View>
-          ) : (
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#444' }]}>—</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>COINS</Text>
-            </View>
-          )}
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          {isAuthenticated && profile ? (
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.electric }]}>
-                {profile.wins}W · {profile.losses}L
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>RECORD</Text>
-            </View>
-          ) : (
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#444' }]}>—</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>RECORD</Text>
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
-
-        <View style={styles.connectionDot}>
-          <View style={[styles.dot, { backgroundColor: connectionStatus === 'connected' ? '#22c55e' : '#ef4444' }]} />
-          <Text style={[styles.connectionText, { color: colors.mutedForeground }]}>
-            {connectionStatus === 'connected'
-              ? onlineCount > 0
-                ? `● ${onlineCount} online`
-                : 'ONLINE'
-              : connectionStatus.toUpperCase()}
-          </Text>
-        </View>
-
-        <View style={styles.musicRow}>
-          <Pressable
-            onPress={toggleMute}
-            style={({ pressed }) => [styles.muteBtn, pressed && { opacity: 0.6 }]}
-            hitSlop={8}
-          >
-            <Text style={styles.muteIcon}>{isMuted ? '🔇' : '🔊'}</Text>
-          </Pressable>
-          {([0.25, 0.5, 1.0] as const).map((v) => {
-            const active = !isMuted && volumeLevel === v;
-            return (
+        <View style={styles.bottomGroup}>
+          <View style={styles.menuSection}>
+            <Animated.View style={playStyle}>
               <Pressable
-                key={v}
-                onPress={() => {
-                  setVolumeLevel(v);
-                  if (isMuted) toggleMute();
-                }}
-                style={({ pressed }) => [
-                  styles.musicPill,
-                  active && styles.musicPillActive,
-                  pressed && { opacity: 0.6 },
-                ]}
-                hitSlop={6}
+                onPress={handlePlay}
+                disabled={connectionStatus !== 'connected'}
+                style={({ pressed }) => [styles.goldPillOuter, pressed && { opacity: 0.88 }]}
               >
-                <Text style={[styles.musicPillText, active && styles.musicPillTextActive]}>
-                  {v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
-                </Text>
+                <LinearGradient
+                  colors={connectionStatus === 'connected'
+                    ? ['#f5e070', '#d4a820', '#f5e070']
+                    : ['#3a3020', '#1e1a0a', '#3a3020']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.goldPill}
+                >
+                  <Text style={[styles.goldPillText, connectionStatus !== 'connected' && { color: '#5a5030' }]}>
+                    {connectionStatus === 'connected' ? 'PLAY' : 'CONNECTING...'}
+                  </Text>
+                </LinearGradient>
               </Pressable>
-            );
-          })}
+            </Animated.View>
+
+            <Animated.View
+              style={[styles.goldPillOuter, styles.goldPillSmall, styles.morphPillOuter, morphContainerStyle]}
+              onLayout={(e) => { buttonWidthRef.current = e.nativeEvent.layout.width; }}
+            >
+              <Pressable
+                onPress={handleHowToPlay}
+                style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.88 }]}
+              >
+                <LinearGradient
+                  colors={['#e8d060', '#b89018', '#e8d060']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.morphGradient}
+                >
+                  <Animated.View style={[styles.pillRow, morphTextStyle]}>
+                    <Text style={styles.pillIcon}>?</Text>
+                    <Text style={[styles.goldPillText, styles.goldPillTextSm]}>HOW TO PLAY</Text>
+                  </Animated.View>
+                  <Animated.View style={morphGoldStyle} />
+                </LinearGradient>
+              </Pressable>
+            </Animated.View>
+
+          </View>
+
+          <View style={styles.statsRow}>
+            {displayCoins !== null ? (
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.accent }]}>
+                  {displayCoins.toLocaleString()}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>COINS</Text>
+              </View>
+            ) : (
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: '#444' }]}>—</Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>COINS</Text>
+              </View>
+            )}
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            {isAuthenticated && profile ? (
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.electric }]}>
+                  {profile.wins}W · {profile.losses}L
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>RECORD</Text>
+              </View>
+            ) : (
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: '#444' }]}>—</Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>RECORD</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.connectionDot}>
+            <View style={[styles.dot, { backgroundColor: connectionStatus === 'connected' ? '#22c55e' : '#ef4444' }]} />
+            <Text style={[styles.connectionText, { color: colors.mutedForeground }]}>
+              {connectionStatus === 'connected'
+                ? onlineCount > 0
+                  ? `● ${onlineCount} online`
+                  : 'ONLINE'
+                : connectionStatus.toUpperCase()}
+            </Text>
+          </View>
+
+          <View style={styles.musicRow}>
+            <Pressable
+              onPress={toggleMute}
+              style={({ pressed }) => [styles.muteBtn, pressed && { opacity: 0.6 }]}
+              hitSlop={8}
+            >
+              <Text style={styles.muteIcon}>{isMuted ? '🔇' : '🔊'}</Text>
+            </Pressable>
+            {([0.25, 0.5, 1.0] as const).map((v) => {
+              const active = !isMuted && volumeLevel === v;
+              return (
+                <Pressable
+                  key={v}
+                  onPress={() => {
+                    setVolumeLevel(v);
+                    if (isMuted) toggleMute();
+                  }}
+                  style={({ pressed }) => [
+                    styles.musicPill,
+                    active && styles.musicPillActive,
+                    pressed && { opacity: 0.6 },
+                  ]}
+                  hitSlop={6}
+                >
+                  <Text style={[styles.musicPillText, active && styles.musicPillTextActive]}>
+                    {v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </View>
     </View>
@@ -421,11 +425,24 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
+  },
+  topGroup: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 20,
+  },
+  bottomGroup: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 14,
+    width: '100%',
   },
   logoSection: { alignItems: 'center', marginTop: 20 },
   logoCrown: { fontSize: 28, color: '#ffd700', marginBottom: 2, textShadowColor: '#c8960a', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14 },
+  logoThe: { fontSize: 22, fontWeight: '600', letterSpacing: 6, color: '#ffd700', textShadowColor: '#c8960a', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10, marginBottom: 2 },
   logoTitle: { fontSize: 64, fontWeight: '900', letterSpacing: 8, lineHeight: 68 },
   logoRoyale: { fontSize: 52, fontWeight: '900', letterSpacing: 6, fontStyle: 'italic', lineHeight: 58 },
   logoTagline: { marginTop: 8, fontSize: 11, letterSpacing: 3, fontWeight: '500' },
