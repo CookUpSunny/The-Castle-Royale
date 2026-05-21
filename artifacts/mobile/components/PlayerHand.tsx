@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    marginBottom: 16,
+    marginBottom: 30,
   },
   multiChip: {
     paddingHorizontal: 10,
