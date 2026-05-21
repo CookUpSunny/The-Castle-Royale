@@ -275,7 +275,7 @@ export default function LobbyScreen() {
 
       <SplashCards />
 
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 20, paddingBottom: insets.bottom + 34 }]}>
+      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 20, paddingBottom: insets.bottom + 74 }]}>
 
         <View style={styles.topGroup}>
           <Animated.View style={[styles.logoSection, logoStyle]}>
@@ -329,7 +329,7 @@ export default function LobbyScreen() {
                   </View>
                 ) : (
                   <Pressable onPress={() => { setNameInput(playerName); setEditingName(true); }}>
-                    <Text style={[styles.playerName, { color: colors.mutedForeground }]}>
+                    <Text style={[styles.playerName, { color: '#ffffff' }]}>
                       ✎  {profile?.displayName ?? playerName}
                     </Text>
                   </Pressable>
