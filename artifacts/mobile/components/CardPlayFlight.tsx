@@ -10,7 +10,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
-import BurnEffect from '@/components/BurnEffect';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 
 export interface LayoutRect {
@@ -62,7 +61,6 @@ export default function CardPlayFlight({
   const cx = useSharedValue(0);
   const cy = useSharedValue(0);
   const lastKeyRef = useRef<string | null>(null);
-  const [impactVisible, setImpactVisible] = useState(false);
 
   useEffect(() => {
     lastKeyRef.current = null;
@@ -105,11 +103,6 @@ export default function CardPlayFlight({
     const finish = () => {
       setFlight((cur) => (cur?.key === key ? null : cur));
     };
-    const showImpact = () => {
-      setImpactVisible(true);
-      setTimeout(() => setImpactVisible(false), 700);
-      if (onImpact) onImpact(ev);
-    };
 
     progress.value = withSequence(
       withTiming(-0.14, { duration: 110, easing: Easing.out(Easing.cubic) }),
@@ -122,7 +115,6 @@ export default function CardPlayFlight({
             withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) }),
             withTiming(0, { duration: 220, easing: Easing.in(Easing.cubic) }),
           );
-          runOnJS(showImpact)();
           runOnJS(finish)();
         },
       ),
@@ -153,19 +145,11 @@ export default function CardPlayFlight({
 
   if (!flight) return null;
 
-  const impactColor =
-    lastEvent?.type === 'burn' || lastEvent?.type === 'set_complete'
-      ? '#ff7f00'
-      : lastEvent?.type === 'reset'
-        ? '#c084fc'
-        : '#ffd700';
-
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View style={animStyle}>
         <Card card={flight.card} size="sm" />
       </Animated.View>
-      <BurnEffect visible={impactVisible} color={impactColor} center={centerOf(pileRect)} />
     </View>
   );
 }

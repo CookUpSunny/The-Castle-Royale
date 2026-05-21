@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
 import type { LayoutRect } from '@/components/CardPlayFlight';
@@ -262,53 +262,6 @@ export default function CinematicPlay({
         <Card card={flight.card} size="sm" />
       </Animated.View>
 
-      {/* Subtle impact ring */}
-      <ImpactRing pileRect={pileRect} pulse={spotTrigger} />
     </View>
   );
 }
-
-function ImpactRing({ pileRect, pulse }: { pileRect: LayoutRect | null; pulse: number }) {
-  const c = centerOf(pileRect);
-  const s = useSharedValue(0);
-  const o = useSharedValue(0);
-
-  useEffect(() => {
-    if (!c) return;
-    s.value = 0;
-    o.value = 0;
-    o.value = withTiming(1, { duration: 80 });
-    s.value = withSequence(
-      withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }),
-      withTiming(1.15, { duration: 220, easing: Easing.in(Easing.cubic) }),
-    );
-    o.value = withDelay(120, withTiming(0, { duration: 360, easing: Easing.in(Easing.cubic) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pulse]);
-
-  const style = useAnimatedStyle(() => ({
-    opacity: o.value,
-    transform: [{ scale: 0.7 + s.value * 0.7 }],
-  }));
-
-  if (!c) return null;
-  const size = 120;
-  return (
-    <View pointerEvents="none" style={[styles.impactWrap, { left: c.x - size / 2, top: c.y - size / 2, width: size, height: size }]}>
-      <Animated.View style={[styles.impactRing, style]} />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  impactWrap: {
-    position: 'absolute',
-    zIndex: 105,
-  },
-  impactRing: {
-    flex: 1,
-    borderRadius: 999,
-    borderWidth: 2,
-    borderColor: 'rgba(255,220,140,0.7)',
-  },
-});
