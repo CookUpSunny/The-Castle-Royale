@@ -15,13 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.thecastleroyale.app",
-      "entitlements": {
-        "com.apple.developer.game-center": true
-      }
+      "bundleIdentifier": "app.replit.thecastleroyale"
     },
     "android": {
-      "package": "com.thecastleroyale.app",
+      "package": "app.replit.thecastleroyale",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#07000f"
