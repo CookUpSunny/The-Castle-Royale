@@ -505,6 +505,75 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
   console.log("Manifests updated");
 }
 
+async function cleanupAfterBuild() {
+  if (process.env.CI !== "true") return;
+
+  const { execSync } = require("child_process");
+
+  console.log("Cleaning up deployment image...");
+
+  // Get pnpm store path before removing anything
+  let storePath = "";
+  try {
+    storePath = execSync("pnpm store path", {
+      cwd: workspaceRoot,
+      encoding: "utf-8",
+    }).trim();
+  } catch {}
+
+  // Remove all node_modules — neither production runtime needs them:
+  //   API server: fully bundled by esbuild into dist/index.mjs
+  //   Mobile serve: zero-dependency server (http, fs, path built-ins only)
+  const dirsToRemove = [
+    path.join(workspaceRoot, "node_modules"),
+    path.join(workspaceRoot, "artifacts", "api-server", "node_modules"),
+    path.join(workspaceRoot, "artifacts", "mobile", "node_modules"),
+    path.join(workspaceRoot, "artifacts", "mockup-sandbox", "node_modules"),
+  ];
+
+  for (const libParent of [
+    path.join(workspaceRoot, "lib"),
+    path.join(workspaceRoot, "scripts"),
+  ]) {
+    if (fs.existsSync(libParent)) {
+      for (const entry of fs.readdirSync(libParent)) {
+        const nm = path.join(libParent, entry, "node_modules");
+        if (fs.existsSync(nm)) dirsToRemove.push(nm);
+      }
+    }
+  }
+
+  for (const dir of dirsToRemove) {
+    if (fs.existsSync(dir)) {
+      console.log(`  Removing ${path.relative(workspaceRoot, dir)}...`);
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  // Remove pnpm content-addressable store
+  if (storePath && fs.existsSync(storePath)) {
+    console.log(`  Removing pnpm store at ${storePath}...`);
+    fs.rmSync(storePath, { recursive: true, force: true });
+  }
+
+  // Remove API server source maps (not needed in production)
+  const apiDistDir = path.join(
+    workspaceRoot,
+    "artifacts",
+    "api-server",
+    "dist",
+  );
+  if (fs.existsSync(apiDistDir)) {
+    for (const f of fs.readdirSync(apiDistDir)) {
+      if (f.endsWith(".map")) {
+        fs.unlinkSync(path.join(apiDistDir, f));
+      }
+    }
+  }
+
+  console.log("Image cleanup complete.");
+}
+
 async function main() {
   console.log("Building static Expo Go deployment...");
 
@@ -561,6 +630,9 @@ async function main() {
   if (metroProcess) {
     metroProcess.kill();
   }
+
+  await cleanupAfterBuild();
+
   process.exit(0);
 }
 
