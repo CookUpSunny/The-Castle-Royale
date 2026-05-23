@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   lockOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(2,0,15,0.55)',
     justifyContent: 'center',
     alignItems: 'center',

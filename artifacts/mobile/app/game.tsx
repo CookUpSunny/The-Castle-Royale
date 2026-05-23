@@ -178,7 +178,7 @@ function AvatarChip({ name, isActive, portraitArt, onPress }: {
         ]}
       >
         {portraitArt ? (
-          <Image source={portraitArt} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <Text style={[avatarChipStyles.initial, { color: isActive ? colors.neonGold : colors.neonPurple }]}>
             {initial}

@@ -104,7 +104,7 @@ function NamePlate({ name, isActive, align, portraitArt, onPress, showMenuDots, 
         ]}
       >
         {portraitArt ? (
-          <Image source={portraitArt} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="top" />
+          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" />
         ) : (
           <Text style={[styles.avatarText, { color: isActive ? colors.neonGold : colors.neonPurple, fontSize: compact ? 16 : 22 }]}>{initial}</Text>
         )}

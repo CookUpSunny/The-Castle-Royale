@@ -199,7 +199,7 @@ export default function LobbyScreen() {
   }));
 
   const morphGoldStyle = useAnimatedStyle(() => ({
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#c8960a',
     opacity: morphGoldOpacity.value,
   }));
@@ -304,7 +304,7 @@ export default function LobbyScreen() {
               <View style={styles.lobbyAvatar}>
                 <Image
                   source={avatarPortrait}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   contentPosition="top"
                 />

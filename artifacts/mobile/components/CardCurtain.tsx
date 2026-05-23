@@ -236,7 +236,7 @@ export default function CardCurtain({ onContentReady, sweeping }: CardCurtainPro
   }, [sweeping, cards]);
 
   const wrapperStyle = useAnimatedStyle(() => ({
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: wrapperOpacity.value,
   }));
 

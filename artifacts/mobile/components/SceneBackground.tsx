@@ -288,7 +288,7 @@ function StaticLayer({
       pointerEvents="none"
     >
       <View style={[StyleSheet.absoluteFill, { transform: [{ scale }] }]}>
-        <Image source={source} style={StyleSheet.absoluteFillObject} contentFit="cover" contentPosition="center" transition={0} />
+        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={0} />
       </View>
     </View>
   );
@@ -299,7 +299,7 @@ function MatrixAmbience() {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <WebView
         source={{ html: MATRIX_HTML }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         scrollEnabled={false}
         bounces={false}
         overScrollMode="never"
@@ -342,7 +342,7 @@ function CosmicAmbience() {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <WebView
         source={{ html: COSMIC_HTML }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         scrollEnabled={false}
         bounces={false}
         overScrollMode="never"
