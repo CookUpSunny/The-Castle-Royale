@@ -7,10 +7,12 @@
     "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port $PORT",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "eas:build:ios": "eas build --platform ios --profile production --non-interactive"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "eas-cli": "^18.0.0",
     "@expo-google-fonts/inter": "^0.4.0",
     "@expo/cli": "~55.0.9",
     "@expo/ngrok": "^4.1.0",
