@@ -222,7 +222,7 @@ const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) 
 
       if (spec.isGolden) {
         if (toFaceUp) {
-          revSc.value = withTiming(1.18, { duration: 320, easing: Easing.out(Easing.back) });
+          revSc.value = withTiming(1.18, { duration: 320, easing: Easing.out(Easing.back()) });
           cancelAnimation(glowOp);
           glowOp.value = withTiming(1, { duration: 180 });
         } else {
