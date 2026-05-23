@@ -506,7 +506,10 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
 }
 
 async function cleanupAfterBuild() {
-  if (process.env.CI !== "true") return;
+  // Only clean up during deployment builds — REPLIT_INTERNAL_APP_DOMAIN is set
+  // by the deployment system and is already used by getDeploymentDomain() above.
+  // CI=true is only injected into the postBuild step, NOT into artifact build steps.
+  if (!process.env.REPLIT_INTERNAL_APP_DOMAIN) return;
 
   const { execSync } = require("child_process");
 
