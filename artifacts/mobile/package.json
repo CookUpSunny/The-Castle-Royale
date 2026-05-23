@@ -12,7 +12,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "eas-cli": "^18.0.0",
     "@expo-google-fonts/inter": "^0.4.0",
     "@expo/cli": "~55.0.9",
     "@expo/ngrok": "^4.1.0",
@@ -26,6 +25,7 @@
     "@workspace/api-client-react": "workspace:*",
     "babel-plugin-react-compiler": "^19.0.0-beta-e993439-20250117",
     "babel-preset-expo": "~55.0.9",
+    "eas-cli": "^19.0.8",
     "expo": "~55.0.9",
     "expo-blur": "~55.0.14",
     "expo-constants": "~55.0.16",

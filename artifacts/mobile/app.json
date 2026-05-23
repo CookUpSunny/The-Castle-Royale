@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.replit.thecastleroyale"
+      "bundleIdentifier": "app.replit.thecastleroyale",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "app.replit.thecastleroyale",
@@ -55,8 +58,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "86070001-353d-4654-bbd9-4359a9954254"
+        "projectId": "00ffd88a-a639-4296-b59f-7ff224e87548"
       }
-    }
+    },
+    "owner": "krazi"
   }
 }

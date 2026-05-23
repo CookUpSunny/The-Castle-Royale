@@ -20,17 +20,7 @@
     "production": {
       "autoIncrement": true,
       "ios": {
-        "distribution": "store",
-        "buildType": "archive"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
+        "distribution": "store"
       }
     }
   }
