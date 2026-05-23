@@ -37,7 +37,9 @@ minimumReleaseAgeExclude:
   - stripe-replit-sync
 
 onlyBuiltDependencies:
+  - '@shopify/react-native-skia'
   - '@swc/core'
   - esbuild
+  - msgpackr-extract
   - msw
   - unrs-resolver

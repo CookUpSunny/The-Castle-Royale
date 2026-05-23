@@ -1,3 +1,10 @@
 const { getDefaultConfig } = require("expo/metro-config");
 
-module.exports = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname);
+
+config.resolver.blockList = [
+  /node_modules\/.*_tmp_.*\/.*/,
+  /node_modules\/.pnpm\/.*_tmp_.*\/.*/,
+];
+
+module.exports = config;
