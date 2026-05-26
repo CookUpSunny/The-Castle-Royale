@@ -1,21 +1,12 @@
 /**
- * Casino SFX via **expo-av** (Audio.Sound).
- *
- * We intentionally avoid expo-audio here: Expo Go ships expo-av on every
- * platform and it reliably plays bundled WAVs after `preloadSfx()` runs.
- * expo-audio is newer and may not initialise the native session the same
- * way inside Expo Go / published workflows.
+ * Casino SFX via **expo-audio** (AudioPlayer).
  *
  * Flow:
  *   1. `preloadSfx()` — sets iOS/Android audio mode + loads every cue into
  *      memory (call once early from `_layout` + optionally await again).
- *   2. `playSfx(name)` — replayAsync from a tiny pool so overlaps don't clip.
+ *   2. `playSfx(name)` — seekTo(0)+play from a tiny pool so overlaps don't clip.
  */
-import {
-  Audio,
-  InterruptionModeAndroid,
-  InterruptionModeIOS,
-} from 'expo-av';
+import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 
 export type SfxName =
   | 'coin'
@@ -76,7 +67,7 @@ const VOLUMES: Partial<Record<SfxName, number>> = {
 const POOL_SIZE = 4;
 // Per-cue minimum gap between successive triggers. Multiple game events can
 // converge on the same cue in a single tick (e.g. burn + multi-play burst),
-// and on Expo Go iOS, hammering Sound.replayAsync from the JS thread within a
+// and on Expo Go iOS, hammering play from the JS thread within a
 // few ms of itself can overrun the native audio session and crash the app.
 const SFX_THROTTLE_MS = 60;
 const lastFiredAt = new Map<SfxName, number>();
@@ -94,7 +85,7 @@ const ALL_NAMES: SfxName[] = [
 ];
 
 interface PoolEntry {
-  sounds: Audio.Sound[];
+  sounds: AudioPlayer[];
   next: number;
 }
 
@@ -107,15 +98,14 @@ async function ensureAudioMode(): Promise<void> {
   if (audioModePromise) return audioModePromise;
   audioModePromise = (async () => {
     try {
-      await Audio.setAudioModeAsync({
+      await setAudioModeAsync({
         // Critical on iOS: true routes playback to earpiece and breaks speaker SFX.
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
-        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+        allowsRecording: false,
+        playsInSilentMode: true,
+        shouldPlayInBackground: false,
+        // Mix with other audio so SFX don't interrupt background music
+        interruptionMode: 'mixWithOthers',
+        shouldRouteThroughEarpiece: false,
       });
     } catch (e) {
       console.warn('[sfx] setAudioModeAsync failed', e);
@@ -125,7 +115,7 @@ async function ensureAudioMode(): Promise<void> {
 }
 
 /**
- * Load every WAV into decoded `Sound` instances. Safe to call multiple times.
+ * Load every WAV into decoded `AudioPlayer` instances. Safe to call multiple times.
  * Run from root layout after fonts so Expo Go has a warm cache before `/game`.
  */
 export async function preloadSfx(): Promise<void> {
@@ -143,13 +133,9 @@ export async function preloadSfx(): Promise<void> {
         try {
           const sounds = await Promise.all(
             Array.from({ length: POOL_SIZE }, async () => {
-              const { sound } = await Audio.Sound.createAsync(
-                src,
-                { shouldPlay: false, volume: vol, isMuted: false },
-                null,
-                true,
-              );
-              return sound;
+              const player = createAudioPlayer(src, { downloadFirst: true });
+              player.volume = vol;
+              return player;
             }),
           );
           pools[name] = { sounds, next: 0 };
@@ -191,14 +177,10 @@ async function playSfxAsync(name: SfxName): Promise<void> {
   pool.next += 1;
 
   try {
-    await sound.replayAsync();
+    await sound.seekTo(0);
+    sound.play();
   } catch (err) {
-    try {
-      await sound.setPositionAsync(0);
-      await sound.playAsync();
-    } catch (e2) {
-      console.warn('[sfx] play failed', name, e2);
-    }
+    console.warn('[sfx] play failed', name, err);
   }
 }
 

@@ -23,7 +23,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Audio } from 'expo-av';
+import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import type { AudioStatus } from 'expo-audio';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ArenaId } from './CosmeticsContext';
 import { setSfxMuted } from '../lib/sfx';
@@ -138,7 +139,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   const isMutedRef     = useRef(false);
   const volumeLevelRef = useRef<VolumeLevel>(DEFAULT_VOLUME);
-  const soundRef       = useRef<Audio.Sound | null>(null);
+  const soundRef       = useRef<AudioPlayer | null>(null);
   const fadeRef        = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef     = useRef(true);
   const prefLoadedRef  = useRef(false);
@@ -188,7 +189,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem(MUTED_KEY, isMuted ? 'true' : 'false').catch(() => {});
     }
     if (soundRef.current) {
-      soundRef.current.setVolumeAsync(isMuted ? 0 : volumeLevelRef.current).catch(() => {});
+      soundRef.current.volume = isMuted ? 0 : volumeLevelRef.current;
     }
   }, [isMuted]);
 
@@ -206,8 +207,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     if (soundRef.current) {
       const s = soundRef.current;
       soundRef.current = null;
-      try { await s.stopAsync(); } catch {}
-      try { await s.unloadAsync(); } catch {}
+      try { s.pause(); } catch {}
+      try { s.remove(); } catch {}
     }
   }, [clearFade]);
 
@@ -232,7 +233,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       vol = direction === 1
         ? Math.min(ceiling, vol + step)
         : Math.max(0, vol - step);
-      soundRef.current?.setVolumeAsync(vol).catch(() => {});
+      if (soundRef.current) soundRef.current.volume = vol;
       const done = direction === 1 ? vol >= ceiling : vol <= 0;
       if (done) {
         clearFade();
@@ -251,32 +252,33 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     if (!mountedRef.current || !splashActiveRef.current) return;
 
     try {
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false });
+      await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false });
 
-      const { sound } = await Audio.Sound.createAsync(
-        TRACKS[SPLASH_TRACK_IDX] as number,
-        { volume: 0, shouldPlay: true },
-        (status) => {
-          if (!('isLoaded' in status) || !status.isLoaded) return;
+      const player = createAudioPlayer(TRACKS[SPLASH_TRACK_IDX] as number, { updateInterval: 100 });
+      player.volume = 0;
 
-          // Begin fade-out 6 s before the track ends → reaches 0 exactly at boundary
-          if (
-            !splashFadeOutStartedRef.current &&
-            status.durationMillis != null &&
-            status.positionMillis >= status.durationMillis - SPLASH_FADE_MS
-          ) {
-            splashFadeOutStartedRef.current = true;
-            startFade(-1);
-          }
+      player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+        if (!status.isLoaded) return;
 
-          // Loop: restart with fresh fade-in
-          if (status.didJustFinish && splashActiveRef.current) {
-            void playSplashTrackAsync();
-          }
-        },
-      );
+        // Begin fade-out 6 s before the track ends → reaches 0 exactly at boundary.
+        // expo-audio uses seconds (not ms) for currentTime and duration.
+        if (
+          !splashFadeOutStartedRef.current &&
+          status.duration > 0 &&
+          status.currentTime >= status.duration - SPLASH_FADE_MS / 1000
+        ) {
+          splashFadeOutStartedRef.current = true;
+          startFade(-1);
+        }
 
-      soundRef.current = sound;
+        // Loop: restart with fresh fade-in
+        if (status.didJustFinish && splashActiveRef.current) {
+          void playSplashTrackAsync();
+        }
+      });
+
+      soundRef.current = player;
+      player.play();
       if (mountedRef.current) setIsPlaying(true);
       startFade(1, undefined, SPLASH_FADE_IN_STEPS, 1.0); // 4-second fade-in to full volume
     } catch {
@@ -300,30 +302,32 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     await unloadCurrent();
     if (!mountedRef.current) return;
     try {
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false });
-      const { sound } = await Audio.Sound.createAsync(
-        TRACKS[trackAssetIndex] as number,
-        { volume: startVol, shouldPlay: true },
-        (status) => {
-          if (!('isLoaded' in status) || !status.isLoaded) return;
-          if (status.didJustFinish) {
-            if (arenaLoopIdxRef.current !== null) {
-              // Arena mode — seamlessly loop the same track
-              void playTrack(arenaLoopIdxRef.current, isMutedRef.current ? 0 : volumeLevelRef.current);
-            } else {
-              // Shuffle queue — advance to next track
-              queuePos.current++;
-              if (queuePos.current >= queueRef.current.length) {
-                queueRef.current = shuffleIndices(PLAYLIST_SIZE);
-                queuePos.current = 0;
-              }
-              const next = queueRef.current[queuePos.current];
-              void playTrack(next, isMutedRef.current ? 0 : volumeLevelRef.current);
+      await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false });
+
+      const player = createAudioPlayer(TRACKS[trackAssetIndex] as number, { updateInterval: 500 });
+      player.volume = startVol;
+
+      player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+        if (!status.isLoaded) return;
+        if (status.didJustFinish) {
+          if (arenaLoopIdxRef.current !== null) {
+            // Arena mode — seamlessly loop the same track
+            void playTrack(arenaLoopIdxRef.current, isMutedRef.current ? 0 : volumeLevelRef.current);
+          } else {
+            // Shuffle queue — advance to next track
+            queuePos.current++;
+            if (queuePos.current >= queueRef.current.length) {
+              queueRef.current = shuffleIndices(PLAYLIST_SIZE);
+              queuePos.current = 0;
             }
+            const next = queueRef.current[queuePos.current];
+            void playTrack(next, isMutedRef.current ? 0 : volumeLevelRef.current);
           }
-        },
-      );
-      soundRef.current = sound;
+        }
+      });
+
+      soundRef.current = player;
+      player.play();
       if (mountedRef.current) setIsPlaying(true);
     } catch {
       // Audio is best-effort — never crash the game
@@ -372,11 +376,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const ceiling = isMutedRef.current ? 0 : volumeLevelRef.current;
     if (ceiling === 0) {
       // Already silent — unload immediately without fading
-      sound.stopAsync().catch(() => {}).finally(() => {
-        sound.unloadAsync().catch(() => {});
-        if (soundRef.current === sound) soundRef.current = null;
-        if (mountedRef.current) setIsPlaying(false);
-      });
+      sound.pause();
+      sound.remove();
+      if (soundRef.current === sound) soundRef.current = null;
+      if (mountedRef.current) setIsPlaying(false);
       return;
     }
 
@@ -384,14 +387,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const step = ceiling / SPLASH_FADE_STEPS;
     fadeRef.current = setInterval(() => {
       vol = Math.max(0, vol - step);
-      sound.setVolumeAsync(vol).catch(() => {});
+      sound.volume = vol;
       if (vol <= 0) {
         clearFade();
-        sound.stopAsync().catch(() => {}).finally(() => {
-          sound.unloadAsync().catch(() => {});
-          if (soundRef.current === sound) soundRef.current = null;
-          if (mountedRef.current) setIsPlaying(false);
-        });
+        sound.pause();
+        sound.remove();
+        if (soundRef.current === sound) soundRef.current = null;
+        if (mountedRef.current) setIsPlaying(false);
       }
     }, FADE_MS);
   }, [clearFade]);
@@ -415,11 +417,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
     const ceiling = isMutedRef.current ? 0 : volumeLevelRef.current;
     if (ceiling === 0) {
-      sound.stopAsync().catch(() => {}).finally(() => {
-        sound.unloadAsync().catch(() => {});
-        if (soundRef.current === sound) soundRef.current = null;
-        if (mountedRef.current) setIsPlaying(false);
-      });
+      sound.pause();
+      sound.remove();
+      if (soundRef.current === sound) soundRef.current = null;
+      if (mountedRef.current) setIsPlaying(false);
       return;
     }
 
@@ -427,14 +428,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const step = ceiling / FAST_STOP_STEPS;
     fadeRef.current = setInterval(() => {
       vol = Math.max(0, vol - step);
-      sound.setVolumeAsync(vol).catch(() => {});
+      sound.volume = vol;
       if (vol <= 0) {
         clearFade();
-        sound.stopAsync().catch(() => {}).finally(() => {
-          sound.unloadAsync().catch(() => {});
-          if (soundRef.current === sound) soundRef.current = null;
-          if (mountedRef.current) setIsPlaying(false);
-        });
+        sound.pause();
+        sound.remove();
+        if (soundRef.current === sound) soundRef.current = null;
+        if (mountedRef.current) setIsPlaying(false);
       }
     }, FADE_MS);
   }, [clearFade]);
@@ -448,7 +448,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     setVolumeLevelState(v);
     AsyncStorage.setItem(VOLUME_KEY, String(v)).catch(() => {});
     if (!isMutedRef.current && soundRef.current) {
-      soundRef.current.setVolumeAsync(v).catch(() => {});
+      soundRef.current.volume = v;
     }
   }, []);
 
