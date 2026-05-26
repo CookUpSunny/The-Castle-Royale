@@ -27,9 +27,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "{{APPLE_ID}}",
-        "ascAppId": "{{ASC_APP_ID}}",
-        "appleTeamId": "{{APPLE_TEAM_ID}}"
+        "appleId": "malohere@gmail.com",
+        "ascAppId": "6772010192",
+        "appleTeamId": "329HG4LB2B"
       }
     }
   }
