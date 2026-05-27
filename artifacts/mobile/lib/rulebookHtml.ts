@@ -21,64 +21,17 @@ html,body{
   background:var(--bg);
   font-family:'Inter',sans-serif;
   color:var(--white);
-  height:100%;
-  overflow:hidden;
 }
 body{
-  display:flex;
-  flex-direction:row;
-  width:300vw;
-  overflow-x:scroll;
-  overflow-y:hidden;
-  scroll-snap-type:x mandatory;
-  -webkit-overflow-scrolling:touch;
-}
-
-/* PANELS */
-.panel{
-  width:100vw;
-  height:100vh;
   overflow-y:auto;
   overflow-x:hidden;
-  scroll-snap-align:start;
-  flex-shrink:0;
   -webkit-overflow-scrolling:touch;
-  position:relative;
 }
 .page{
   width:100%;
   max-width:100%;
   margin:0;
   padding:44px 20px 100px;
-}
-
-/* PANEL NAVIGATION */
-.panel-nav{
-  position:sticky;
-  bottom:0;
-  left:0;
-  right:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:6px;
-  padding:10px 0 16px;
-  background:linear-gradient(to top,rgba(15,15,19,1) 60%,rgba(15,15,19,0));
-  pointer-events:none;
-}
-.dots{
-  display:flex;
-  gap:8px;
-}
-.dot{
-  width:7px;height:7px;border-radius:50%;
-  background:rgba(255,255,255,0.18);
-  transition:background 0.2s;
-}
-.dot.on{background:var(--yellow);}
-.swipe-hint{
-  font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
-  color:rgba(255,255,255,0.28);
 }
 
 /* HERO */
@@ -250,8 +203,6 @@ body{
 </head>
 <body>
 
-<!-- ═══════════════════════════════ PANEL 1 ════════════════════════════════ -->
-<div class="panel" id="p1">
 <div class="page">
 
 <!-- HERO -->
@@ -299,18 +250,9 @@ body{
   </div>
 </div>
 
-</div><!-- /page -->
 
-<div class="panel-nav">
-  <div class="dots"><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
-  <div class="swipe-hint">Swipe for more &rarr;</div>
-</div>
-</div><!-- /panel 1 -->
+<div class="orn-line"><span>✦ ✦ ✦</span></div>
 
-
-<!-- ═══════════════════════════════ PANEL 2 ════════════════════════════════ -->
-<div class="panel" id="p2">
-<div class="page">
 
 <!-- 2 · SETUP -->
 <div class="section">
@@ -416,18 +358,9 @@ body{
   </div>
 </div>
 
-</div><!-- /page -->
 
-<div class="panel-nav">
-  <div class="dots"><div class="dot"></div><div class="dot on"></div><div class="dot"></div></div>
-  <div class="swipe-hint">&larr; Swipe &rarr;</div>
-</div>
-</div><!-- /panel 2 -->
+<div class="orn-line"><span>✦ ✦ ✦</span></div>
 
-
-<!-- ═══════════════════════════════ PANEL 3 ════════════════════════════════ -->
-<div class="panel" id="p3">
-<div class="page">
 
 <!-- 4 · SPECIAL CARDS -->
 <div class="section">
@@ -540,12 +473,6 @@ body{
 <div class="orn-line"><span>✦ ✦ ✦</span></div>
 
 </div><!-- /page -->
-
-<div class="panel-nav">
-  <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot on"></div></div>
-  <div class="swipe-hint">&larr; Swipe back</div>
-</div>
-</div><!-- /panel 3 -->
 
 <script>
 (function(){

@@ -135,30 +135,12 @@ export default function LobbyScreen() {
   useFocusEffect(
     useCallback(() => {
       playSplashTrack();
-      morphingRef.current = false;
-      const w = buttonWidthRef.current || 240;
-      morphBR.value = withTiming(32, { duration: 220 });
-      morphH.value = withTiming(60, { duration: 220 });
-      morphTextOpacity.value = withTiming(1, { duration: 180 });
-      morphGoldOpacity.value = withTiming(0, { duration: 150 });
-      morphW.value = withTiming(w, { duration: 220 }, () => {
-        'worklet';
-        morphW.value = -1;
-      });
     }, [playSplashTrack]),
   );
 
   const playScale = useSharedValue(1);
   const logoOpacity = useSharedValue(0);
   const logoY = useSharedValue(30);
-
-  const morphBR = useSharedValue(32);
-  const morphW = useSharedValue(-1);
-  const morphH = useSharedValue(60);
-  const morphTextOpacity = useSharedValue(1);
-  const morphGoldOpacity = useSharedValue(0);
-  const buttonWidthRef = useRef(0);
-  const morphingRef = useRef(false);
 
   useEffect(() => {
     logoOpacity.value = withTiming(1, { duration: 800 });
@@ -182,28 +164,6 @@ export default function LobbyScreen() {
     transform: [{ scale: playScale.value }],
   }));
 
-  const morphContainerStyle = useAnimatedStyle(() => {
-    if (morphW.value < 0) {
-      return { borderRadius: 32, height: 60 };
-    }
-    return {
-      borderRadius: morphBR.value,
-      width: morphW.value,
-      height: morphH.value,
-      alignSelf: 'center' as const,
-    };
-  });
-
-  const morphTextStyle = useAnimatedStyle(() => ({
-    opacity: morphTextOpacity.value,
-  }));
-
-  const morphGoldStyle = useAnimatedStyle(() => ({
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#c8960a',
-    opacity: morphGoldOpacity.value,
-  }));
-
   useEffect(() => {
     if (gameView && gameView.gameId !== lastNavigatedGameIdRef.current) {
       lastNavigatedGameIdRef.current = gameView.gameId;
@@ -222,37 +182,6 @@ export default function LobbyScreen() {
     router.push('/mode-select');
   };
 
-  const doNavigate = useCallback(() => {
-    router.push('/how-to-play');
-  }, []);
-
-  const handleHowToPlay = useCallback(() => {
-    if (morphingRef.current) return;
-    morphingRef.current = true;
-
-    morphTextOpacity.value = withTiming(0, { duration: 110 });
-    morphGoldOpacity.value = withTiming(1, { duration: 500 });
-
-    morphBR.value = withSequence(
-      withTiming(50, { duration: 200 }),
-      withTiming(22, { duration: 180 }),
-      withTiming(10, { duration: 220 }),
-    );
-
-    morphW.value = withSequence(
-      withTiming(buttonWidthRef.current || 240, { duration: 0 }),
-      withTiming(62, { duration: 200 }),
-      withTiming(62, { duration: 400 }),
-    );
-
-    morphH.value = withSequence(
-      withTiming(60, { duration: 200 }),
-      withTiming(76, { duration: 180 }),
-      withTiming(88, { duration: 220 }, () => {
-        runOnJS(doNavigate)();
-      }),
-    );
-  }, [doNavigate]);
 
   const handleNameSave = () => {
     if (nameInput.trim()) {
@@ -365,12 +294,9 @@ export default function LobbyScreen() {
               </Pressable>
             </Animated.View>
 
-            <Animated.View
-              style={[styles.goldPillOuter, styles.goldPillSmall, styles.morphPillOuter, morphContainerStyle]}
-              onLayout={(e) => { buttonWidthRef.current = e.nativeEvent.layout.width; }}
-            >
+            <View style={[styles.goldPillOuter, styles.goldPillSmall, styles.morphPillOuter]}>
               <Pressable
-                onPress={handleHowToPlay}
+                onPress={() => router.push('/how-to-play')}
                 style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.88 }]}
               >
                 <LinearGradient
@@ -378,14 +304,13 @@ export default function LobbyScreen() {
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                   style={styles.morphGradient}
                 >
-                  <Animated.View style={[styles.pillRow, morphTextStyle]}>
+                  <View style={styles.pillRow}>
                     <Text style={styles.pillIcon}>?</Text>
                     <Text style={[styles.goldPillText, styles.goldPillTextSm]}>HOW TO PLAY</Text>
-                  </Animated.View>
-                  <Animated.View style={morphGoldStyle} />
+                  </View>
                 </LinearGradient>
               </Pressable>
-            </Animated.View>
+            </View>
 
           </View>
 
