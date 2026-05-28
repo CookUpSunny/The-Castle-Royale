@@ -24,20 +24,20 @@ function spotlightFromEvent(ev: LastEvent): SpotlightStrength {
  * 3D tilt helpers — all inline math from progress t so they run on the UI
  * thread without extra Reanimated SVs.
  *
- * rotateX: parabola through (0, 12°) → (0.5, −8°) → (1, 0°)
- *   Derived: a=56, b=−68, c=12 → f(t) = 56t²−68t+12
+ * rotateX: parabola through (0, 9°) → (0.61, −6°) → (1, 0°)
+ *   Derived: a=42, b=−51, c=9 → f(t) = 42t²−51t+9
  *
  * rotateY: sin(π·t) banking in the direction of travel; sideDir = +1 (self)
  *   or −1 (opponent). Peaks at t=0.5, returns to 0 at landing.
  */
 function tiltRotX(t: number): number {
   'worklet';
-  return 56 * t * t - 68 * t + 12;
+  return 42 * t * t - 51 * t + 9;
 }
 
 function tiltRotY(t: number, sideDir: number): number {
   'worklet';
-  return Math.sin(Math.PI * t) * 10 * sideDir;
+  return Math.sin(Math.PI * t) * 8 * sideDir;
 }
 
 /**
@@ -135,13 +135,16 @@ export default function CinematicPlay({
       setFlight((cur) => (cur?.key === key ? null : cur));
     };
 
-    const flightMs = 420;
-    const anticipationMs = 110;
+    const flightMs = 480;
+    const anticipationMs = 90;
 
     trigger.value = trigger.value + 1;
     progress.value = withSequence(
-      withTiming(-0.14, { duration: anticipationMs, easing: Easing.out(Easing.cubic) }),
-      withTiming(1, { duration: flightMs, easing: Easing.inOut(Easing.cubic) }, (finished) => {
+      // Easing.in accelerates into the pullback so velocity carries through
+      // into the launch — eliminates the near-zero velocity stutter that
+      // Easing.out caused at the anticipation→flight handoff.
+      withTiming(-0.10, { duration: anticipationMs, easing: Easing.in(Easing.quad) }),
+      withTiming(1, { duration: flightMs, easing: Easing.out(Easing.cubic) }, (finished) => {
         if (!finished) return;
         impact.value = withSequence(
           withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) }),
@@ -169,7 +172,7 @@ export default function CinematicPlay({
     const by = omt * omt * sy.value + 2 * omt * t * cy.value + t * t * ey.value;
     const fade = t > 0.92 ? 1 - (t - 0.92) / 0.08 : 1;
 
-    const ant = rawT < 0 ? rawT / -0.14 : 0;
+    const ant = rawT < 0 ? rawT / -0.10 : 0;
     const antX = ant * (sideDir.value > 0 ? -10 : 10);
     const antY = ant * 8;
 
