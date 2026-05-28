@@ -184,8 +184,7 @@ export default function ArenaPickerScreen() {
                   <Image
                     source={av.portrait}
                     style={styles.avatarImage}
-                    contentFit="contain"
-                    contentPosition="top right"
+                    contentFit="cover"
                   />
                   {isSelected ? (
                     <View style={[styles.selectedBadge, { position: 'absolute', top: 10, right: 10 }]}>
@@ -346,12 +345,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   avatarImage: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: '68%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
   },
   avatarNameWrap: {
     paddingHorizontal: 16,

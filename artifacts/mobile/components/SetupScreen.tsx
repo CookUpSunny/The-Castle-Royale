@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -14,6 +14,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import CardComponent, { CardBack } from './Card';
+
+const FAN_R = 200;
+const FAN_HALF_DEG = 40;
+const FAN_H = 210;
+const SLOT_W = 64;
+const SLOT_H = 100;
 
 /**
  * Castle/Palace pre-game setup.
@@ -124,6 +130,9 @@ export default function SetupScreen() {
     confirmSetup();
   };
 
+  const { width: screenWidth } = useWindowDimensions();
+  const containerWidth = screenWidth - 32;
+
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
 
   return (
@@ -167,17 +176,28 @@ export default function SetupScreen() {
           </Text>
         </View>
 
-        {/* All 6 cards — tap to toggle */}
-        <View style={styles.cardGrid}>
-          {allDealt.map((card) => (
-            <ToggleCard
-              key={card.id}
-              card={card}
-              isFaceUp={faceUpIdSet.has(card.id)}
-              disabled={myReady}
-              onPress={() => handleToggle(card.id)}
-            />
-          ))}
+        {/* All 6 cards in a semi-circle fan — tap to toggle */}
+        <View style={[styles.fanContainer, { width: containerWidth }]}>
+          {allDealt.map((card, i) => {
+            const n = allDealt.length;
+            const angleDeg = n <= 1 ? 0 : -FAN_HALF_DEG + (2 * FAN_HALF_DEG / (n - 1)) * i;
+            const angleRad = (angleDeg * Math.PI) / 180;
+            const left = containerWidth / 2 + FAN_R * Math.sin(angleRad) - SLOT_W / 2;
+            const top = FAN_H / 2 + FAN_R * (1 - Math.cos(angleRad)) - SLOT_H / 2;
+            return (
+              <View
+                key={card.id}
+                style={[styles.fanCardWrapper, { left, top, transform: [{ rotate: `${angleDeg}deg` }] }]}
+              >
+                <ToggleCard
+                  card={card}
+                  isFaceUp={faceUpIdSet.has(card.id)}
+                  disabled={myReady}
+                  onPress={() => handleToggle(card.id)}
+                />
+              </View>
+            );
+          })}
         </View>
 
         {/* Hint legend */}
@@ -329,14 +349,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a0535',
   },
   counterText: { fontSize: 13, fontWeight: '900', letterSpacing: 3 },
-  cardGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    paddingTop: 18,
-    paddingBottom: 12,
+  fanContainer: {
+    height: FAN_H,
+    overflow: 'visible',
+  },
+  fanCardWrapper: {
+    position: 'absolute',
   },
   toggleSlot: {
     width: 64,
