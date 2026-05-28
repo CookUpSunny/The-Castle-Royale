@@ -55,14 +55,16 @@ interface CurtainCardProps {
   spec: CardSpec;
   sweeping: boolean;
   screenHeight: number;
+  startCovered?: boolean;
 }
 
-function CurtainCard({ spec, sweeping, screenHeight }: CurtainCardProps) {
-  const translateY = useSharedValue(spec.initTranslateY);
+function CurtainCard({ spec, sweeping, screenHeight, startCovered }: CurtainCardProps) {
+  const translateY = useSharedValue(startCovered ? 0 : spec.initTranslateY);
   const translateX = useSharedValue(0);
 
-  // Enter: rain down from above
+  // Enter: rain down from above (skipped when cards already cover the screen)
   useEffect(() => {
+    if (startCovered) return;
     translateY.value = withDelay(
       spec.enterDelay,
       withTiming(0, { duration: ENTER_DURATION, easing: Easing.in(Easing.quad) }),
@@ -156,9 +158,13 @@ function CurtainCard({ spec, sweeping, screenHeight }: CurtainCardProps) {
 interface CardCurtainProps {
   onContentReady: () => void;
   sweeping: boolean;
+  /** When true, cards start already covering the screen — no entry rain animation. */
+  startCovered?: boolean;
+  /** How long (ms) to hold after cards land before calling onContentReady. Default 400. */
+  holdDuration?: number;
 }
 
-export default function CardCurtain({ onContentReady, sweeping }: CardCurtainProps) {
+export default function CardCurtain({ onContentReady, sweeping, startCovered, holdDuration = 400 }: CardCurtainProps) {
   const { width, height } = useWindowDimensions();
   const wrapperOpacity = useSharedValue(1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -207,11 +213,11 @@ export default function CardCurtain({ onContentReady, sweeping }: CardCurtainPro
       }
     }
 
-    // onContentReady fires once enter animation + short hold are done.
-    // The victory screen content then fades in while the cards are still falling,
-    // so the result is "revealed through" the parting curtain.
-    return { cards: specs, onReadyDelay: Math.ceil(maxEnterEnd + HOLD_AFTER_LAND) };
-  }, [width, height]);
+    // onContentReady fires once enter animation + hold are done.
+    // When startCovered, cards are already in place so fire almost immediately.
+    const delay = startCovered ? 50 : Math.ceil(maxEnterEnd + holdDuration);
+    return { cards: specs, onReadyDelay: delay };
+  }, [width, height, startCovered, holdDuration]);
 
   useEffect(() => {
     timerRef.current = setTimeout(() => {
@@ -248,6 +254,7 @@ export default function CardCurtain({ onContentReady, sweeping }: CardCurtainPro
           spec={spec}
           sweeping={sweeping}
           screenHeight={height}
+          startCovered={startCovered}
         />
       ))}
     </Animated.View>

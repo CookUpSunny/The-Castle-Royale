@@ -23,6 +23,7 @@ import { useColors } from '@/hooks/useColors';
 import ActionButtons from '@/components/ActionButtons';
 import BackButton from '@/components/BackButton';
 import CardComponent, { CardBack } from '@/components/Card';
+import CardCurtain from '@/components/CardCurtain';
 import CinematicPlay from '@/components/CinematicPlay';
 import type { LayoutRect } from '@/components/CardPlayFlight';
 import DrawPileStack, { type DrawPileHandle } from '@/components/DrawPileStack';
@@ -245,6 +246,9 @@ export default function GameLandscape(): React.JSX.Element | null {
   const [opponentZoneRectLs, setOpponentZoneRectLs] = useState<LayoutRect | null>(null);
   const selfHandRefLs = useRef<View>(null);
   const opponentZoneRefLs = useRef<View>(null);
+  // End-game curtain
+  const [endCurtainActive, setEndCurtainActive] = useState(false);
+  const endGameParamsRef = useRef<{ winner: string; myId: string; opponentName: string } | null>(null);
 
   // Stable initial key so CinematicPlay does not replay the last event when
   // the landscape branch mounts (e.g. after rotating from portrait).
@@ -284,16 +288,24 @@ export default function GameLandscape(): React.JSX.Element | null {
   }, [gameView]);
 
   useEffect(() => {
-    if (gameView?.phase === 'finished') {
-      const t = setTimeout(() => {
-        router.replace({
-          pathname: '/victory',
-          params: { winner: gameView.winner, myId: gameView.myPlayerId, opponentName: gameView.opponentName },
-        });
-      }, 2700);
-      return () => clearTimeout(t);
+    if (gameView?.phase === 'finished' && !endCurtainActive) {
+      endGameParamsRef.current = {
+        winner: gameView.winner ?? '',
+        myId: gameView.myPlayerId ?? '',
+        opponentName: gameView.opponentName ?? '',
+      };
+      setEndCurtainActive(true);
     }
-  }, [gameView?.phase]);
+  }, [gameView?.phase, endCurtainActive]);
+
+  const handleEndReady = useCallback(() => {
+    const p = endGameParamsRef.current;
+    if (!p) return;
+    router.replace({
+      pathname: '/victory',
+      params: { winner: p.winner, myId: p.myId, opponentName: p.opponentName, fromGame: '1' },
+    });
+  }, []);
 
   useEffect(() => {
     if (!gameView?.lastEvent) return;
@@ -728,6 +740,16 @@ export default function GameLandscape(): React.JSX.Element | null {
             </Pressable>
           </View>
         </>
+      )}
+
+      {/* End-game card curtain — rains over the landscape board, holds 1.3 s,
+          then navigates to victory hidden behind the covered screen. */}
+      {endCurtainActive && (
+        <CardCurtain
+          holdDuration={1300}
+          onContentReady={handleEndReady}
+          sweeping={false}
+        />
       )}
     </Animated.View>
   );

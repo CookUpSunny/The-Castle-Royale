@@ -40,6 +40,7 @@ import FaceDownReveal from '@/components/FaceDownReveal';
 import GameLandscape from '@/components/GameLandscape';
 import GlowPile from '@/components/GlowPile';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
+import CardCurtain from '@/components/CardCurtain';
 import OrientationCurtain from '@/components/OrientationCurtain';
 import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
@@ -396,6 +397,9 @@ export default function GameScreen() {
   const selfHandRef = useRef<View>(null);
   const opponentZoneRef = useRef<View>(null);
   const playerHandRef = useRef<PlayerHandRef>(null);
+  // End-game curtain — covers the game board, then navigates to victory behind it.
+  const [endCurtainActive, setEndCurtainActive] = useState(false);
+  const endGameParamsRef = useRef<{ winner: string; myId: string; opponentName: string } | null>(null);
 
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
@@ -412,20 +416,29 @@ export default function GameScreen() {
     }
   }, [gameView, committedLandscape]);
 
-  // Hold on the final board state long enough for the player to see the winning
-  // card actually land + the opponent's empty hand state, before transitioning.
+  // When the game ends, immediately rain cards over the game board.
+  // Navigation to victory happens inside the curtain's onContentReady callback,
+  // hidden behind the covered screen, so the player never sees the route jump.
   useEffect(() => {
     if (committedLandscape) return;
-    if (gameView?.phase === 'finished') {
-      const t = setTimeout(() => {
-        router.replace({
-          pathname: '/victory',
-          params: { winner: gameView.winner, myId: gameView.myPlayerId, opponentName: gameView.opponentName },
-        });
-      }, 2700);
-      return () => clearTimeout(t);
+    if (gameView?.phase === 'finished' && !endCurtainActive) {
+      endGameParamsRef.current = {
+        winner: gameView.winner ?? '',
+        myId: gameView.myPlayerId ?? '',
+        opponentName: gameView.opponentName ?? '',
+      };
+      setEndCurtainActive(true);
     }
-  }, [gameView?.phase, committedLandscape]);
+  }, [gameView?.phase, committedLandscape, endCurtainActive]);
+
+  const handleEndReady = useCallback(() => {
+    const p = endGameParamsRef.current;
+    if (!p) return;
+    router.replace({
+      pathname: '/victory',
+      params: { winner: p.winner, myId: p.myId, opponentName: p.opponentName, fromGame: '1' },
+    });
+  }, []);
 
   useEffect(() => {
     if (committedLandscape) return;
@@ -781,6 +794,17 @@ export default function GameScreen() {
           toDirection={curtain.toDirection}
           onMidpoint={handleCurtainMidpoint}
           onComplete={handleCurtainComplete}
+        />
+      )}
+
+      {/* End-game card curtain — rains over the board, holds 1.3 s, then
+          navigates to victory behind the covered screen. Portrait only;
+          landscape triggers its own curtain inside GameLandscape. */}
+      {endCurtainActive && !committedLandscape && (
+        <CardCurtain
+          holdDuration={1300}
+          onContentReady={handleEndReady}
+          sweeping={false}
         />
       )}
     </View>

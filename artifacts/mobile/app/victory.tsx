@@ -327,7 +327,10 @@ export default function VictoryScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { clearGame, joinQueue } = useGame();
-  const params = useLocalSearchParams<{ winner: string; myId: string; opponentName: string }>();
+  const params = useLocalSearchParams<{ winner: string; myId: string; opponentName: string; fromGame?: string }>();
+  // fromGame=1 means we arrived via the end-game curtain that already covered
+  // the screen; skip the entry rain and start sweeping immediately.
+  const fromGame = params.fromGame === '1';
   const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
 
   const isWin = params.winner === params.myId;
@@ -417,7 +420,7 @@ export default function VictoryScreen() {
             </View>
           </View>
         </Animated.View>
-        <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} />
+        <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} startCovered={fromGame} />
       </View>
     );
   }
@@ -474,7 +477,7 @@ export default function VictoryScreen() {
           </View>
         </View>
       </Animated.View>
-      <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} />
+      <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} startCovered={fromGame} />
     </View>
   );
 }
