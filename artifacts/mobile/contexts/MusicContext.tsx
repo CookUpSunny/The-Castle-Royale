@@ -23,11 +23,23 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import type { AudioPlayer } from 'expo-audio';
 import type { AudioStatus } from 'expo-audio';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ArenaId } from './CosmeticsContext';
 import { setSfxMuted } from '../lib/sfx';
+
+// expo-audio depends on the ExponentAV native module which is not bundled in
+// standard Expo Go. Guard the require so a missing native module degrades to
+// silent no-op rather than crashing the app.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _audio: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  _audio = require('expo-audio');
+} catch {
+  // Native module unavailable — music disabled silently.
+}
 
 const MUTED_KEY           = '@castleroyale_music_muted';
 const VOLUME_KEY          = '@castleroyale_volume';
@@ -245,6 +257,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   // ─── Splash track (looping) ────────────────────────────────────────────────
 
   const playSplashTrackAsync = useCallback(async () => {
+    if (!_audio) return;
     if (!mountedRef.current) return;
     splashFadeOutStartedRef.current = false;
 
@@ -252,9 +265,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     if (!mountedRef.current || !splashActiveRef.current) return;
 
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false });
+      await _audio.setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false });
 
-      const player = createAudioPlayer(TRACKS[SPLASH_TRACK_IDX] as number, { updateInterval: 100 });
+      const player = _audio.createAudioPlayer(TRACKS[SPLASH_TRACK_IDX] as number, { updateInterval: 100 });
       player.volume = 0;
 
       player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
@@ -299,12 +312,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   // ─── Match music (arena track or shuffled playlist) ────────────────────────
 
   const playTrack = useCallback(async (trackAssetIndex: number, startVol: number) => {
+    if (!_audio) return;
     await unloadCurrent();
     if (!mountedRef.current) return;
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false });
+      await _audio.setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false });
 
-      const player = createAudioPlayer(TRACKS[trackAssetIndex] as number, { updateInterval: 500 });
+      const player = _audio.createAudioPlayer(TRACKS[trackAssetIndex] as number, { updateInterval: 500 });
       player.volume = startVol;
 
       if (arenaLoopIdxRef.current !== null) {

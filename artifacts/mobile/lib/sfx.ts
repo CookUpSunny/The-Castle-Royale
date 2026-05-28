@@ -6,7 +6,17 @@
  *      memory (call once early from `_layout` + optionally await again).
  *   2. `playSfx(name)` — seekTo(0)+play from a tiny pool so overlaps don't clip.
  */
-import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+// expo-audio depends on the ExponentAV native module which is not bundled in
+// standard Expo Go. Guard the require so a missing native module degrades to
+// silent no-op rather than crashing the app.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _audio: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  _audio = require('expo-audio');
+} catch {
+  // Native module unavailable — audio disabled silently.
+}
 
 export type SfxName =
   | 'coin'
@@ -85,7 +95,8 @@ const ALL_NAMES: SfxName[] = [
 ];
 
 interface PoolEntry {
-  sounds: AudioPlayer[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sounds: any[];
   next: number;
 }
 
@@ -95,10 +106,11 @@ let muted = false;
 let audioModePromise: Promise<void> | null = null;
 
 async function ensureAudioMode(): Promise<void> {
+  if (!_audio) return;
   if (audioModePromise) return audioModePromise;
   audioModePromise = (async () => {
     try {
-      await setAudioModeAsync({
+      await _audio.setAudioModeAsync({
         // Critical on iOS: true routes playback to earpiece and breaks speaker SFX.
         allowsRecording: false,
         playsInSilentMode: true,
@@ -122,6 +134,7 @@ export async function preloadSfx(): Promise<void> {
   if (loadPromise) return loadPromise;
 
   loadPromise = (async () => {
+    if (!_audio) return;
     await ensureAudioMode();
     await Promise.all(
       ALL_NAMES.map(async (name) => {
@@ -133,7 +146,7 @@ export async function preloadSfx(): Promise<void> {
         try {
           const sounds = await Promise.all(
             Array.from({ length: POOL_SIZE }, async () => {
-              const player = createAudioPlayer(src, { downloadFirst: true });
+              const player = _audio.createAudioPlayer(src, { downloadFirst: true });
               player.volume = vol;
               return player;
             }),
