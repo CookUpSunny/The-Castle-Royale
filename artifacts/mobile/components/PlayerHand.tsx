@@ -265,6 +265,7 @@ function HandCard({
               card={card}
               size="lg"
               onPress={isMyTurn && isPlayable ? handlePress : undefined}
+              onLongPress={isMyTurn && isPlayable && multiplicity >= 2 ? handleLongPress : undefined}
               isPlayable={isMyTurn && isPlayable}
               multiplicity={multiplicity}
             />
@@ -508,15 +509,18 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
           })}
         </View>
       ) : (
-        /* ── Pinched accordion fan ── */
-        <GestureDetector gesture={hoverPan}>
+        /* ── Pinched accordion fan ──
+           Two-tap selection + hover raise are portrait-only features (draggable=false).
+           When draggable=true (landscape), the old single-tap behaviour is preserved. */
+        <GestureDetector gesture={draggable ? Gesture.Manual() : hoverPan}>
           <View style={[styles.fanContainer, { width: containerWidth }]}>
             {activeCards.map((card, i) => {
               const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
               const multiplicity = valueCounts.get(card.value) ?? 1;
               const { left, top, rotationDeg } = computeFanPosition(i, totalCards, containerWidth);
-              const isThisSelected = selectedCardId === card.id;
-              const isDimmed = selectedCardId !== null && !isThisSelected && isPlayable;
+              // Selection state and hover raise are portrait-only
+              const isThisSelected = !draggable && selectedCardId === card.id;
+              const isDimmed = !draggable && selectedCardId !== null && !isThisSelected && isPlayable;
               return (
                 <View
                   key={card.id}
@@ -535,7 +539,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
                     isPlayable={isPlayable}
                     isMyTurn={isMyTurn}
                     multiplicity={multiplicity}
-                    onTap={handleTap}
+                    onTap={draggable ? handleFaceUpTap : handleTap}
                     onLongPress={handleLongPress}
                     isStarterPick={card.id === starterPickId}
                     draggable={draggable}
@@ -544,7 +548,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
                     onDragEnd={onDragEnd}
                     isSelected={isThisSelected}
                     isDimmed={isDimmed}
-                    hoveredIndex={hoveredIndex}
+                    hoveredIndex={draggable ? undefined : hoveredIndex}
                     myIndex={i}
                   />
                 </View>
