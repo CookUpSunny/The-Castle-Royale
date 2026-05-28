@@ -50,7 +50,11 @@ export default function MatchmakingScreen() {
         <PortalSpinner size={220} />
 
         <Text style={[styles.timer, { color: colors.foreground }]}>{fmt(queueSeconds)}</Text>
-        <Text style={[styles.statusText, { color: colors.mutedForeground }]}>Searching for a worthy challenger...</Text>
+        {queueSeconds >= 58 ? (
+          <Text style={[styles.statusText, { color: colors.neonGold }]}>Finding a bot opponent…</Text>
+        ) : (
+          <Text style={[styles.statusText, { color: colors.mutedForeground }]}>Searching for a worthy challenger...</Text>
+        )}
 
         <View />
       </View>

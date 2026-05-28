@@ -236,6 +236,25 @@ function scheduleBotEmote(io: Server, gameId: string, botId: string): void {
  */
 const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+/**
+ * Per-player timeouts for the matchmaking queue.
+ * If a real opponent doesn't appear within QUEUE_BOT_FALLBACK_MS, the waiting
+ * player is automatically dropped into a bot game.
+ */
+const queueTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** How long (ms) to wait in the queue before falling back to a bot game. */
+const QUEUE_BOT_FALLBACK_MS = 60_000;
+
+/** Cancel and remove a pending queue-fallback timeout for a player. */
+function clearQueueTimeout(playerId: string): void {
+  const t = queueTimeouts.get(playerId);
+  if (t !== undefined) {
+    clearTimeout(t);
+    queueTimeouts.delete(playerId);
+  }
+}
+
 /** How long (ms) to keep a game alive after a player disconnects. */
 const RECONNECT_GRACE_MS = 60_000;
 
@@ -512,6 +531,9 @@ export function initSocketGame(httpServer: HttpServer): void {
       const existingTimer = disconnectTimers.get(playerId);
       if (existingTimer !== undefined) { clearTimeout(existingTimer); disconnectTimers.delete(playerId); }
 
+      // Cancel any pre-existing queue fallback timer (re-queuing scenario).
+      clearQueueTimeout(playerId);
+
       const existing = queue.findIndex((e) => e.playerId === playerId);
       if (existing >= 0) queue.splice(existing, 1);
 
@@ -522,6 +544,11 @@ export function initSocketGame(httpServer: HttpServer): void {
       if (queue.length >= 2) {
         const p1 = queue.shift()!;
         const p2 = queue.shift()!;
+
+        // Both players matched — cancel their individual fallback timers.
+        clearQueueTimeout(p1.playerId);
+        clearQueueTimeout(p2.playerId);
+
         const state = dealGame([p1.playerId, p2.playerId], [p1.playerName, p2.playerName]);
 
         games.set(state.gameId, state);
@@ -536,6 +563,39 @@ export function initSocketGame(httpServer: HttpServer): void {
         }
 
         logger.info({ gameId: state.gameId }, 'Game started');
+      } else {
+        // Solo in queue — start the bot-fallback countdown.
+        const fallbackTimer = setTimeout(() => {
+          queueTimeouts.delete(playerId);
+
+          // Check the player is still waiting (they may have cancelled or matched).
+          const idx = queue.findIndex((e) => e.playerId === playerId);
+          if (idx < 0) return;
+
+          const entry = queue.splice(idx, 1)[0]!;
+
+          const botId = newBotId();
+          const botName = randomBotName();
+          const state = dealGame([entry.playerId, botId], [entry.playerName, botName]);
+
+          games.set(state.gameId, state);
+          playerToGame.set(entry.playerId, state.gameId);
+          playerToGame.set(botId, state.gameId);
+          registerParticipants(state.gameId, [
+            entry,
+            { socketId: '', playerId: botId, playerName: botName },
+          ]);
+          setActiveGameForParticipants(state.gameId, [entry]);
+
+          const view = getGameView(state, entry.playerId);
+          io.to(entry.socketId).emit('game_start', view);
+
+          logger.info({ gameId: state.gameId, botName, playerId: entry.playerId }, 'Bot fallback game started after queue timeout');
+
+          scheduleBotSetup(io, state.gameId, botId);
+        }, QUEUE_BOT_FALLBACK_MS);
+
+        queueTimeouts.set(playerId, fallbackTimer);
       }
     });
 
@@ -548,6 +608,9 @@ export function initSocketGame(httpServer: HttpServer): void {
       // Cancel any lingering disconnect timer from a previous game session.
       const existingTimer = disconnectTimers.get(playerId);
       if (existingTimer !== undefined) { clearTimeout(existingTimer); disconnectTimers.delete(playerId); }
+
+      // Cancel any queue fallback timer since the player is explicitly starting a bot game.
+      clearQueueTimeout(playerId);
 
       removeFromQueue(playerId);
 
@@ -584,6 +647,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       if (pid) {
         const idx = queue.findIndex((e) => e.playerId === pid);
         if (idx >= 0) queue.splice(idx, 1);
+        clearQueueTimeout(pid);
       }
       socket.emit('queue_cancelled');
     });
@@ -1007,7 +1071,10 @@ export function initSocketGame(httpServer: HttpServer): void {
           }
         }
         const qi = queue.findIndex((e) => e.playerId === pid);
-        if (qi >= 0) queue.splice(qi, 1);
+        if (qi >= 0) {
+          queue.splice(qi, 1);
+          clearQueueTimeout(pid);
+        }
         // NOTE: Intentionally do NOT delete hosted private rooms here.
         // Mobile clients routinely lose the WebSocket while the user switches
         // apps to share the room code. The room is GC'd by reapStaleRooms()
