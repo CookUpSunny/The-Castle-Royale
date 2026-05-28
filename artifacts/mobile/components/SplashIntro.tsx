@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   Image,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -15,81 +16,99 @@ interface SplashIntroProps {
 }
 
 const BEAM_LENGTH = 160;
-const BEAM_SPEED = 5;
-const CORNER_BEAM_LENGTH = 60;
-const CORNER_OFFSET = 90;
+const CORNER_BEAM_LENGTH = 55;
+const CORNER_LEAD = 100;
 
 function EnergyBorder({ width, height }: { width: number; height: number }) {
   const perimeter = 2 * (width + height);
   const [offset, setOffset] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [cornerOffset, setCornerOffset] = useState(0);
 
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setOffset(prev => (prev + BEAM_SPEED) % perimeter);
-    }, 16);
+    // Primary beam — Animated.loop + Animated.timing as spec'd
+    const primaryAnim = new Animated.Value(0);
+    const primaryLoop = Animated.loop(
+      Animated.timing(primaryAnim, {
+        toValue: perimeter,
+        duration: 2800,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      }),
+    );
+    const primaryId = primaryAnim.addListener(({ value }) => setOffset(value));
+    primaryLoop.start();
+
+    // Corner glow node — slower secondary beam (4 000 ms)
+    const cornerAnim = new Animated.Value(CORNER_LEAD);
+    const cornerLoop = Animated.loop(
+      Animated.timing(cornerAnim, {
+        toValue: perimeter + CORNER_LEAD,
+        duration: 4000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      }),
+    );
+    const cornerId = cornerAnim.addListener(({ value }) =>
+      setCornerOffset(value % perimeter),
+    );
+    cornerLoop.start();
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      primaryLoop.stop();
+      cornerLoop.stop();
+      primaryAnim.removeListener(primaryId);
+      cornerAnim.removeListener(cornerId);
     };
   }, [perimeter]);
 
   const d = `M 2 2 L ${width - 2} 2 L ${width - 2} ${height - 2} L 2 ${height - 2} Z`;
-
-  const outerDash = `${BEAM_LENGTH},${perimeter - BEAM_LENGTH}`;
-  const innerDash = `${BEAM_LENGTH * 0.5},${perimeter - BEAM_LENGTH * 0.5}`;
-  const cornerDash = `${CORNER_BEAM_LENGTH},${perimeter - CORNER_BEAM_LENGTH}`;
-
-  const neg = (v: number) => -v;
+  const perimStr = perimeter.toFixed(0);
 
   return (
-    <Svg
-      width={width}
-      height={height}
-      style={StyleSheet.absoluteFill}
-    >
-      {/* Wide soft purple glow */}
+    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+      {/* Wide soft purple glow — outer bloom */}
       <Path
         d={d}
         fill="none"
         stroke="#7c3aed"
-        strokeWidth={10}
-        strokeDasharray={outerDash}
-        strokeDashoffset={neg(offset)}
+        strokeWidth={12}
+        strokeDasharray={`${BEAM_LENGTH},${perimStr}`}
+        strokeDashoffset={-offset}
         strokeLinecap="round"
-        opacity={0.55}
+        opacity={0.45}
       />
-      {/* Mid teal accent */}
+      {/* Teal mid layer */}
       <Path
         d={d}
         fill="none"
         stroke="#22d3ee"
         strokeWidth={5}
-        strokeDasharray={outerDash}
-        strokeDashoffset={neg(offset)}
+        strokeDasharray={`${BEAM_LENGTH},${perimStr}`}
+        strokeDashoffset={-offset}
         strokeLinecap="round"
-        opacity={0.65}
+        opacity={0.7}
       />
-      {/* Thin white-hot core */}
+      {/* White-hot thin core */}
       <Path
         d={d}
         fill="none"
         stroke="#ffffff"
         strokeWidth={2}
-        strokeDasharray={innerDash}
-        strokeDashoffset={neg(offset + BEAM_LENGTH * 0.25)}
+        strokeDasharray={`${Math.round(BEAM_LENGTH * 0.45)},${perimStr}`}
+        strokeDashoffset={-(offset + BEAM_LENGTH * 0.3)}
         strokeLinecap="round"
         opacity={0.95}
       />
-      {/* Corner pulse — amber energy node trailing behind */}
+      {/* Amber corner pulse node — slower secondary loop */}
       <Path
         d={d}
         fill="none"
         stroke="#f59e0b"
-        strokeWidth={4}
-        strokeDasharray={cornerDash}
-        strokeDashoffset={neg((offset + CORNER_OFFSET) % perimeter)}
+        strokeWidth={5}
+        strokeDasharray={`${CORNER_BEAM_LENGTH},${perimStr}`}
+        strokeDashoffset={-cornerOffset}
         strokeLinecap="round"
-        opacity={0.7}
+        opacity={0.75}
       />
     </Svg>
   );
@@ -109,24 +128,26 @@ export default function SplashIntro({ onDone }: SplashIntroProps) {
   }, [onDone]);
 
   useEffect(() => {
-    // 1.3s: start fading in the hero image + border
+    // 1.3 s: start fading in hero image and energy border
     const fadeTimer = setTimeout(() => {
       setShowBorder(true);
       Animated.parallel([
         Animated.timing(imageOpacity, {
           toValue: 1,
           duration: 500,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(borderOpacity, {
           toValue: 1,
           duration: 600,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
       ]).start();
     }, 1300);
 
-    // 5.7s total: sharp cut to lobby
+    // 5.7 s total: sharp cut to lobby (1.3 dark + 0.4 fade + 4.0 hold)
     const exitTimer = setTimeout(finish, 5700);
 
     return () => {
@@ -136,34 +157,36 @@ export default function SplashIntro({ onDone }: SplashIntroProps) {
   }, [finish, imageOpacity, borderOpacity]);
 
   return (
-    <TouchableWithoutFeedback onPress={finish} accessible={false}>
-      <View style={[styles.container, { width, height }]}>
-        {/* Dark grey base */}
-        <View style={[StyleSheet.absoluteFill, styles.darkBg]} />
+    <Pressable
+      onPress={finish}
+      style={[styles.container, { width, height }]}
+      accessible={false}
+    >
+      {/* Dark grey base — always visible */}
+      <View style={[StyleSheet.absoluteFill, styles.darkBg]} />
 
-        {/* Hero image fades in */}
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: imageOpacity }]}>
-          <Image
-            source={require('../assets/splash/splash_hero.png')}
-            style={{ width, height }}
-            resizeMode="cover"
-          />
-        </Animated.View>
+      {/* Hero image fades in after 1.3 s */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: imageOpacity }]}>
+        <Image
+          source={require('../assets/splash/splash_hero.png')}
+          style={{ width, height }}
+          resizeMode="cover"
+        />
+      </Animated.View>
 
-        {/* Energy border fades in with image */}
-        <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: borderOpacity }]}
-          pointerEvents="none"
-        >
-          {showBorder && <EnergyBorder width={width} height={height} />}
-        </Animated.View>
+      {/* Energy border fades in with the image */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { opacity: borderOpacity }]}
+        pointerEvents="none"
+      >
+        {showBorder && <EnergyBorder width={width} height={height} />}
+      </Animated.View>
 
-        {/* Loading text — bottom of screen, above the energy bar */}
-        <View style={styles.loadingRow} pointerEvents="none">
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
+      {/* "Loading..." — pinned at bottom above the energy bar */}
+      <View style={styles.loadingRow} pointerEvents="none">
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
-    </TouchableWithoutFeedback>
+    </Pressable>
   );
 }
 

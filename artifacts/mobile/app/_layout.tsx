@@ -24,10 +24,6 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-/**
- * Bridge: reads the authenticated Game Center ID (if any) and passes it into
- * GameProvider so the socket layer can include it in join/queue events.
- */
 function GameProviderBridge({ children }: { children: React.ReactNode }) {
   const { profile } = useGameCenter();
   return (
@@ -62,13 +58,13 @@ export default function RootLayout() {
   });
   const [showIntro, setShowIntro] = useState(true);
 
+  // Hide native splash immediately — our dark-grey JS intro takes over from here.
+  // Do NOT wait for font loading; the intro overlay covers the screen during that time.
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+    void SplashScreen.hideAsync();
+  }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  const appReady = fontsLoaded || fontError;
 
   return (
     <SafeAreaProvider>
@@ -80,7 +76,8 @@ export default function RootLayout() {
                 <CosmeticsProvider>
                   <GameCenterProvider>
                     <GameProviderBridge>
-                      <RootLayoutNav />
+                      {/* Render navigator only once fonts are ready; intro overlay covers during load */}
+                      {appReady && <RootLayoutNav />}
                       {showIntro && (
                         <SplashIntro onDone={() => setShowIntro(false)} />
                       )}
