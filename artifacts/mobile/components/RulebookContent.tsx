@@ -226,9 +226,7 @@ function AnimatedCrown() {
   return (
     <View style={s.animCrownWrap}>
       <Animated.View style={[s.crownGlowRing, { transform: [{ scale: pulse }] }]} />
-      <View style={s.lensFlareWrap} pointerEvents="none">
-        <View style={s.lensFlare} />
-      </View>
+
       <Animated.Text style={[s.crownIcon, { transform: [{ scale: pulse }] }]}>👑</Animated.Text>
     </View>
   );
@@ -980,15 +978,6 @@ const s = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(245,230,66,0.35)',
   },
-  lensFlareWrap: { position: 'absolute', width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
-  lensFlare: {
-    width: 130,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-    borderRadius: 2,
-    transform: [{ rotate: '-35deg' }],
-  },
-
   // Iridescent 2-card
   iriCard: {
     width: 62,
