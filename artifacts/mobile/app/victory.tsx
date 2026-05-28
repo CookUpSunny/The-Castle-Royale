@@ -146,18 +146,49 @@ function ConfettiParticle({ def }: { def: ConfettiDef }) {
   );
 }
 
-function LuxuryConfetti({ visible, width, height }: { visible: boolean; width: number; height: number }) {
-  const defs = useMemo(
-    () => (visible ? generateConfetti(width, height) : []),
-    // Regenerate only when visibility first turns on; ignore subsequent size jitter
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [visible],
-  );
-  if (!visible) return null;
+const WAVE_INTERVAL_MS = 2500;
+// max delay (700) + max duration (3200) + small buffer
+const WAVE_LIFETIME_MS = 4200;
+
+function ConfettiWave({ width, height }: { width: number; height: number }) {
+  const defs = useMemo(() => generateConfetti(width, height), [width, height]);
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <>
       {defs.map((def) => (
         <ConfettiParticle key={def.id} def={def} />
+      ))}
+    </>
+  );
+}
+
+function LuxuryConfetti({ visible, width, height }: { visible: boolean; width: number; height: number }) {
+  const [waves, setWaves] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!visible) {
+      setWaves([]);
+      return;
+    }
+
+    function spawnWave() {
+      const waveId = Date.now() + Math.random();
+      setWaves((prev) => [...prev, waveId]);
+      setTimeout(() => {
+        setWaves((prev) => prev.filter((id) => id !== waveId));
+      }, WAVE_LIFETIME_MS);
+    }
+
+    spawnWave();
+    const interval = setInterval(spawnWave, WAVE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [visible]);
+
+  if (!visible || waves.length === 0) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {waves.map((waveId) => (
+        <ConfettiWave key={waveId} width={width} height={height} />
       ))}
     </View>
   );
