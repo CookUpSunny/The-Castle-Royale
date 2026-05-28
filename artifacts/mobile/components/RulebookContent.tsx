@@ -229,7 +229,7 @@ function AnimatedCrown() {
       <View style={s.lensFlareWrap} pointerEvents="none">
         <View style={s.lensFlare} />
       </View>
-      <Animated.Text style={[s.crownIcon, { transform: [{ scale: pulse }] }]}>♛</Animated.Text>
+      <Animated.Text style={[s.crownIcon, { transform: [{ scale: pulse }] }]}>👑</Animated.Text>
     </View>
   );
 }
