@@ -34,25 +34,25 @@ function getSource(name: SfxName): number | null {
   try {
     switch (name) {
       case 'coin':
-        return require('../assets/audio/coin.m4a');
+        return require('../assets/audio/coin.wav');
       case 'coin-stack':
-        return require('../assets/audio/coin-stack.m4a');
+        return require('../assets/audio/coin-stack.wav');
       case 'bell':
-        return require('../assets/audio/bell.m4a');
+        return require('../assets/audio/bell.wav');
       case 'reset':
-        return require('../assets/audio/reset.m4a');
+        return require('../assets/audio/reset.wav');
       case 'jackpot':
-        return require('../assets/audio/jackpot.m4a');
+        return require('../assets/audio/jackpot.wav');
       case 'pickup':
-        return require('../assets/audio/pickup.m4a');
+        return require('../assets/audio/pickup.wav');
       case 'slot-bright':
-        return require('../assets/audio/slot-alt-b-bright.m4a');
+        return require('../assets/audio/slot-alt-b-bright.wav');
       case 'fanfare-cathedral':
-        return require('../assets/audio/fanfare-opt-e-cathedral.m4a');
+        return require('../assets/audio/fanfare-opt-e-cathedral.wav');
       case 'fanfare-epic':
-        return require('../assets/audio/fanfare-epic.m4a');
+        return require('../assets/audio/fanfare-epic.wav');
       case 'fanfare-victory':
-        return require('../assets/audio/fanfare-victory.m4a');
+        return require('../assets/audio/fanfare-victory.wav');
     }
   } catch (err) {
     console.warn('[sfx] failed to resolve asset', name, err);
