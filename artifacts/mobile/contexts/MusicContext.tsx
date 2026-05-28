@@ -33,7 +33,7 @@ const MUTED_KEY           = '@castleroyale_music_muted';
 const VOLUME_KEY          = '@castleroyale_volume';
 const SPLASH_FADE_STEPS   = 60;   // 60 × 100 ms = 6 000 ms (loop fade-out + stop fade-out)
 const SPLASH_FADE_IN_STEPS = 40;  // 40 × 100 ms = 4 000 ms (opening fade-in only)
-const MATCH_FADE_STEPS    = 30;   // 30 × 100 ms = 3 000 ms
+const MATCH_FADE_STEPS    = 10;   // 10 × 100 ms = 1 000 ms
 const FAST_STOP_STEPS     = 14;   // 14 × 100 ms = 1 400 ms (fast match-transition fade-out)
 const FADE_MS             = 100;
 const SPLASH_FADE_MS    = SPLASH_FADE_STEPS * FADE_MS; // 6 000 ms — fade-out trigger point
@@ -307,14 +307,14 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       const player = createAudioPlayer(TRACKS[trackAssetIndex] as number, { updateInterval: 500 });
       player.volume = startVol;
 
-      player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
-        if (!status.isLoaded) return;
-        if (status.didJustFinish) {
-          if (arenaLoopIdxRef.current !== null) {
-            // Arena mode — seamlessly loop the same track
-            void playTrack(arenaLoopIdxRef.current, isMutedRef.current ? 0 : volumeLevelRef.current);
-          } else {
-            // Shuffle queue — advance to next track
+      if (arenaLoopIdxRef.current !== null) {
+        // Arena mode — native player loop is reliable and gap-free
+        player.loop = true;
+      } else {
+        // Shuffle queue — advance to next track on finish
+        player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+          if (!status.isLoaded) return;
+          if (status.didJustFinish) {
             queuePos.current++;
             if (queuePos.current >= queueRef.current.length) {
               queueRef.current = shuffleIndices(PLAYLIST_SIZE);
@@ -323,8 +323,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
             const next = queueRef.current[queuePos.current];
             void playTrack(next, isMutedRef.current ? 0 : volumeLevelRef.current);
           }
-        }
-      });
+        });
+      }
 
       soundRef.current = player;
       player.play();

@@ -1,10 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/cinzel';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import BackButton from '@/components/BackButton';
 import CardCurtain from '@/components/CardCurtain';
 import Animated, {
@@ -200,7 +199,7 @@ export default function VictoryScreen() {
               <Image
                 source={crownLossImage}
                 style={styles.crownImage}
-                contentFit="contain"
+                resizeMode="contain"
               />
               <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>YOU LOSE</Text>
               <Text style={[styles.lossSub, { fontFamily: cinzelRegular }]}>
@@ -240,11 +239,11 @@ export default function VictoryScreen() {
           <BackButton label="← HOME" onPress={handleLobby} />
 
           <View style={styles.winCenterBlock}>
-            <Animated.View style={[styles.winImageWrap, glowStyle]}>
+            <Animated.View style={[{ width: imageSize, height: imageSize }, styles.winImageWrap, glowStyle]}>
               <Image
                 source={crownWinImage}
                 style={{ width: imageSize, height: imageSize }}
-                contentFit="contain"
+                resizeMode="contain"
               />
             </Animated.View>
 
