@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import SplashIntro from '@/components/SplashIntro';
+import SplashStudio from '@/components/SplashStudio';
 import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
@@ -56,7 +57,7 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  const [showIntro, setShowIntro] = useState(true);
+  const [splashPhase, setSplashPhase] = useState<'intro' | 'studio' | 'done'>('intro');
 
   // Hide native splash immediately — our dark-grey JS intro takes over from here.
   // Do NOT wait for font loading; the intro overlay covers the screen during that time.
@@ -78,8 +79,11 @@ export default function RootLayout() {
                     <GameProviderBridge>
                       {/* Render navigator only once fonts are ready; intro overlay covers during load */}
                       {appReady && <RootLayoutNav />}
-                      {showIntro && (
-                        <SplashIntro onDone={() => setShowIntro(false)} />
+                      {splashPhase === 'intro' && (
+                        <SplashIntro onDone={() => setSplashPhase('studio')} />
+                      )}
+                      {splashPhase === 'studio' && (
+                        <SplashStudio onDone={() => setSplashPhase('done')} />
                       )}
                     </GameProviderBridge>
                   </GameCenterProvider>
