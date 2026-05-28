@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 
 const C = {
   bg: '#0f0f13',
@@ -93,17 +95,17 @@ function Step({
 
 function PileIllustration() {
   const cards = [
-    { rank: '9',  suit: '♣', rot: -34, x: -54, y: 14, red: false },
-    { rank: 'Q',  suit: '♥', rot: -22, x: -38, y:  8, red: true  },
-    { rank: '5',  suit: '♠', rot: -14, x: -24, y: 16, red: false },
-    { rank: 'K',  suit: '♦', rot: -6,  x: -12, y:  6, red: true  },
-    { rank: '7',  suit: '♥', rot:  2,  x:   0, y: 12, red: true  },
-    { rank: 'J',  suit: '♦', rot:  9,  x:  10, y:  4, red: true  },
-    { rank: '3',  suit: '♣', rot: 17,  x:  22, y: 18, red: false },
-    { rank: '4',  suit: '♠', rot: 25,  x:  36, y:  8, red: false },
-    { rank: 'A',  suit: '♥', rot: 33,  x:  50, y: 14, red: true  },
-    { rank: '6',  suit: '♦', rot: -28, x: -46, y: -6, red: true  },
-    { rank: '10', suit: '♣', rot:  14, x:   4, y: -4, red: false },
+    { rank: '9',  suit: '♣', rot: -34, x: -54, y:  0, red: false },
+    { rank: 'Q',  suit: '♥', rot: -22, x: -38, y: -6, red: true  },
+    { rank: '5',  suit: '♠', rot: -14, x: -24, y:  2, red: false },
+    { rank: 'K',  suit: '♦', rot: -6,  x: -12, y: -8, red: true  },
+    { rank: '7',  suit: '♥', rot:  2,  x:   0, y: -2, red: true  },
+    { rank: 'J',  suit: '♦', rot:  9,  x:  10, y:-10, red: true  },
+    { rank: '3',  suit: '♣', rot: 17,  x:  22, y:  4, red: false },
+    { rank: '4',  suit: '♠', rot: 25,  x:  36, y: -6, red: false },
+    { rank: 'A',  suit: '♥', rot: 33,  x:  50, y:  0, red: true  },
+    { rank: '6',  suit: '♦', rot: -28, x: -46, y:-20, red: true  },
+    { rank: '10', suit: '♣', rot:  14, x:   4, y:-18, red: false },
   ];
   return (
     <View style={s.pileContainer}>
@@ -139,13 +141,6 @@ function FaceUpOverDownIllustration() {
           <View key={i} style={s.fuodFaceUp}>
             <Text style={[s.fuodRank, c.red ? s.fuodRed : s.fuodBlack]}>{c.rank}</Text>
             <Text style={[s.fuodSuit, c.red ? s.fuodRed : s.fuodBlack]}>{c.suit}</Text>
-          </View>
-        ))}
-      </View>
-      <View style={[s.fuodRow, s.fuodLower]}>
-        {[0, 1, 2].map(i => (
-          <View key={i} style={s.fuodFaceDown}>
-            <Text style={s.fuodDownMark}>▪</Text>
           </View>
         ))}
       </View>
@@ -621,6 +616,27 @@ export default function RulebookContent({ bottomInset = 0 }: { bottomInset?: num
       </SectionCard>
 
       <OrnDivider />
+
+      {/* WELCOME FOOTER */}
+      <View style={s.welcomeFooter}>
+        <Text style={s.welcomeTitle}>Welcome To The Castle Royale</Text>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.replace('/');
+          }}
+          style={({ pressed }) => [s.ctaWrap, pressed && { opacity: 0.82 }]}
+        >
+          <LinearGradient
+            colors={['#f5e642', '#e6a817', '#d4881a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={s.ctaBtn}
+          >
+            <Text style={s.ctaText}>ARE YOU READY TO PLAY?</Text>
+          </LinearGradient>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -716,7 +732,7 @@ const s = StyleSheet.create({
   stepIllustration: { marginTop: 14 },
 
   // Pile illustration
-  pileContainer: { height: 120, alignItems: 'center', justifyContent: 'center' },
+  pileContainer: { height: 120, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   pileCard: {
     position: 'absolute',
     width: 44,
@@ -756,7 +772,7 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 0,
     gap: 3,
   },
   fuodRank: { fontSize: 18, fontWeight: '900', lineHeight: 20 },
@@ -1065,5 +1081,33 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     textAlign: 'center',
+  },
+
+  welcomeFooter: {
+    alignItems: 'center',
+    paddingVertical: 36,
+    gap: 22,
+  },
+  welcomeTitle: {
+    color: C.yellow,
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: 0.4,
+  },
+  ctaWrap: { width: '100%' },
+  ctaBtn: {
+    borderRadius: 100,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaText: {
+    color: C.ink,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
 });
