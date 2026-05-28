@@ -233,6 +233,9 @@ importers:
       expo-build-properties:
         specifier: ~55.0.14
         version: 55.0.14(expo@55.0.26)
+      expo-modules-autolinking:
+        specifier: ~55.0.24
+        version: 55.0.24(typescript@5.9.3)
       expo-sensors:
         specifier: ~55.0.15
         version: 55.0.15(expo@55.0.26)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))
