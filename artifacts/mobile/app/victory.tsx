@@ -11,8 +11,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withRepeat,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,48 +23,105 @@ const crownLossImage = require('../assets/crown-loss.png');
 const SERIF_BOLD = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const SERIF_REGULAR = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
-const PARTICLE_COLORS = ['#fbbf24', '#10b981', '#ffffff', '#f97316'];
+// ─── Luxury Confetti ──────────────────────────────────────────────────────────
 
-interface ParticleDef {
+const CONFETTI_COLORS = ['#8b5cf6', '#14b8a6', '#f59e0b', '#ec4899', '#ffffff', '#a78bfa', '#f0abfc'];
+
+interface ConfettiDef {
   id: number;
-  originX: number;
-  originY: number;
-  vx: number;
-  vy: number;
+  x: number;
+  w: number;
+  h: number;
+  borderRadius: number;
   color: string;
-  size: number;
-  duration: number;
   delay: number;
+  duration: number;
+  driftX: number;
+  fallY: number;
+  rotation: number;
+  glowing: boolean;
+  opacity: number;
 }
 
-function Particle({ def }: { def: ParticleDef }) {
-  const tx = useSharedValue(0);
-  const ty = useSharedValue(0);
-  const opacity = useSharedValue(0);
-  const scale = useSharedValue(1);
+function generateConfetti(screenWidth: number, screenHeight: number): ConfettiDef[] {
+  const defs: ConfettiDef[] = [];
+  for (let i = 0; i < 74; i++) {
+    const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]!;
+    const base = 5 + Math.random() * 13;
+    const shapeRoll = Math.random();
+    let w: number, h: number, br: number;
+    if (shapeRoll < 0.25) {
+      // circle
+      w = base; h = base; br = base / 2;
+    } else if (shapeRoll < 0.5) {
+      // thin horizontal ribbon
+      w = base * 2.2; h = base * 0.38; br = 1;
+    } else if (shapeRoll < 0.72) {
+      // rounded square
+      w = base; h = base; br = 3;
+    } else if (shapeRoll < 0.88) {
+      // tall shard
+      w = base * 0.5; h = base * 2.1; br = 1;
+    } else {
+      // small square tile
+      w = base * 1.3; h = base * 1.3; br = 4;
+    }
+    defs.push({
+      id: i,
+      x: Math.random() * screenWidth,
+      w,
+      h,
+      borderRadius: br,
+      color,
+      delay: Math.random() * 700,
+      duration: 1600 + Math.random() * 1600,
+      driftX: (Math.random() - 0.5) * 130,
+      fallY: screenHeight * 0.78 + Math.random() * screenHeight * 0.35,
+      rotation: (Math.random() > 0.5 ? 1 : -1) * (80 + Math.random() * 640),
+      glowing: Math.random() < 0.28,
+      opacity: 0.7 + Math.random() * 0.3,
+    });
+  }
+  return defs;
+}
+
+function ConfettiParticle({ def }: { def: ConfettiDef }) {
+  const ty      = useSharedValue(0);
+  const tx      = useSharedValue(0);
+  const rot     = useSharedValue(0);
+  const opacity = useSharedValue(def.opacity);
 
   useEffect(() => {
-    opacity.value = withDelay(def.delay, withTiming(1, { duration: 80 }));
-    tx.value = withDelay(def.delay, withTiming(def.vx, { duration: def.duration, easing: Easing.out(Easing.quad) }));
-    ty.value = withDelay(
-      def.delay,
-      withTiming(def.vy, { duration: def.duration, easing: Easing.in(Easing.quad) }),
-    );
+    ty.value = withDelay(def.delay, withTiming(def.fallY, {
+      duration: def.duration,
+      easing: Easing.in(Easing.quad),
+    }));
+    tx.value = withDelay(def.delay, withTiming(def.driftX, {
+      duration: def.duration,
+      easing: Easing.inOut(Easing.sin),
+    }));
+    rot.value = withDelay(def.delay, withTiming(def.rotation, {
+      duration: def.duration,
+    }));
     opacity.value = withDelay(
-      def.delay + def.duration * 0.3,
-      withTiming(0, { duration: def.duration * 0.7 }),
+      def.delay + def.duration * 0.65,
+      withTiming(0, { duration: def.duration * 0.35 }),
     );
-    scale.value = withDelay(def.delay, withTiming(0, { duration: def.duration }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const style = useAnimatedStyle(() => ({
+  const animStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: tx.value },
       { translateY: ty.value },
-      { scale: scale.value },
+      { translateX: tx.value },
+      { rotateZ: `${rot.value}deg` },
     ],
     opacity: opacity.value,
   }));
+
+  const glowStyle = def.glowing
+    ? { shadowColor: def.color, shadowOpacity: 0.85, shadowRadius: 7, shadowOffset: { width: 0, height: 0 }, elevation: 5 }
+    : {};
 
   return (
     <Animated.View
@@ -74,59 +129,38 @@ function Particle({ def }: { def: ParticleDef }) {
       style={[
         {
           position: 'absolute',
-          left: def.originX - def.size / 2,
-          top: def.originY - def.size / 2,
-          width: def.size,
-          height: def.size,
-          borderRadius: def.size / 2,
+          left: def.x,
+          top: -def.h,
+          width: def.w,
+          height: def.h,
+          borderRadius: def.borderRadius,
           backgroundColor: def.color,
         },
-        style,
+        glowStyle,
+        animStyle,
       ]}
     />
   );
 }
 
-function Fireworks({ width, height }: { width: number; height: number }) {
-  const particles = useMemo<ParticleDef[]>(() => {
-    const origins = [
-      { x: width * 0.22, y: height * 0.22 },
-      { x: width * 0.5,  y: height * 0.15 },
-      { x: width * 0.78, y: height * 0.22 },
-    ];
-    const defs: ParticleDef[] = [];
-    let id = 0;
-    origins.forEach((origin, oi) => {
-      const count = 14;
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2;
-        const speed = 60 + Math.random() * 110;
-        const vx = Math.cos(angle) * speed;
-        const vy = Math.sin(angle) * speed + 80 + Math.random() * 60;
-        defs.push({
-          id: id++,
-          originX: origin.x,
-          originY: origin.y,
-          vx,
-          vy,
-          color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)]!,
-          size: 5 + Math.random() * 5,
-          duration: 900 + Math.random() * 500,
-          delay: oi * 120 + Math.random() * 80,
-        });
-      }
-    });
-    return defs;
-  }, [width, height]);
-
+function LuxuryConfetti({ visible, width, height }: { visible: boolean; width: number; height: number }) {
+  const defs = useMemo(
+    () => (visible ? generateConfetti(width, height) : []),
+    // Regenerate only when visibility first turns on; ignore subsequent size jitter
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visible],
+  );
+  if (!visible) return null;
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {particles.map((def) => (
-        <Particle key={def.id} def={def} />
+      {defs.map((def) => (
+        <ConfettiParticle key={def.id} def={def} />
       ))}
     </View>
   );
 }
+
+// ─── Victory Screen ───────────────────────────────────────────────────────────
 
 export default function VictoryScreen() {
   const colors = useColors();
@@ -138,38 +172,28 @@ export default function VictoryScreen() {
 
   const isWin = params.winner === params.myId;
 
-  // No scale animation — images always render at their natural full resolution.
-  // Entrance is driven purely by opacity (fade) + a subtle translateY slide.
-  const contentOpacity = useSharedValue(0);
-  const slideY        = useSharedValue(28);   // slides up 28 px on reveal
-  const glowPulse     = useSharedValue(1);
+  // Content starts fully visible so the crown renders beneath the CardCurtain
+  // before the sweep begins. Only slideY animates in on reveal.
+  const contentOpacity = useSharedValue(1);
+  const slideY        = useSharedValue(28);
 
   const [curtainSweeping, setCurtainSweeping] = useState(false);
+  const [confettiVisible, setConfettiVisible] = useState(false);
 
   const handleContentReady = useCallback(() => {
-    contentOpacity.value = withTiming(1, { duration: 380 });
+    contentOpacity.value = withTiming(1, { duration: 1 }); // no-op, already 1
     slideY.value = withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) });
     if (isWin) {
-      glowPulse.value = withRepeat(
-        withSequence(withTiming(1.06, { duration: 1400 }), withTiming(0.97, { duration: 1400 })),
-        -1,
-        true,
-      );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setTimeout(() => setConfettiVisible(true), 1000);
     }
     setTimeout(() => setCurtainSweeping(true), 200);
-  }, [isWin]);
+  }, [isWin, contentOpacity, slideY]);
 
-  // The entire visible content fades + slides up together — images always at
-  // scale 1 so React Native rasterises them at full native resolution.
   const innerContentStyle = useAnimatedStyle(() => ({
     flex: 1,
     opacity: contentOpacity.value,
     transform: [{ translateY: slideY.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: glowPulse.value }],
   }));
 
   const handlePlayAgain = () => {
@@ -187,7 +211,7 @@ export default function VictoryScreen() {
   const cinzelBold = fontsLoaded ? 'Cinzel_700Bold' : SERIF_BOLD;
   const cinzelRegular = fontsLoaded ? 'Cinzel_400Regular' : SERIF_REGULAR;
 
-  // ── LOSS SCREEN ────────────────────────────────────────────────────────────
+  // ── LOSS SCREEN ─────────────────────────────────────────────────────────────
   if (!isWin) {
     return (
       <View style={[styles.container, styles.lossContainer]}>
@@ -225,7 +249,7 @@ export default function VictoryScreen() {
     );
   }
 
-  // ── WIN SCREEN ─────────────────────────────────────────────────────────────
+  // ── WIN SCREEN ──────────────────────────────────────────────────────────────
   const imageSize = Math.min(width * 0.82, 340);
   const topPad = insets.top + webTopPad + 16;
   const bottomPad = insets.bottom + 40;
@@ -233,19 +257,19 @@ export default function VictoryScreen() {
   return (
     <View style={[styles.container, styles.winContainer]}>
       <Animated.View style={innerContentStyle}>
-        <Fireworks width={width} height={height} />
+        <LuxuryConfetti visible={confettiVisible} width={width} height={height} />
 
         <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
           <BackButton label="← HOME" onPress={handleLobby} />
 
           <View style={styles.winCenterBlock}>
-            <Animated.View style={[{ width: imageSize, height: imageSize }, styles.winImageWrap, glowStyle]}>
+            <View style={[{ width: imageSize, height: imageSize }, styles.winImageWrap]}>
               <Image
                 source={crownWinImage}
                 style={{ width: imageSize, height: imageSize }}
                 resizeMode="contain"
               />
-            </Animated.View>
+            </View>
 
             <Text style={[styles.winTitle, { fontFamily: cinzelBold }]}>YOU WIN</Text>
             <Text style={[styles.winSub, { fontFamily: cinzelRegular }]}>

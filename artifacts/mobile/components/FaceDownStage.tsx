@@ -223,7 +223,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 22,
-    marginLeft: 4,
   },
   cardSlot: {
     width: 88,
