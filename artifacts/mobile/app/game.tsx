@@ -609,18 +609,21 @@ export default function GameScreen() {
             />
           </View>
 
-          {/* Player avatar chip — left side, above the action buttons area */}
-          <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 148, left: 10 }]}>
-            <AvatarChip
-              name={playerName}
-              isActive={isMyTurn}
-              portraitArt={myAvatarPortrait}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setPlayerMenuOpen((o) => !o);
-              }}
-            />
-          </View>
+          {/* Player avatar chip — left side, above the action buttons area.
+              Hidden during the blind-flip phase so it doesn't overlap the face-down glow rings. */}
+          {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
+            <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 148, left: 10 }]}>
+              <AvatarChip
+                name={playerName}
+                isActive={isMyTurn}
+                portraitArt={myAvatarPortrait}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setPlayerMenuOpen((o) => !o);
+                }}
+              />
+            </View>
+          )}
 
           {/* Cinematic card-flight overlay — spotlight + Bezier arc + 3D tilt + impact sparks.
               initialLastKey is computed inline at render time so that each portrait branch

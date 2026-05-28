@@ -329,11 +329,13 @@ export default function PlayerHand({
   // Must be AFTER all hooks (Rules of Hooks — see comment in original code).
   if (showFaceDown) {
     return (
-      <FaceDownStage
-        faceDownIds={faceDownIds.length > 0 ? faceDownIds : Array.from({ length: faceDownCount }).map((_, i) => `fd_${i}`)}
-        isMyTurn={isMyTurn}
-        onPlayCard={onPlayCard}
-      />
+      <View style={{ paddingLeft: 50 }}>
+        <FaceDownStage
+          faceDownIds={faceDownIds.length > 0 ? faceDownIds : Array.from({ length: faceDownCount }).map((_, i) => `fd_${i}`)}
+          isMyTurn={isMyTurn}
+          onPlayCard={onPlayCard}
+        />
+      </View>
     );
   }
 

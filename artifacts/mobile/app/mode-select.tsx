@@ -10,7 +10,7 @@ import BackButton from '@/components/BackButton';
 export default function ModeSelectScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { connectionStatus, onlineCount } = useGame();
+  const { connectionStatus } = useGame();
 
   const goPrivate = () => {
     if (connectionStatus !== 'connected') return;
@@ -81,7 +81,7 @@ export default function ModeSelectScreen() {
               <Text style={[styles.bigBtnIcon, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>🌐</Text>
               <Text style={[styles.bigBtnText, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>PLAY ONLINE</Text>
               <Text style={[styles.bigBtnSubText, { color: 'rgba(255,255,255,0.78)' }, !isConnected && { color: '#1a4048' }]}>
-                {isConnected ? `· ${onlineCount} PLAYERS ONLINE ·` : '· FIND AN OPPONENT ·'}
+                · FIND AN OPPONENT ·
               </Text>
             </LinearGradient>
           </Pressable>

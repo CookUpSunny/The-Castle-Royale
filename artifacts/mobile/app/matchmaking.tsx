@@ -11,7 +11,7 @@ import BackButton from '@/components/BackButton';
 export default function MatchmakingScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { cancelQueue, queueSeconds, gameView, isInQueue, onlineCount } = useGame();
+  const { cancelQueue, queueSeconds, gameView, isInQueue } = useGame();
 
   const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -51,7 +51,6 @@ export default function MatchmakingScreen() {
 
         <Text style={[styles.timer, { color: colors.foreground }]}>{fmt(queueSeconds)}</Text>
         <Text style={[styles.statusText, { color: colors.mutedForeground }]}>Searching for a worthy challenger...</Text>
-        <Text style={[styles.onlineText, { color: colors.mutedForeground }]}>{onlineCount} players online</Text>
 
         <View />
       </View>
