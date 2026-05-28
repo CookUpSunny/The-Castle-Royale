@@ -307,7 +307,7 @@ export default function SplashIntro({ onDone }: SplashIntroProps) {
           source={require('../assets/splash/splash_hero.png')}
           style={{
             position: 'absolute',
-            right: -40,
+            right: 0,
             top: 0,
             width: Math.round((941 / 1672) * height),
             height,
