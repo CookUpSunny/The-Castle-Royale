@@ -36,7 +36,7 @@ export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning
  * That's it — the rest of the app picks it up automatically.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export type AvatarId = 'eagles' | 'frog' | 'troll' | 'gigi' | 'rockner';
+export type AvatarId = 'eagles' | 'frog' | 'troll' | 'gigi' | 'rockner' | 'sunami';
 
 export interface AvatarOption {
   id: AvatarId;
@@ -87,6 +87,14 @@ export const AVATARS: AvatarOption[] = [
     color: '#dc2626',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     portrait: require('../assets/avatars/rockner.png') as number,
+  },
+  {
+    id: 'sunami',
+    name: 'Sunami Walker',
+    quote: 'Oh come on. Show me you can handle the game.',
+    color: '#f43f5e',
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/sunami.png') as number,
   },
 ];
 
