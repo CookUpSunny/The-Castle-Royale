@@ -14,6 +14,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import SplashGravity from '@/components/SplashGravity';
 import SplashIntro from '@/components/SplashIntro';
 import SplashStudio from '@/components/SplashStudio';
 import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
@@ -57,7 +58,7 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  const [splashPhase, setSplashPhase] = useState<'intro' | 'studio' | 'done'>('intro');
+  const [splashPhase, setSplashPhase] = useState<'intro' | 'gravity' | 'studio' | 'done'>('intro');
 
   // Hide native splash immediately — our dark-grey JS intro takes over from here.
   // Do NOT wait for font loading; the intro overlay covers the screen during that time.
@@ -80,7 +81,10 @@ export default function RootLayout() {
                       {/* Render navigator only once fonts are ready; intro overlay covers during load */}
                       {appReady && <RootLayoutNav />}
                       {splashPhase === 'intro' && (
-                        <SplashIntro onDone={() => setSplashPhase('studio')} />
+                        <SplashIntro onDone={() => setSplashPhase('gravity')} />
+                      )}
+                      {splashPhase === 'gravity' && (
+                        <SplashGravity onDone={() => setSplashPhase('studio')} />
                       )}
                       {splashPhase === 'studio' && (
                         <SplashStudio onDone={() => setSplashPhase('done')} />
