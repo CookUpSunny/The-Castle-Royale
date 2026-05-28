@@ -7,10 +7,13 @@ import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions
 import BackButton from '@/components/BackButton';
 import CardCurtain from '@/components/CardCurtain';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -160,6 +163,132 @@ function LuxuryConfetti({ visible, width, height }: { visible: boolean; width: n
   );
 }
 
+// ─── Wind-blown Dust (loss screen) ───────────────────────────────────────────
+
+const DUST_COLORS = ['#8b7355', '#a08560', '#7a6348', '#b8997a', '#c4a882'];
+
+interface DustDef {
+  id: number;
+  y: number;
+  size: number;
+  color: string;
+  duration: number;
+  delay: number;
+  driftY: number;
+  baseOpacity: number;
+}
+
+function buildDustDefs(screenWidth: number, screenHeight: number): DustDef[] {
+  const defs: DustDef[] = [];
+  for (let i = 0; i < 28; i++) {
+    const size = 2 + Math.random() * 4;
+    defs.push({
+      id: i,
+      y: Math.random() * screenHeight,
+      size,
+      color: DUST_COLORS[Math.floor(Math.random() * DUST_COLORS.length)]!,
+      duration: 5000 + Math.random() * 5000,
+      delay: Math.random() * 8000,
+      driftY: 6 + Math.random() * 18,
+      baseOpacity: 0.18 + Math.random() * 0.32,
+    });
+  }
+  return defs;
+}
+
+function DustParticle({ def, screenWidth }: { def: DustDef; screenWidth: number }) {
+  const tx      = useSharedValue(-def.size);
+  const ty      = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    // Sweep left → right, instant snap back, repeat indefinitely
+    tx.value = withDelay(
+      def.delay,
+      withRepeat(
+        withSequence(
+          withTiming(screenWidth + def.size + 1, {
+            duration: def.duration,
+            easing: Easing.linear,
+          }),
+          withTiming(-def.size - 1, { duration: 0 }),
+        ),
+        -1,
+        false,
+      ),
+    );
+    // Gentle vertical oscillation — independent of horizontal timing
+    ty.value = withRepeat(
+      withSequence(
+        withTiming(def.driftY, {
+          duration: def.duration * 0.55,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        withTiming(-def.driftY * 0.4, {
+          duration: def.duration * 0.45,
+          easing: Easing.inOut(Easing.sin),
+        }),
+      ),
+      -1,
+      false,
+    );
+    // Fade in → hold → fade out in sync with horizontal cycle
+    opacity.value = withDelay(
+      def.delay,
+      withRepeat(
+        withSequence(
+          withTiming(def.baseOpacity, { duration: def.duration * 0.18 }),
+          withTiming(def.baseOpacity, { duration: def.duration * 0.62 }),
+          withTiming(0, { duration: def.duration * 0.2 }),
+          withTiming(0, { duration: 0 }),
+        ),
+        -1,
+        false,
+      ),
+    );
+    return () => {
+      cancelAnimation(tx);
+      cancelAnimation(ty);
+      cancelAnimation(opacity);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }, { translateY: ty.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          left: 0,
+          top: def.y,
+          width: def.size,
+          height: def.size,
+          borderRadius: def.size / 2,
+          backgroundColor: def.color,
+        },
+        animStyle,
+      ]}
+    />
+  );
+}
+
+function DustParticles({ width, height }: { width: number; height: number }) {
+  const defs = useMemo(() => buildDustDefs(width, height), [width, height]);
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {defs.map((def) => (
+        <DustParticle key={def.id} def={def} screenWidth={width} />
+      ))}
+    </View>
+  );
+}
+
 // ─── Victory Screen ───────────────────────────────────────────────────────────
 
 export default function VictoryScreen() {
@@ -215,6 +344,7 @@ export default function VictoryScreen() {
   if (!isWin) {
     return (
       <View style={[styles.container, styles.lossContainer]}>
+        <DustParticles width={width} height={height} />
         <Animated.View style={innerContentStyle}>
           <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
             <BackButton label="← HOME" onPress={handleLobby} />
