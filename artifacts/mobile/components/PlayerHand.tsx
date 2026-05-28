@@ -2,7 +2,6 @@ import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import type { LayoutRect } from '@/components/CardPlayFlight';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -47,9 +46,6 @@ interface PlayerHandProps {
   onDragEnd?: (x: number, y: number) => void;
   /** Override the available width used for fan arc math (defaults to full screen width). Pass when the container is narrower than the screen. */
   availableWidth?: number;
-  /** Called on second-tap confirmation with the selected card's raised screen rect so
-   *  the flight animation can depart from the card's actual raised position. */
-  onPlayFromRect?: (rect: LayoutRect) => void;
 }
 
 // ─── Fan arc constants ────────────────────────────────────────────────────────
@@ -307,13 +303,11 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   onDragMove,
   onDragEnd,
   availableWidth,
-  onPlayFromRect,
 }: PlayerHandProps, ref) {
   const colors = useColors();
   const { width: screenWidth } = useWindowDimensions();
   const containerWidth = availableWidth ?? screenWidth;
   const showHand = hand.length > 0;
-  const fanContainerRef = useRef<View>(null);
   const showFaceUp = hand.length === 0 && faceUp.length > 0;
   const showFaceDown = hand.length === 0 && faceUp.length === 0 && faceDownCount > 0;
 
@@ -411,34 +405,12 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   // Fan-only two-tap: first tap selects, second tap plays.
   const handleTap = useCallback((card: CardType) => {
     if (selectedCardId === card.id) {
-      // Immediately clear selection so the raise animation drops.
       setSelectedCardId(null);
-      const doPlay = () => onPlayCard(card.id);
-      // Report the card's raised screen rect so the flight can depart from it.
-      if (onPlayFromRect && fanContainerRef.current) {
-        const cardIndex = activeCards.findIndex((c) => c.id === card.id);
-        if (cardIndex >= 0) {
-          fanContainerRef.current.measure((_x, _y, _w, _h, pageX, pageY) => {
-            if (_w > 0) {
-              const { left, top } = computeFanPosition(cardIndex, activeCards.length, containerWidth);
-              onPlayFromRect({
-                x: pageX + left,
-                // top is relative to container; subtract 28px raise that was applied.
-                y: pageY + top - 28,
-                width: CARD_WIDTH,
-                height: CARD_HEIGHT,
-              });
-            }
-            doPlay();
-          });
-          return;
-        }
-      }
-      doPlay();
+      onPlayCard(card.id);
     } else {
       setSelectedCardId(card.id);
     }
-  }, [selectedCardId, onPlayCard, onPlayFromRect, activeCards, containerWidth]);
+  }, [selectedCardId, onPlayCard]);
 
   // Face-up phase uses immediate single-tap play (no selection state).
   const handleFaceUpTap = useCallback((card: CardType) => {
@@ -541,7 +513,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
            Two-tap selection + hover raise are portrait-only features (draggable=false).
            When draggable=true (landscape), the old single-tap behaviour is preserved. */
         <GestureDetector gesture={draggable ? Gesture.Manual() : hoverPan}>
-          <View ref={fanContainerRef} style={[styles.fanContainer, { width: containerWidth }]}>
+          <View style={[styles.fanContainer, { width: containerWidth }]}>
             {activeCards.map((card, i) => {
               const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
               const multiplicity = valueCounts.get(card.value) ?? 1;

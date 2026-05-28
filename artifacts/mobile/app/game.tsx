@@ -391,7 +391,6 @@ export default function GameScreen() {
   // Layout rects for CinematicPlay (portrait)
   const [pileRectP, setPileRectP] = useState<LayoutRect | null>(null);
   const [selfHandRectP, setSelfHandRectP] = useState<LayoutRect | null>(null);
-  const [selfCardRectP, setSelfCardRectP] = useState<LayoutRect | null>(null);
   const [opponentZoneRectP, setOpponentZoneRectP] = useState<LayoutRect | null>(null);
   const pileViewRef = useRef<View>(null);
   const selfHandRef = useRef<View>(null);
@@ -606,7 +605,6 @@ export default function GameScreen() {
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
                 availableWidth={Math.round(width * 0.88)}
-                onPlayFromRect={setSelfCardRectP}
               />
             </View>
 
@@ -653,10 +651,8 @@ export default function GameScreen() {
               myPlayerId={gameView.myPlayerId}
               pileRect={pileRectP}
               selfHandRect={selfHandRectP}
-              selfCardRect={selfCardRectP}
               opponentZoneRect={opponentZoneRectP}
               onAvatarPulse={() => {}}
-              onFlightConsumed={() => setSelfCardRectP(null)}
               initialLastKey={gameView.lastEvent ? lastEventIdentityKey(gameView.gameId, gameView.lastEvent) : null}
             />
           )}
