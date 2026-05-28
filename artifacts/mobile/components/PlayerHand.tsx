@@ -52,9 +52,9 @@ const CARD_HEIGHT = 100;
 /** Visible height of the fan container. Cards arc within this space. */
 const FAN_CONTAINER_H = 160;
 /** Radius of the imaginary circle whose arc the card bottoms follow. */
-const FAN_PIVOT_R = 220;
+const FAN_PIVOT_R = 190;
 /** Maximum half-spread in degrees (each side from center). */
-const MAX_HALF_SPREAD = 30;
+const MAX_HALF_SPREAD = 40;
 
 /**
  * Compute the absolute position and rotation for card [index] of [total]
@@ -203,8 +203,8 @@ function HandCard({
   const softGlowWrap = {
     shadowColor: '#fbbf24',
     shadowOffset: { width: 0, height: 0 } as const,
-    shadowRadius: 14,
-    elevation: 6,
+    shadowRadius: 5,
+    elevation: 2,
     borderRadius: 10,
   };
 

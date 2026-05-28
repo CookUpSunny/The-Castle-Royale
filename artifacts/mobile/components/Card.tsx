@@ -329,11 +329,11 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
   const animStyle = useAnimatedStyle(() => {
     const playable = playableShared.value;
     const glow = glowShared.value;
-    const op = playable ? 0.55 + shimmer.value * 0.45 : (glow !== 'transparent' ? 0.9 : 0);
+    const op = playable ? 0.3 + shimmer.value * 0.35 : (glow !== 'transparent' ? 0.5 : 0);
     return {
       transform: [{ scale: scale.value }],
       shadowOpacity: op,
-      shadowRadius: playable ? 14 + shimmer.value * 20 : 8,
+      shadowRadius: playable ? 6 + shimmer.value * 8 : 5,
     };
   });
 
