@@ -65,22 +65,95 @@ function Step({
   numColor,
   title,
   desc,
+  illustration,
 }: {
   num: string;
   numBg: string;
   numColor: string;
   title: string;
   desc: string;
+  illustration?: React.ReactNode;
 }) {
   return (
     <View style={s.step}>
-      <View style={[s.stepNum, { backgroundColor: numBg }]}>
-        <Text style={[s.stepNumText, { color: numColor }]}>{num}</Text>
+      <View style={s.stepRow}>
+        <View style={[s.stepNum, { backgroundColor: numBg }]}>
+          <Text style={[s.stepNumText, { color: numColor }]}>{num}</Text>
+        </View>
+        <View style={s.stepBody}>
+          <Text style={s.stepTitle}>{title}</Text>
+          <Text style={s.stepDesc}>{desc}</Text>
+        </View>
       </View>
-      <View style={s.stepBody}>
-        <Text style={s.stepTitle}>{title}</Text>
-        <Text style={s.stepDesc}>{desc}</Text>
+      {illustration ? <View style={s.stepIllustration}>{illustration}</View> : null}
+    </View>
+  );
+}
+
+function PileIllustration() {
+  const cards = [
+    { rank: 'K', suit: '♠', rot: -18, x: -22, y: 4, red: false },
+    { rank: '7', suit: '♥', rot: -8, x: -10, y: 2, red: true },
+    { rank: 'J', suit: '♦', rot: 3, x: 0, y: 0, red: true },
+    { rank: '4', suit: '♣', rot: 12, x: 10, y: 3, red: false },
+    { rank: 'A', suit: '♠', rot: 22, x: 20, y: 5, red: false },
+  ];
+  return (
+    <View style={s.pileContainer}>
+      {cards.map((c, i) => (
+        <View
+          key={i}
+          style={[
+            s.pileCard,
+            {
+              transform: [{ rotate: `${c.rot}deg` }, { translateX: c.x }, { translateY: c.y }],
+              zIndex: i,
+            },
+          ]}
+        >
+          <Text style={[s.pileRank, c.red ? s.pileRed : s.pileBlack]}>{c.rank}</Text>
+          <Text style={[s.pileSuit, c.red ? s.pileRed : s.pileBlack]}>{c.suit}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function FaceUpOverDownIllustration() {
+  const faceUpCards = [
+    { rank: 'J', suit: '♠', red: false },
+    { rank: 'Q', suit: '♥', red: true },
+    { rank: 'A', suit: '♦', red: true },
+  ];
+  return (
+    <View style={s.fuodContainer}>
+      <View style={s.fuodRow}>
+        {faceUpCards.map((c, i) => (
+          <View key={i} style={s.fuodFaceUp}>
+            <Text style={[s.fuodRank, c.red ? s.fuodRed : s.fuodBlack]}>{c.rank}</Text>
+            <Text style={[s.fuodSuit, c.red ? s.fuodRed : s.fuodBlack]}>{c.suit}</Text>
+          </View>
+        ))}
       </View>
+      <View style={[s.fuodRow, s.fuodLower]}>
+        {[0, 1, 2].map(i => (
+          <View key={i} style={s.fuodFaceDown}>
+            <Text style={s.fuodDownMark}>▪</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function BlindFlipIllustration() {
+  return (
+    <View style={s.bfContainer}>
+      {[0, 1, 2].map(i => (
+        <View key={i} style={s.bfCard}>
+          <Text style={s.bfCrown}>♛</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -355,9 +428,9 @@ export default function RulebookContent({ bottomInset = 0 }: { bottomInset?: num
         <View style={s.steps}>
           <Step num="1" numBg={C.yellow} numColor={C.ink} title="Play a Card — or Multiple" desc="Play one or more cards of the same rank from your hand. All must be equal to or higher in rank than the top card of the pile." />
           <Step num="2" numBg={C.blue} numColor="#fff" title="Refill to Three" desc="After playing, draw from the deck until you hold three cards in hand again — as long as the deck has cards remaining." />
-          <Step num="3" numBg={C.red} numColor="#fff" title="Cannot Play? Collect the Pile" desc="If no card in your hand is valid to play, collect every card from the pile into your hand." />
-          <Step num="4" numBg={C.green} numColor={C.ink} title="Hand Empty & Deck Gone — Play Face-Ups" desc="Once your hand is empty and the deck is exhausted, begin playing your face-up cards. Same rules apply." />
-          <Step num="5" numBg={C.purple} numColor="#fff" title="Face-Ups Gone — Flip Blind" desc="Choose any face-down card without looking. Flip it. Plays legally? Go. Doesn't? Collect the pile and that card into your hand." />
+          <Step num="3" numBg={C.red} numColor="#fff" title="Cannot Play? Collect the Pile" desc="If no card in your hand is valid to play, collect every card from the pile into your hand." illustration={<PileIllustration />} />
+          <Step num="4" numBg={C.green} numColor={C.ink} title="Hand Empty & Deck Gone — Play Face-Ups" desc="Once your hand is empty and the deck is exhausted, begin playing your face-up cards. Same rules apply." illustration={<FaceUpOverDownIllustration />} />
+          <Step num="5" numBg={C.purple} numColor="#fff" title="Face-Ups Gone — Flip Blind" desc="Choose any face-down card without looking. Flip it. Plays legally? Go. Doesn't? Collect the pile and that card into your hand — then immediately play a card on top." illustration={<BlindFlipIllustration />} />
         </View>
       </SectionCard>
 
@@ -535,14 +608,16 @@ const s = StyleSheet.create({
 
   steps: { gap: 10 },
   step: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
     padding: 14,
     borderRadius: 14,
     backgroundColor: C.surface2,
     borderWidth: 1,
     borderColor: C.border,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   stepNum: {
     width: 32,
@@ -557,6 +632,87 @@ const s = StyleSheet.create({
   stepBody: { flex: 1 },
   stepTitle: { color: C.white, fontSize: 16, fontWeight: '800', marginBottom: 4, lineHeight: 20 },
   stepDesc: { color: C.mid, fontSize: 14, fontWeight: '500', lineHeight: 21 },
+  stepIllustration: { marginTop: 14 },
+
+  // Pile illustration
+  pileContainer: { height: 80, alignItems: 'center', justifyContent: 'center' },
+  pileCard: {
+    position: 'absolute',
+    width: 44,
+    height: 62,
+    borderRadius: 6,
+    backgroundColor: '#faf8f2',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
+    gap: 2,
+  },
+  pileRank: { fontSize: 16, fontWeight: '900', lineHeight: 18 },
+  pileSuit: { fontSize: 14, lineHeight: 15 },
+  pileRed: { color: '#cc0000' },
+  pileBlack: { color: '#10100e' },
+
+  // Face-up over face-down illustration
+  fuodContainer: { alignItems: 'center' },
+  fuodRow: { flexDirection: 'row', gap: 10, justifyContent: 'center' },
+  fuodLower: { marginTop: -16 },
+  fuodFaceUp: {
+    width: 52,
+    height: 70,
+    borderRadius: 7,
+    backgroundColor: '#faf8f2',
+    borderWidth: 2,
+    borderColor: 'rgba(200,210,255,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#c0d0ff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 6,
+    gap: 3,
+  },
+  fuodRank: { fontSize: 18, fontWeight: '900', lineHeight: 20 },
+  fuodSuit: { fontSize: 16, lineHeight: 17 },
+  fuodRed: { color: '#cc0000' },
+  fuodBlack: { color: '#10100e' },
+  fuodFaceDown: {
+    width: 52,
+    height: 70,
+    borderRadius: 7,
+    backgroundColor: '#1a1a2e',
+    borderWidth: 1,
+    borderColor: 'rgba(150,150,180,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.55,
+  },
+  fuodDownMark: { fontSize: 20, color: 'rgba(180,79,255,0.4)' },
+
+  // Blind flip illustration
+  bfContainer: { flexDirection: 'row', gap: 12, justifyContent: 'center' },
+  bfCard: {
+    width: 56,
+    height: 78,
+    borderRadius: 9,
+    backgroundColor: '#12101e',
+    borderWidth: 2,
+    borderColor: 'rgba(245,230,66,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#f5e642',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  bfCrown: { fontSize: 28, color: '#f5e642' },
 
   tip: {
     borderRadius: 10,
