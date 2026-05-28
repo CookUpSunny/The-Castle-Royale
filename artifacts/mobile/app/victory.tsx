@@ -339,6 +339,8 @@ export default function VictoryScreen() {
 
   const [curtainSweeping, setCurtainSweeping] = useState(false);
   const [confettiVisible, setConfettiVisible] = useState(false);
+  const confettiOpacity = useSharedValue(1);
+  const confettiFadeStyle = useAnimatedStyle(() => ({ opacity: confettiOpacity.value }));
 
   const handleContentReady = useCallback(() => {
     contentOpacity.value = withTiming(1, { duration: 1 }); // no-op, already 1
@@ -356,15 +358,25 @@ export default function VictoryScreen() {
     transform: [{ translateY: slideY.value }],
   }));
 
+  const CONFETTI_FADE_MS = 400;
+
   const handlePlayAgain = () => {
-    clearGame();
-    joinQueue();
-    router.replace('/matchmaking');
+    const delay = confettiVisible ? CONFETTI_FADE_MS : 0;
+    if (confettiVisible) confettiOpacity.value = withTiming(0, { duration: CONFETTI_FADE_MS });
+    setTimeout(() => {
+      clearGame();
+      joinQueue();
+      router.replace('/matchmaking');
+    }, delay);
   };
 
   const handleLobby = () => {
-    clearGame();
-    router.replace('/');
+    const delay = confettiVisible ? CONFETTI_FADE_MS : 0;
+    if (confettiVisible) confettiOpacity.value = withTiming(0, { duration: CONFETTI_FADE_MS });
+    setTimeout(() => {
+      clearGame();
+      router.replace('/');
+    }, delay);
   };
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
@@ -418,7 +430,9 @@ export default function VictoryScreen() {
   return (
     <View style={[styles.container, styles.winContainer]}>
       <Animated.View style={innerContentStyle}>
-        <LuxuryConfetti visible={confettiVisible} width={width} height={height} />
+        <Animated.View style={[StyleSheet.absoluteFill, confettiFadeStyle]} pointerEvents="none">
+          <LuxuryConfetti visible={confettiVisible} width={width} height={height} />
+        </Animated.View>
 
         <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
           <BackButton label="← HOME" onPress={handleLobby} />
