@@ -3,9 +3,8 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import WebView from 'react-native-webview';
 import CardMosaic from '@/components/CardMosaic';
-import { RULEBOOK_HTML } from '@/lib/rulebookHtml';
+import RulebookContent from '@/components/RulebookContent';
 
 type Phase = 'mosaic' | 'dissolve' | 'rulebook';
 
@@ -13,35 +12,25 @@ export default function HowToPlayScreen() {
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('mosaic');
   const dissolveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const webOpacity = useSharedValue(0);
+  const contentOpacity = useSharedValue(0);
 
   const handleAssembled = useCallback(() => {
     setPhase('dissolve');
-    webOpacity.value = withTiming(1, { duration: 520 });
+    contentOpacity.value = withTiming(1, { duration: 520 });
     dissolveTimer.current = setTimeout(() => {
       setPhase('rulebook');
     }, 620);
   }, []);
 
-  const webStyle = useAnimatedStyle(() => ({
-    opacity: webOpacity.value,
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
   }));
 
   return (
     <View style={styles.root}>
-      <View style={styles.webContainer}>
-        <Animated.View style={[StyleSheet.absoluteFill, webStyle]}>
-          <WebView
-            source={{ html: RULEBOOK_HTML }}
-            style={styles.webView}
-            javaScriptEnabled
-            originWhitelist={['*']}
-            scrollEnabled={true}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </Animated.View>
-      </View>
+      <Animated.View style={[StyleSheet.absoluteFill, contentStyle]}>
+        <RulebookContent bottomInset={insets.bottom} />
+      </Animated.View>
 
       {phase !== 'rulebook' && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -71,13 +60,6 @@ export default function HowToPlayScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
-    backgroundColor: '#0f0f13',
-  },
-  webContainer: {
-    flex: 1,
-  },
-  webView: {
     flex: 1,
     backgroundColor: '#0f0f13',
   },
