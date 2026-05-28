@@ -119,3 +119,9 @@ id = "6j7q1AHkrtpTjeIhc66dm"
 uri = "file://castle-royale-src.zip"
 type = "unspecified"
 title = "Castle Royale — Full Source Code"
+
+[[outputs]]
+id = "VOWgYfR4WAh8luWw7INeb"
+uri = "file://artifacts/castle-royale-promo/public/audio/bg_music.mp3"
+type = "audio"
+title = "Castle Royale epic anime battle music"
