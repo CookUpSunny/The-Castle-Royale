@@ -152,7 +152,7 @@ function BlindFlipIllustration() {
     <View style={s.bfContainer}>
       {[0, 1, 2].map(i => (
         <View key={i} style={s.bfCard}>
-          <Text style={s.bfCrown}>♛</Text>
+          <Text style={s.bfCrown}>👑</Text>
         </View>
       ))}
     </View>

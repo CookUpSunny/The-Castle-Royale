@@ -28,6 +28,14 @@ export type CardSkinId =
 
 export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning' | 'matrix';
 
+/**
+ * ─── ADDING A NEW CHARACTER AVATAR ───────────────────────────────────────────
+ * 1. Drop the portrait PNG into  artifacts/mobile/assets/avatars/<id>.png
+ * 2. Add the new ID to the union below  (e.g.  | 'ninja')
+ * 3. Add an entry to the AVATARS array  (id, name, quote, color, portrait require())
+ * That's it — the rest of the app picks it up automatically.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
 export type AvatarId = 'eagles' | 'frog' | 'troll';
 
 export interface AvatarOption {
@@ -164,8 +172,9 @@ const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 const isArenaId = (v: string | null): v is ArenaId =>
   v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning' || v === 'matrix';
 
+const AVATAR_ID_SET = new Set<string>(AVATARS.map((a) => a.id));
 const isAvatarId = (v: string | null): v is AvatarId =>
-  v === 'eagles' || v === 'frog' || v === 'troll';
+  v !== null && AVATAR_ID_SET.has(v);
 
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [cardSkin, setCardSkinState] = useState<CardSkinId>('royal-gold');
