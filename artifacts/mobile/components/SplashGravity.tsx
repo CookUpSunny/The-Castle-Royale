@@ -77,7 +77,6 @@ const PULSE_COUNT = 4;
 const PULSE_INTERVAL = 800;
 
 function PulseRing({ cx, cy, delay }: { cx: number; cy: number; delay: number }) {
-  'use no memo';
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -137,7 +136,6 @@ function PulseRing({ cx, cy, delay }: { cx: number; cy: number; delay: number })
 }
 
 function Particle({ cx, cy, config }: { cx: number; cy: number; config: ParticleConfig }) {
-  'use no memo';
   const translateX = useRef(new Animated.Value(config.startX)).current;
   const translateY = useRef(new Animated.Value(config.startY)).current;
   const scale = useRef(new Animated.Value(1)).current;
