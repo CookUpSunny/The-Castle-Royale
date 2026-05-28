@@ -1,0 +1,48 @@
+[Create a futuristic animated light-border system inspired by an Infinity Loop / Möbius strip animation, but transformed into a single continuous bold beam of energy that wraps perfectly around the outer edge of a smartphone screen and surrounding image frame.
+
+The animation should feel alive, luxurious, and technologically divine — as if the phone itself is generating an infinite energy field around the display.
+
+Use one uninterrupted glowing line of light that travels endlessly around the perimeter of the phone screen and image border, hugging the edges precisely with elegant curvature. The motion should resemble a Möbius-style infinity current flowing through a closed circuit, smooth and mathematically perfect.
+
+Animation Behavior:
+• The light beam continuously circulates around the screen edges without stopping
+• Motion should feel fluid, seamless, hypnotic, and premium
+• The line slightly accelerates and decelerates naturally as it rounds corners
+• Corners emit intensified glow pulses as the beam bends around them
+• The line leaves behind a subtle fading energy trail
+• Occasional pulses ripple through the border like energy surges
+• The beam never breaks, never resets visibly, and never arrives anywhere — infinite motion
+
+Visual Style:
+• Ultra-clean Apple-meets-cyberpunk aesthetic
+• Dark background preferred to emphasize glow
+• High-end cinematic lighting and reflections
+• Edge illumination should softly bleed into the surrounding environment
+• Glow uses layered bloom with feGaussianBlur-style diffusion
+• The border should feel dimensional, like liquid neon glass
+• The animation should look expensive, futuristic, and emotionally magnetic
+
+Color System:
+• Primary glow: electric violet
+• Secondary accents: teal and amber energy flares
+• Soft reactive gradients shifting subtly during motion
+• Occasional white-hot highlights at peak energy points
+
+Technical Inspiration:
+• SVG path animation
+• stroke-dasharray and stroke-dashoffset techniques
+• Infinite perimeter tracing system
+• Dynamic glow filters
+• Motion-trail compositing
+• Reactive edge lighting
+
+Additional Details:
+• Add a faint pulsing energy node that occasionally travels with the beam
+• The border should subtly reflect onto the phone body and nearby surfaces
+• Motion must loop perfectly seamlessly
+• The effect should work as a premium hero animation for a luxury tech product, AI interface, futuristic app splash page, or cinematic website intro
+
+Overall feeling:
+Infinite energy.
+Luxury intelligence.
+A living interface made of light.]
