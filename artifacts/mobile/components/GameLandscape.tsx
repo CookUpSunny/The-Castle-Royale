@@ -435,7 +435,7 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const {
     myHand, myFaceUp, myFaceDownCount, myFaceDownIds, opponentHandCount, opponentFaceUp, opponentFaceDownCount,
-    opponentName, discardPile, deckCount, isMyTurn,
+    opponentName, discardPile, deckCount, isMyTurn, canFastPlay,
   } = gameView;
 
   // Opponent gets a deterministic avatar from the AVATARS list based on their name
@@ -443,8 +443,18 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   const activeZone = myHand.length > 0 ? myHand : myFaceUp;
   const burnIds = activeZone.filter((c) => c.value === 10 && canPlayCard(c, discardPile)).map((c) => c.id);
+  const resetIds = activeZone.filter((c) => c.value === 2 && canPlayCard(c, discardPile)).map((c) => c.id);
   const hasBurn = burnIds.length > 0;
+  const hasReset = resetIds.length > 0;
   const handlePlayBurn = () => { if (burnIds.length > 0) playCards(burnIds); };
+  const handlePlayReset = () => { if (resetIds.length > 0) playCards(resetIds); };
+  const handleFastPlay = () => {
+    if (!canFastPlay) return;
+    const top = discardPile[discardPile.length - 1];
+    if (!top) return;
+    const sameIds = activeZone.filter((c) => c.value === top.value).map((c) => c.id);
+    if (sameIds.length > 0) playCards(sameIds);
+  };
 
   // Left column holds only action buttons now (name plates moved to absolute corners).
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
@@ -499,9 +509,13 @@ export default function GameLandscape(): React.JSX.Element | null {
               <ActionButtons
                 canPickup={discardPile.length > 0}
                 hasBurn={hasBurn}
+                hasReset={hasReset}
+                canFastPlay={canFastPlay}
                 isMyTurn={isMyTurn}
                 onPickup={doPickup}
                 onPlayBurn={handlePlayBurn}
+                onPlayReset={handlePlayReset}
+                onFastPlay={handleFastPlay}
               />
             )}
           </View>
