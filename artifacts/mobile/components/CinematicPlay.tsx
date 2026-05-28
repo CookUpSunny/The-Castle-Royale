@@ -51,8 +51,10 @@ export default function CinematicPlay({
   myPlayerId,
   pileRect,
   selfHandRect,
+  selfCardRect,
   opponentZoneRect,
   onAvatarPulse,
+  onFlightConsumed,
   initialLastKey,
 }: {
   gameId: string;
@@ -60,8 +62,13 @@ export default function CinematicPlay({
   myPlayerId: string;
   pileRect: LayoutRect | null;
   selfHandRect: LayoutRect | null;
+  /** When provided and valid, used as the flight start for self plays instead of selfHandRect.
+   *  Should be the selected card's actual raised screen rect at the moment of play. */
+  selfCardRect?: LayoutRect | null;
   opponentZoneRect: LayoutRect | null;
   onAvatarPulse: (side: 'self' | 'opponent') => void;
+  /** Called when a self-side flight is triggered so the caller can reset selfCardRect. */
+  onFlightConsumed?: () => void;
   initialLastKey?: string | null;
 }) {
   const [flight, setFlight] = useState<{ card: CardType; key: string; side: 'self' | 'opponent' } | null>(null);
@@ -107,12 +114,17 @@ export default function CinematicPlay({
     if (lastKeyRef.current === key) return;
 
     const side: 'self' | 'opponent' = ev.playerId === myPlayerId ? 'self' : 'opponent';
-    const start = centerOf(side === 'self' ? selfHandRect : opponentZoneRect);
+    // For self plays, prefer the specific card's raised rect over the generic hand rect.
+    const selfStart = side === 'self' && selfCardRect && selfCardRect.width > 0
+      ? selfCardRect
+      : selfHandRect;
+    const start = centerOf(side === 'self' ? selfStart : opponentZoneRect);
     const end = centerOf(pileRect);
     if (!start || !end) return;
 
     lastKeyRef.current = key;
     onAvatarPulse(side);
+    if (side === 'self') onFlightConsumed?.();
 
     const arcLift = 84;
     const ctrlX = (start.x + end.x) / 2 + (side === 'self' ? 18 : -18);
@@ -151,7 +163,7 @@ export default function CinematicPlay({
       }),
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps -- Reanimated SVs are mutated here, not read as deps
-  }, [gameId, lastEvent, myPlayerId, pileRect, selfHandRect, opponentZoneRect, onAvatarPulse]);
+  }, [gameId, lastEvent, myPlayerId, pileRect, selfHandRect, selfCardRect, opponentZoneRect, onAvatarPulse, onFlightConsumed]);
 
   const spotlightStrength: SpotlightStrength = flight
     ? (lastEvent ? spotlightFromEvent(lastEvent) : 'soft')
