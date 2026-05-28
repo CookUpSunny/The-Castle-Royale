@@ -1,17 +1,19 @@
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
   runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withRepeat,
   withSequence,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
@@ -103,6 +105,10 @@ function HandCard({
   onDragStart,
   onDragMove,
   onDragEnd,
+  isSelected,
+  isDimmed,
+  hoveredIndex,
+  myIndex,
 }: {
   card: CardType;
   isPlayable: boolean;
@@ -115,6 +121,10 @@ function HandCard({
   onDragStart?: (card: CardType, x: number, y: number) => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd?: (x: number, y: number) => void;
+  isSelected?: boolean;
+  isDimmed?: boolean;
+  hoveredIndex?: SharedValue<number>;
+  myIndex?: number;
 }) {
   const bounce = useSharedValue(0);
   const glowOpacity = useSharedValue(isPlayable && isMyTurn ? 0.4 : 0.12);
@@ -147,10 +157,29 @@ function HandCard({
     shadowOpacity: glowOpacity.value,
   }));
 
+  // Raise animation: –28 px when hovered or selected
+  const raiseY = useSharedValue(0);
+  const isSelectedSV = useSharedValue(isSelected ?? false);
+  useEffect(() => {
+    isSelectedSV.value = isSelected ?? false;
+  }, [isSelected, isSelectedSV]);
+
+  useAnimatedReaction(
+    () => {
+      const hovered = hoveredIndex !== undefined && myIndex !== undefined
+        ? hoveredIndex.value === myIndex
+        : false;
+      return hovered || isSelectedSV.value;
+    },
+    (shouldRaise) => {
+      raiseY.value = withTiming(shouldRaise ? -28 : 0, { duration: 120 });
+    },
+  );
+
   // Bounce is the only per-card animation — arc position + rotation are
   // handled by the absolutely-positioned wrapper in the parent.
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: bounce.value }],
+    transform: [{ translateY: bounce.value + raiseY.value }],
   }));
 
   const handlePress = useCallback(() => {
@@ -208,34 +237,40 @@ function HandCard({
     borderRadius: 10,
   };
 
-  const cardNode = (
-    <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
-      <Animated.View style={starterGlowStyle}>
-        <CardComponent
-          card={card}
-          size="lg"
-          onPress={isMyTurn && isPlayable ? handlePress : undefined}
-          onLongPress={isMyTurn && isPlayable && multiplicity >= 2 ? handleLongPress : undefined}
-          isPlayable={isMyTurn && isPlayable}
-          multiplicity={multiplicity}
-        />
-      </Animated.View>
-    </Animated.View>
-  );
+  const dimStyle = isDimmed ? { opacity: 0.6 } : undefined;
 
-  const cardNodeFinal = dragGesture
-    ? (
+  const cardNode = (
+    <View style={dimStyle}>
       <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
         <Animated.View style={starterGlowStyle}>
           <CardComponent
             card={card}
             size="lg"
             onPress={isMyTurn && isPlayable ? handlePress : undefined}
+            onLongPress={isMyTurn && isPlayable && multiplicity >= 2 ? handleLongPress : undefined}
             isPlayable={isMyTurn && isPlayable}
             multiplicity={multiplicity}
           />
         </Animated.View>
       </Animated.View>
+    </View>
+  );
+
+  const cardNodeFinal = dragGesture
+    ? (
+      <View style={dimStyle}>
+        <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
+          <Animated.View style={starterGlowStyle}>
+            <CardComponent
+              card={card}
+              size="lg"
+              onPress={isMyTurn && isPlayable ? handlePress : undefined}
+              isPlayable={isMyTurn && isPlayable}
+              multiplicity={multiplicity}
+            />
+          </Animated.View>
+        </Animated.View>
+      </View>
     )
     : cardNode;
 
@@ -273,6 +308,56 @@ export default function PlayerHand({
   const activeCards: CardType[] = showHand ? hand : showFaceUp ? faceUp : [];
   const totalCards = showHand ? hand.length : showFaceUp ? faceUp.length : faceDownCount;
 
+  // ── Two-tap selection ──────────────────────────────────────────────────────
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  // Clear selection whenever the turn flips (prevents a stale "selected" card
+  // from persisting while the opponent is playing).
+  useEffect(() => {
+    if (!isMyTurn) setSelectedCardId(null);
+  }, [isMyTurn]);
+
+  // Clear if the selected card leaves the hand (e.g. played by server ack).
+  useEffect(() => {
+    if (selectedCardId && !activeCards.find((c) => c.id === selectedCardId)) {
+      setSelectedCardId(null);
+    }
+  }, [activeCards, selectedCardId]);
+
+  // ── Drag hover tracking ────────────────────────────────────────────────────
+  const hoveredIndex = useSharedValue(-1);
+
+  // Pre-compute each card's horizontal centre so the pan worklet can find the
+  // closest card without calling back to JS.
+  const cardCenters = useMemo(() =>
+    showHand
+      ? activeCards.map((_, i) => {
+          const { left } = computeFanPosition(i, totalCards, containerWidth);
+          return left + CARD_WIDTH / 2;
+        })
+      : [],
+  [showHand, totalCards, containerWidth]);
+
+  const hoverPan = useMemo(() =>
+    Gesture.Pan()
+      .minDistance(3)
+      .onUpdate((e) => {
+        'worklet';
+        if (cardCenters.length === 0) return;
+        let closest = -1;
+        let minDist = 55; // px threshold — outside this range nothing is hovered
+        for (let i = 0; i < cardCenters.length; i++) {
+          const dist = Math.abs(e.x - (cardCenters[i] ?? 0));
+          if (dist < minDist) { minDist = dist; closest = i; }
+        }
+        hoveredIndex.value = closest;
+      })
+      .onEnd(() => { 'worklet'; hoveredIndex.value = -1; })
+      .onFinalize(() => { 'worklet'; hoveredIndex.value = -1; }),
+  // Recreate when card positions change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [cardCenters]);
+
   // In starter mode the LOWEST-VALUE card from the active zone gets a gold
   // glow so the player knows the strategically-correct sacrifice without being
   // forced into it.
@@ -309,12 +394,24 @@ export default function PlayerHand({
   }, [activeCards]);
 
   const handleTap = useCallback((card: CardType) => {
-    onPlayCard(card.id);
-  }, [onPlayCard]);
+    // Two-tap model:
+    //   First tap  → select the card (raises it, dims others)
+    //   Second tap → play it (onPlayCard fires) and clear selection
+    //   Tap a different card → deselect old, select new
+    if (selectedCardId === card.id) {
+      // Second tap on the already-selected card — fire the play
+      onPlayCard(card.id);
+      setSelectedCardId(null);
+    } else {
+      // First tap (or switching selection) — just select
+      setSelectedCardId(card.id);
+    }
+  }, [selectedCardId, onPlayCard]);
 
   const handleLongPress = useCallback((card: CardType) => {
     const ids = activeCards.filter((c) => c.value === card.value).map((c) => c.id);
     if (ids.length === 0) return;
+    setSelectedCardId(null);
     onPlayCards(ids);
   }, [activeCards, onPlayCards]);
 
@@ -323,6 +420,7 @@ export default function PlayerHand({
     const ids = activeCards.filter((c) => c.value === value).map((c) => c.id);
     if (ids.length === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    setSelectedCardId(null);
     onPlayCards(ids);
   }, [activeCards, onPlayCards]);
 
@@ -403,41 +501,49 @@ export default function PlayerHand({
         </View>
       ) : (
         /* ── Pinched accordion fan ── */
-        <View style={[styles.fanContainer, { width: containerWidth }]}>
-          {activeCards.map((card, i) => {
-            const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
-            const multiplicity = valueCounts.get(card.value) ?? 1;
-            const { left, top, rotationDeg } = computeFanPosition(i, totalCards, containerWidth);
-            return (
-              <View
-                key={card.id}
-                style={[
-                  styles.fanCardWrapper,
-                  {
-                    left,
-                    top,
-                    zIndex: i,
-                    transform: [{ rotate: `${rotationDeg}deg` }],
-                  },
-                ]}
-              >
-                <HandCard
-                  card={card}
-                  isPlayable={isPlayable}
-                  isMyTurn={isMyTurn}
-                  multiplicity={multiplicity}
-                  onTap={handleTap}
-                  onLongPress={handleLongPress}
-                  isStarterPick={card.id === starterPickId}
-                  draggable={draggable}
-                  onDragStart={onDragStart}
-                  onDragMove={onDragMove}
-                  onDragEnd={onDragEnd}
-                />
-              </View>
-            );
-          })}
-        </View>
+        <GestureDetector gesture={hoverPan}>
+          <View style={[styles.fanContainer, { width: containerWidth }]}>
+            {activeCards.map((card, i) => {
+              const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
+              const multiplicity = valueCounts.get(card.value) ?? 1;
+              const { left, top, rotationDeg } = computeFanPosition(i, totalCards, containerWidth);
+              const isThisSelected = selectedCardId === card.id;
+              const isDimmed = selectedCardId !== null && !isThisSelected && isPlayable;
+              return (
+                <View
+                  key={card.id}
+                  style={[
+                    styles.fanCardWrapper,
+                    {
+                      left,
+                      top,
+                      zIndex: isThisSelected ? totalCards + 1 : i,
+                      transform: [{ rotate: `${rotationDeg}deg` }],
+                    },
+                  ]}
+                >
+                  <HandCard
+                    card={card}
+                    isPlayable={isPlayable}
+                    isMyTurn={isMyTurn}
+                    multiplicity={multiplicity}
+                    onTap={handleTap}
+                    onLongPress={handleLongPress}
+                    isStarterPick={card.id === starterPickId}
+                    draggable={draggable}
+                    onDragStart={onDragStart}
+                    onDragMove={onDragMove}
+                    onDragEnd={onDragEnd}
+                    isSelected={isThisSelected}
+                    isDimmed={isDimmed}
+                    hoveredIndex={hoveredIndex}
+                    myIndex={i}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        </GestureDetector>
       )}
     </View>
   );
