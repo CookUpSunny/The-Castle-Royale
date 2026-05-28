@@ -31,24 +31,6 @@ type = "image"
 title = "castle royale notification icon mono"
 
 [[generated]]
-id = "eICNwW17YDP8qtep59Y-f"
-uri = "file://artifacts/mobile/assets/casino/hero_player_pov.png"
-type = "image"
-title = "hero player pov"
-
-[[generated]]
-id = "YV7RRclPZZv6dJ4k24nif"
-uri = "file://artifacts/mobile/assets/casino/opponent_silver.png"
-type = "image"
-title = "opponent silver"
-
-[[generated]]
-id = "RJBhhjf4GVz348nfgczo7"
-uri = "file://artifacts/mobile/assets/casino/table_backdrop_neon.png"
-type = "image"
-title = "casino table neon"
-
-[[generated]]
 id = "CKJT2CnL4pyXQh7N3-L1g"
 uri = "file://artifacts/mobile/assets/avatars/maverick.png"
 type = "image"

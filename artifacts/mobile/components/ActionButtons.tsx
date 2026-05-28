@@ -12,13 +12,9 @@ import { useColors } from '@/hooks/useColors';
 interface ActionButtonsProps {
   canPickup: boolean;
   hasBurn: boolean;
-  hasReset: boolean;
-  canFastPlay: boolean;
   isMyTurn: boolean;
   onPickup: () => void;
   onPlayBurn: () => void;
-  onPlayReset: () => void;
-  onFastPlay?: () => void;
 }
 
 interface ActionButtonProps {
@@ -113,16 +109,10 @@ function ActionButton({
 export default function ActionButtons({
   canPickup,
   hasBurn,
-  hasReset,
-  canFastPlay,
   isMyTurn,
   onPickup,
   onPlayBurn,
-  onPlayReset,
-  onFastPlay,
 }: ActionButtonsProps) {
-  const colors = useColors();
-
   return (
     <View style={styles.container}>
       <ActionButton
@@ -132,29 +122,6 @@ export default function ActionButtons({
         onPress={onPlayBurn}
         enabled={isMyTurn && hasBurn}
       />
-      <ActionButton
-        icon="2"
-        label="RESET"
-        accentColor={colors.neonPurple}
-        onPress={onPlayReset}
-        enabled={isMyTurn && hasReset}
-      />
-      {/* FAST PLAY is an EXTRA option on top of TAKE PILE — never a replacement.
-          Previously these two shared a slot, which meant the pickup button
-          disappeared whenever the player happened to hold a matching value
-          for the top card, leaving them frozen if they didn't want to fast-play. */}
-      {canFastPlay && isMyTurn && onFastPlay ? (
-        <ActionButton
-          icon="⚡"
-          label="FAST PLAY"
-          accentColor="#fde047"
-          onPress={onFastPlay}
-          enabled={true}
-          paddedFrame
-          labelLetterSpacing={0.35}
-          labelAdjustsSize
-        />
-      ) : null}
       <ActionButton
         icon="↓"
         iconFontSize={15}

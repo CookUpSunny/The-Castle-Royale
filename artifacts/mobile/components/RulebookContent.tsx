@@ -1,5 +1,6 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const C = {
   bg: '#0f0f13',
@@ -154,6 +155,81 @@ function BlindFlipIllustration() {
           <Text style={s.bfCrown}>♛</Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+function IridescentTwoCard() {
+  return (
+    <LinearGradient
+      colors={['#ff0080', '#ff8c00', '#ffee00', '#00ff88', '#00cfff', '#9b4fff', '#ff0080']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ borderRadius: 10, padding: 3, alignSelf: 'center' }}
+    >
+      <View style={s.iriCard}>
+        <Text style={s.iriRank}>2</Text>
+        <Text style={s.iriSuit}>★</Text>
+      </View>
+    </LinearGradient>
+  );
+}
+
+function FireTenCard() {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <View style={s.fireFlames}>
+        <Text style={[s.fireEmoji, { fontSize: 16 }]}>🔥</Text>
+        <Text style={[s.fireEmoji, { fontSize: 22 }]}>🔥</Text>
+        <Text style={[s.fireEmoji, { fontSize: 16 }]}>🔥</Text>
+      </View>
+      <View style={s.fireTenFace}>
+        <Text style={s.fireTenRank}>10</Text>
+        <Text style={s.fireTenSuit}>♠</Text>
+      </View>
+    </View>
+  );
+}
+
+function BonusBurnRow() {
+  const suits: Array<{ suit: string; red: boolean }> = [
+    { suit: '♠', red: false },
+    { suit: '♥', red: true },
+    { suit: '♦', red: true },
+    { suit: '♣', red: false },
+  ];
+  return (
+    <View style={s.bonusBurnRow}>
+      {suits.map(({ suit, red }, i) => (
+        <View key={i} style={{ alignItems: 'center' }}>
+          <Text style={s.bonusFlame}>🔥</Text>
+          <View style={s.bonusCard}>
+            <Text style={s.bonusRank}>K</Text>
+            <Text style={[s.bonusSuit, { color: red ? '#cc0000' : '#10100e' }]}>{suit}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function AnimatedCrown() {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.18, duration: 1100, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.96, duration: 1100, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, [pulse]);
+  return (
+    <View style={s.animCrownWrap}>
+      <Animated.View style={[s.crownGlowRing, { transform: [{ scale: pulse }] }]} />
+      <View style={s.lensFlareWrap} pointerEvents="none">
+        <View style={s.lensFlare} />
+      </View>
+      <Animated.Text style={[s.crownIcon, { transform: [{ scale: pulse }] }]}>♛</Animated.Text>
     </View>
   );
 }
@@ -447,7 +523,7 @@ export default function RulebookContent({ bottomInset = 0 }: { bottomInset?: num
         <View style={s.specGrid}>
           {/* 2 — Wild Card */}
           <View style={[s.specTile, s.tGold]}>
-            <MiniCard rank="2" suit="★" rankColor="#9a7800" style={s.spCard} />
+            <IridescentTwoCard />
             <View style={s.specBody}>
               <Text style={s.specRank}>2</Text>
               <Text style={[s.specLabel, { color: C.yellow }]}>Wild Card</Text>
@@ -456,7 +532,7 @@ export default function RulebookContent({ bottomInset = 0 }: { bottomInset?: num
           </View>
           {/* 10 — The Burn */}
           <View style={[s.specTile, s.tRed]}>
-            <MiniCard rank="10" suit="♠" rankColor={C.red} style={s.bnCard} />
+            <FireTenCard />
             <View style={s.specBody}>
               <Text style={s.specRank}>10</Text>
               <Text style={[s.specLabel, { color: C.red }]}>The Burn</Text>
@@ -469,6 +545,7 @@ export default function RulebookContent({ bottomInset = 0 }: { bottomInset?: num
             <Text style={s.tipBold}>Bonus burn: </Text>
             Playing four cards of the same rank at once also burns the pile — same effect as a 10. You play again immediately.
           </Text>
+          <BonusBurnRow />
         </Tip>
       </SectionCard>
 
@@ -528,13 +605,13 @@ export default function RulebookContent({ bottomInset = 0 }: { bottomInset?: num
 
         {/* Win Banner */}
         <View style={s.winBanner}>
-          <Text style={s.crownIcon}>♛</Text>
+          <AnimatedCrown />
           <Text style={s.winTitle}>First to clear all three zones wins</Text>
           <Text style={s.winDesc}>
             Play your final face-down card successfully and you are out.{'\n'}Take your bow. Shuffle the deck. Go again.
           </Text>
           <View style={s.loseNote}>
-            <Text style={s.loseNoteText}>Last player holding cards loses — and earns the title</Text>
+            <Text style={s.loseNoteText}>Last Player Holding Cards Is Defeated And Will Have Their Crown Stripped.</Text>
           </View>
         </View>
       </SectionCard>
@@ -892,7 +969,82 @@ const s = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(245,230,66,0.3)',
   },
-  crownIcon: { fontSize: 44, color: C.yellow, marginBottom: 10 },
+  crownIcon: { fontSize: 72, color: C.yellow, marginBottom: 4 },
+  animCrownWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 6, height: 100 },
+  crownGlowRing: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(245,230,66,0.18)',
+    borderWidth: 2,
+    borderColor: 'rgba(245,230,66,0.35)',
+  },
+  lensFlareWrap: { position: 'absolute', width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
+  lensFlare: {
+    width: 130,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 2,
+    transform: [{ rotate: '-35deg' }],
+  },
+
+  // Iridescent 2-card
+  iriCard: {
+    width: 62,
+    height: 86,
+    borderRadius: 8,
+    backgroundColor: '#fefefe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  iriRank: { fontSize: 26, fontWeight: '900', color: '#7000cc' },
+  iriSuit: { fontSize: 16, color: '#9b4fff' },
+
+  // Fire 10-card
+  fireFlames: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, marginBottom: -4 },
+  fireEmoji: { fontSize: 18 },
+  fireTenFace: {
+    width: 62,
+    height: 86,
+    borderRadius: 8,
+    backgroundColor: '#fff8f0',
+    borderWidth: 3,
+    borderColor: '#ff5500',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    shadowColor: '#ff4500',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  fireTenRank: { fontSize: 24, fontWeight: '900', color: '#cc2200' },
+  fireTenSuit: { fontSize: 14, color: '#ff5500' },
+
+  // Bonus burn row
+  bonusBurnRow: { flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 12 },
+  bonusFlame: { fontSize: 18, textAlign: 'center', marginBottom: -4 },
+  bonusCard: {
+    width: 48,
+    height: 66,
+    borderRadius: 7,
+    backgroundColor: '#fff8f0',
+    borderWidth: 2,
+    borderColor: '#ff5500',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+    shadowColor: '#ff4500',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  bonusRank: { fontSize: 18, fontWeight: '900', color: '#cc2200' },
+  bonusSuit: { fontSize: 13, fontWeight: '700' },
   winTitle: {
     color: C.yellow,
     fontSize: 22,
