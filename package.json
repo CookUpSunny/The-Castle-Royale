@@ -97,9 +97,5 @@
       "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0",
       "esbuild": "0.27.3"
     }
-  },
-  "dependencies": {
-    "expo": "^56.0.4",
-    "expo-modules-autolinking": "^56.0.12"
   }
 }
