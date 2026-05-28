@@ -41,7 +41,7 @@ import GameLandscape from '@/components/GameLandscape';
 import GlowPile from '@/components/GlowPile';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import OrientationCurtain from '@/components/OrientationCurtain';
-import PlayerHand from '@/components/PlayerHand';
+import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
@@ -394,6 +394,7 @@ export default function GameScreen() {
   const pileViewRef = useRef<View>(null);
   const selfHandRef = useRef<View>(null);
   const opponentZoneRef = useRef<View>(null);
+  const playerHandRef = useRef<PlayerHandRef>(null);
 
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
@@ -537,7 +538,7 @@ export default function GameScreen() {
               <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
             </View>
 
-            <View style={styles.tableCenter}>
+            <Pressable style={styles.tableCenter} onPress={() => playerHandRef.current?.clearSelection()}>
               <View style={styles.pileRow}>
                 <View style={{ flex: 1 }} />
                 <View
@@ -567,7 +568,7 @@ export default function GameScreen() {
                   onPlayBurn={handlePlayBurn}
                 />
               )}
-            </View>
+            </Pressable>
 
             <View
               ref={selfHandRef}
@@ -580,6 +581,7 @@ export default function GameScreen() {
               }}
             >
               <PlayerHand
+                ref={playerHandRef}
                 hand={myHand}
                 faceUp={myFaceUp}
                 faceDownCount={myFaceDownCount}

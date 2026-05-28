@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
@@ -282,7 +282,12 @@ function HandCard({
 
 // ─── PlayerHand ───────────────────────────────────────────────────────────────
 
-export default function PlayerHand({
+/** Imperative handle so game.tsx can dismiss selection on outside taps. */
+export interface PlayerHandRef {
+  clearSelection: () => void;
+}
+
+const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function PlayerHand({
   hand,
   faceUp,
   faceDownCount,
@@ -297,7 +302,7 @@ export default function PlayerHand({
   onDragMove,
   onDragEnd,
   availableWidth,
-}: PlayerHandProps) {
+}: PlayerHandProps, ref) {
   const colors = useColors();
   const { width: screenWidth } = useWindowDimensions();
   const containerWidth = availableWidth ?? screenWidth;
@@ -310,6 +315,9 @@ export default function PlayerHand({
 
   // ── Two-tap selection ──────────────────────────────────────────────────────
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  // Expose clearSelection so game.tsx can dismiss when tapping outside the hand.
+  useImperativeHandle(ref, () => ({ clearSelection: () => setSelectedCardId(null) }), []);
 
   // Clear selection whenever the turn flips (prevents a stale "selected" card
   // from persisting while the opponent is playing).
@@ -393,20 +401,20 @@ export default function PlayerHand({
     return counts;
   }, [activeCards]);
 
+  // Fan-only two-tap: first tap selects, second tap plays.
   const handleTap = useCallback((card: CardType) => {
-    // Two-tap model:
-    //   First tap  → select the card (raises it, dims others)
-    //   Second tap → play it (onPlayCard fires) and clear selection
-    //   Tap a different card → deselect old, select new
     if (selectedCardId === card.id) {
-      // Second tap on the already-selected card — fire the play
       onPlayCard(card.id);
       setSelectedCardId(null);
     } else {
-      // First tap (or switching selection) — just select
       setSelectedCardId(card.id);
     }
   }, [selectedCardId, onPlayCard]);
+
+  // Face-up phase uses immediate single-tap play (no selection state).
+  const handleFaceUpTap = useCallback((card: CardType) => {
+    onPlayCard(card.id);
+  }, [onPlayCard]);
 
   const handleLongPress = useCallback((card: CardType) => {
     const ids = activeCards.filter((c) => c.value === card.value).map((c) => c.id);
@@ -438,7 +446,7 @@ export default function PlayerHand({
   }
 
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={() => setSelectedCardId(null)}>
       {/* Multi-play chips — one per duplicate group */}
       {(showHand || showFaceUp) && duplicateGroups.length > 0 && (
         <View style={styles.multiRow}>
@@ -480,7 +488,7 @@ export default function PlayerHand({
       )}
 
       {showFaceUp ? (
-        /* Face-up final phase — stationary centered cards */
+        /* Face-up final phase — stationary centered cards (single-tap play) */
         <View style={styles.faceUpRow}>
           {activeCards.map((card, i) => {
             const isPlayable = canPlayCardFn(card, discardPile);
@@ -493,7 +501,7 @@ export default function PlayerHand({
                 isPlayable={isPlayable}
                 isMyTurn={isMyTurn}
                 multiplicity={multiplicity}
-                onTap={handleTap}
+                onTap={handleFaceUpTap}
                 onLongPress={handleLongPress}
               />
             );
@@ -545,9 +553,11 @@ export default function PlayerHand({
           </View>
         </GestureDetector>
       )}
-    </View>
+    </Pressable>
   );
-}
+});
+
+export default PlayerHand;
 
 // ─── FaceUpCardSlot ───────────────────────────────────────────────────────────
 
