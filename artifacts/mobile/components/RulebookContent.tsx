@@ -93,11 +93,17 @@ function Step({
 
 function PileIllustration() {
   const cards = [
-    { rank: 'K', suit: '♠', rot: -18, x: -22, y: 4, red: false },
-    { rank: '7', suit: '♥', rot: -8, x: -10, y: 2, red: true },
-    { rank: 'J', suit: '♦', rot: 3, x: 0, y: 0, red: true },
-    { rank: '4', suit: '♣', rot: 12, x: 10, y: 3, red: false },
-    { rank: 'A', suit: '♠', rot: 22, x: 20, y: 5, red: false },
+    { rank: '9',  suit: '♣', rot: -34, x: -54, y: 14, red: false },
+    { rank: 'Q',  suit: '♥', rot: -22, x: -38, y:  8, red: true  },
+    { rank: '5',  suit: '♠', rot: -14, x: -24, y: 16, red: false },
+    { rank: 'K',  suit: '♦', rot: -6,  x: -12, y:  6, red: true  },
+    { rank: '7',  suit: '♥', rot:  2,  x:   0, y: 12, red: true  },
+    { rank: 'J',  suit: '♦', rot:  9,  x:  10, y:  4, red: true  },
+    { rank: '3',  suit: '♣', rot: 17,  x:  22, y: 18, red: false },
+    { rank: '4',  suit: '♠', rot: 25,  x:  36, y:  8, red: false },
+    { rank: 'A',  suit: '♥', rot: 33,  x:  50, y: 14, red: true  },
+    { rank: '6',  suit: '♦', rot: -28, x: -46, y: -6, red: true  },
+    { rank: '10', suit: '♣', rot:  14, x:   4, y: -4, red: false },
   ];
   return (
     <View style={s.pileContainer}>
@@ -710,7 +716,7 @@ const s = StyleSheet.create({
   stepIllustration: { marginTop: 14 },
 
   // Pile illustration
-  pileContainer: { height: 80, alignItems: 'center', justifyContent: 'center' },
+  pileContainer: { height: 120, alignItems: 'center', justifyContent: 'center' },
   pileCard: {
     position: 'absolute',
     width: 44,
@@ -778,16 +784,16 @@ const s = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: '#12101e',
     borderWidth: 2,
-    borderColor: 'rgba(245,230,66,0.7)',
+    borderColor: 'rgba(220,228,245,0.75)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#f5e642',
+    shadowColor: '#c8d4f0',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.75,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+    elevation: 0,
   },
-  bfCrown: { fontSize: 28, color: '#f5e642' },
+  bfCrown: { fontSize: 28, color: '#c8d4f0' },
 
   tip: {
     borderRadius: 10,
