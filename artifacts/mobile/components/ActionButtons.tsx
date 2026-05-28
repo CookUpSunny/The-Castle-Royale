@@ -7,18 +7,13 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useColors } from '@/hooks/useColors';
 
 interface ActionButtonsProps {
   canPickup: boolean;
   hasBurn: boolean;
-  hasReset: boolean;
-  canFastPlay: boolean;
   isMyTurn: boolean;
   onPickup: () => void;
   onPlayBurn: () => void;
-  onPlayReset: () => void;
-  onFastPlay?: () => void;
 }
 
 interface ActionButtonProps {
@@ -27,13 +22,9 @@ interface ActionButtonProps {
   accentColor: string;
   onPress: () => void;
   enabled: boolean;
-  /** Override icon glyph size (plain arrows read better slightly larger than emoji). */
   iconFontSize?: number;
-  /** Stronger chrome + padding so the icon/label don't kiss the pill edge. */
   paddedFrame?: boolean;
-  /** Tighter tracking for longer labels (e.g. TAKE PILE) so glyphs stay inside the border. */
   labelLetterSpacing?: number;
-  /** Shrink label slightly if needed so it never clips the pill (iOS/Android). */
   labelAdjustsSize?: boolean;
 }
 
@@ -113,16 +104,10 @@ function ActionButton({
 export default function ActionButtons({
   canPickup,
   hasBurn,
-  hasReset,
-  canFastPlay,
   isMyTurn,
   onPickup,
   onPlayBurn,
-  onPlayReset,
-  onFastPlay,
 }: ActionButtonsProps) {
-  const colors = useColors();
-
   return (
     <View style={styles.container}>
       <ActionButton
@@ -132,29 +117,6 @@ export default function ActionButtons({
         onPress={onPlayBurn}
         enabled={isMyTurn && hasBurn}
       />
-      <ActionButton
-        icon="2"
-        label="RESET"
-        accentColor={colors.neonPurple}
-        onPress={onPlayReset}
-        enabled={isMyTurn && hasReset}
-      />
-      {/* FAST PLAY is an EXTRA option on top of TAKE PILE — never a replacement.
-          Previously these two shared a slot, which meant the pickup button
-          disappeared whenever the player happened to hold a matching value
-          for the top card, leaving them frozen if they didn't want to fast-play. */}
-      {canFastPlay && isMyTurn && onFastPlay ? (
-        <ActionButton
-          icon="⚡"
-          label="FAST PLAY"
-          accentColor="#fde047"
-          onPress={onFastPlay}
-          enabled={true}
-          paddedFrame
-          labelLetterSpacing={0.35}
-          labelAdjustsSize
-        />
-      ) : null}
       <ActionButton
         icon="↓"
         iconFontSize={15}
@@ -197,7 +159,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  /** Used for TAKE PILE / FAST PLAY — thicker border + more inset; wide enough for longest label. */
   buttonShellPadded: {
     minWidth: 90,
     minHeight: 38,

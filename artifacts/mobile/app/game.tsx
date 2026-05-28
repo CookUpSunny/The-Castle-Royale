@@ -494,31 +494,17 @@ export default function GameScreen() {
   // All portrait-specific derived values. gameView is non-null here (guarded above).
   const {
     myHand, myFaceUp, myFaceDownCount, myFaceDownIds, opponentHandCount, opponentFaceUp, opponentFaceDownCount,
-    opponentName, discardPile, deckCount, isMyTurn, canFastPlay,
+    opponentName, discardPile, deckCount, isMyTurn,
   } = gameView;
 
-  // For BURN/RESET buttons we collect ALL cards of that value from the active zone (hand if non-empty, else face-up)
+  // For BURN button we collect ALL 10s from the active zone (hand if non-empty, else face-up)
   // so a single tap fires the multi-play (e.g. all four 10s burns through any pile).
   const activeZone = myHand.length > 0 ? myHand : myFaceUp;
   const burnIds = activeZone.filter((c) => c.value === 10 && canPlayCard(c, discardPile)).map((c) => c.id);
-  const resetIds = activeZone.filter((c) => c.value === 2 && canPlayCard(c, discardPile)).map((c) => c.id);
   const hasBurn = burnIds.length > 0;
-  const hasReset = resetIds.length > 0;
 
   const handlePlayBurn = () => {
     if (burnIds.length > 0) playCards(burnIds);
-  };
-
-  const handlePlayReset = () => {
-    if (resetIds.length > 0) playCards(resetIds);
-  };
-
-  const handleFastPlay = () => {
-    if (!canFastPlay) return;
-    const top = discardPile[discardPile.length - 1];
-    if (!top) return;
-    const sameIds = activeZone.filter((c) => c.value === top.value).map((c) => c.id);
-    if (sameIds.length > 0) playCards(sameIds);
   };
 
   // ── Unified single-root return ───────────────────────────────────────────
@@ -577,13 +563,9 @@ export default function GameScreen() {
                 <ActionButtons
                   canPickup={discardPile.length > 0}
                   hasBurn={hasBurn}
-                  hasReset={hasReset}
-                  canFastPlay={canFastPlay}
                   isMyTurn={isMyTurn}
                   onPickup={doPickup}
                   onPlayBurn={handlePlayBurn}
-                  onPlayReset={handlePlayReset}
-                  onFastPlay={handleFastPlay}
                 />
               )}
             </View>
