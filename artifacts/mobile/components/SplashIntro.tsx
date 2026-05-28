@@ -293,12 +293,17 @@ export default function SplashIntro({ onDone }: SplashIntroProps) {
       {/* Dark grey base — always visible behind everything */}
       <View style={[StyleSheet.absoluteFill, styles.darkBg]} />
 
-      {/* Hero image fades in after 1.3 s */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: imageOpacity }]}>
+      {/* Hero image fades in after 1.3 s — contained and centered with breathing room */}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { opacity: imageOpacity, alignItems: 'center', justifyContent: 'center' },
+        ]}
+      >
         <Image
           source={require('../assets/splash/splash_hero.png')}
-          style={{ width, height }}
-          resizeMode="cover"
+          style={{ width: width * 0.88, height: height * 0.88 }}
+          resizeMode="contain"
         />
       </Animated.View>
 
