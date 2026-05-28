@@ -15,7 +15,7 @@ An anime-style real-time multiplayer card game (Castle/Palace variant) playable 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- Mobile: Expo SDK 54, Expo Router, React Native 0.81, react-native-game-center
+- Mobile: Expo SDK 55, Expo Router, React Native 0.83, react-native-game-center
 - API: Express 5 + Socket.io 4 (real-time game server)
 - DB: PostgreSQL + Drizzle ORM (`players` table live)
 - Validation: Zod, drizzle-zod
@@ -42,7 +42,7 @@ An anime-style real-time multiplayer card game (Castle/Palace variant) playable 
 - Spectator state lives in server maps: `gameSpectators` (gameId→Set<socketId>) and `spectatorToGame` (socketId→gameId)
 - Socket.io path is `/api/socket.io` so it routes through the shared reverse proxy
 - `EXPO_PUBLIC_DOMAIN` → main Replit dev domain; used to build absolute API URL for Expo Go native
-- Music and SFX use `expo-av`; audio is best-effort (never crashes the game)
+- Music and SFX use `expo-audio` (guarded with try/catch require so missing native module in Expo Go degrades silently — never crashes the game)
 - Scene backgrounds are multi-layer PNGs with parallax; missing layers degrade gracefully
 - Game Center auth uses conditional `require('react-native-game-center')` — silently no-ops on Expo Go; only works in custom EAS builds
 - `gameCenterId` is passed from the client in join events so the server can update player stats in DB after each game
