@@ -343,20 +343,24 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
     const arenaTrackIdx = arenaId != null ? ARENA_TRACK[arenaId] : undefined;
 
-    if (arenaTrackIdx != null) {
-      // Arena-specific single-track loop
-      arenaLoopIdxRef.current = arenaTrackIdx;
-      void playTrack(arenaTrackIdx, 0);
-    } else {
-      // Generic shuffled playlist
-      arenaLoopIdxRef.current = null;
-      queueRef.current = shuffleIndices(PLAYLIST_SIZE);
-      queuePos.current = 0;
-      void playTrack(queueRef.current[0], 0);
-    }
-
-    // 3-second match fade-in
-    startFade(1, undefined, MATCH_FADE_STEPS);
+    // Await player creation before starting the fade so the fade interval
+    // never runs against a null soundRef (race condition that caused silence).
+    const doStart = async () => {
+      if (arenaTrackIdx != null) {
+        // Arena-specific single-track loop
+        arenaLoopIdxRef.current = arenaTrackIdx;
+        await playTrack(arenaTrackIdx, 0);
+      } else {
+        // Generic shuffled playlist
+        arenaLoopIdxRef.current = null;
+        queueRef.current = shuffleIndices(PLAYLIST_SIZE);
+        queuePos.current = 0;
+        await playTrack(queueRef.current[0], 0);
+      }
+      // Fade in only once the player is confirmed ready
+      startFade(1, undefined, MATCH_FADE_STEPS);
+    };
+    void doStart();
   }, [playTrack, startFade]);
 
   // ─── Stop (shared) ─────────────────────────────────────────────────────────
