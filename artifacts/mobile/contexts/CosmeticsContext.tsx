@@ -36,7 +36,7 @@ export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning
  * That's it — the rest of the app picks it up automatically.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export type AvatarId = 'eagles' | 'frog' | 'troll';
+export type AvatarId = 'eagles' | 'frog' | 'troll' | 'gigi';
 
 export interface AvatarOption {
   id: AvatarId;
@@ -71,6 +71,14 @@ export const AVATARS: AvatarOption[] = [
     color: '#a855f7',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     portrait: require('../assets/avatars/troll.png') as number,
+  },
+  {
+    id: 'gigi',
+    name: 'Gigi Gorgon',
+    quote: 'Lucky you.',
+    color: '#22c55e',
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/gigi.png') as number,
   },
 ];
 
