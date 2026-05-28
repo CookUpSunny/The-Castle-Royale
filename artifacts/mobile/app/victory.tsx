@@ -335,9 +335,9 @@ export default function VictoryScreen() {
 
   const isWin = params.winner === params.myId;
 
-  // Content starts fully visible so the crown renders beneath the CardCurtain
-  // before the sweep begins. Only slideY animates in on reveal.
-  const contentOpacity = useSharedValue(1);
+  // When arriving from the game, the game's curtain already covered the screen.
+  // Start hidden and fade in directly — no second card rain needed.
+  const contentOpacity = useSharedValue(fromGame ? 0 : 1);
   const slideY        = useSharedValue(28);
 
   const [curtainSweeping, setCurtainSweeping] = useState(false);
@@ -345,15 +345,27 @@ export default function VictoryScreen() {
   const confettiOpacity = useSharedValue(1);
   const confettiFadeStyle = useAnimatedStyle(() => ({ opacity: confettiOpacity.value }));
 
+  // fromGame path: reveal content directly without a second curtain.
+  useEffect(() => {
+    if (!fromGame) return;
+    contentOpacity.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.quad) });
+    slideY.value = withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) });
+    if (isWin) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setTimeout(() => setConfettiVisible(true), 800);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Non-fromGame path: curtain calls this once cards have landed.
   const handleContentReady = useCallback(() => {
-    contentOpacity.value = withTiming(1, { duration: 1 }); // no-op, already 1
     slideY.value = withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) });
     if (isWin) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setTimeout(() => setConfettiVisible(true), 1000);
     }
     setTimeout(() => setCurtainSweeping(true), 200);
-  }, [isWin, contentOpacity, slideY]);
+  }, [isWin, slideY]);
 
   const innerContentStyle = useAnimatedStyle(() => ({
     flex: 1,
@@ -420,7 +432,9 @@ export default function VictoryScreen() {
             </View>
           </View>
         </Animated.View>
-        <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} startCovered={fromGame} />
+        {!fromGame && (
+          <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} />
+        )}
       </View>
     );
   }
@@ -477,7 +491,9 @@ export default function VictoryScreen() {
           </View>
         </View>
       </Animated.View>
-      <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} startCovered={fromGame} />
+      {!fromGame && (
+        <CardCurtain onContentReady={handleContentReady} sweeping={curtainSweeping} />
+      )}
     </View>
   );
 }

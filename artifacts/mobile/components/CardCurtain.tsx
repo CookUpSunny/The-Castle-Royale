@@ -12,9 +12,8 @@ import Animated, {
 const CARD_W           = 72;
 const CARD_H           = 100;
 const GAP              = 4;
-const ENTER_DURATION   = 800;   // cards rain down in ~0.8 s
-const EXIT_DURATION    = 1800;  // gravity fall — accelerating drop
-const HOLD_AFTER_LAND  = 400;   // brief pause before onContentReady fires
+const ENTER_DURATION   = 680;   // cards rain down
+const EXIT_DURATION    = 1600;  // gravity fall — accelerating drop
 
 // ~30 % of curtain cards show their face
 const FACE_UP_CHANCE   = 0.30;

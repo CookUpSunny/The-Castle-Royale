@@ -798,7 +798,7 @@ export default function GameScreen() {
           landscape triggers its own curtain inside GameLandscape. */}
       {endCurtainActive && !committedLandscape && (
         <CardCurtain
-          holdDuration={1300}
+          holdDuration={600}
           onContentReady={handleEndReady}
           sweeping={false}
         />
