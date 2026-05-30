@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -184,13 +183,11 @@ function HandCard({
 
   const handlePress = useCallback(() => {
     if (!isMyTurn || !isPlayable) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onTap(card);
   }, [card, isMyTurn, isPlayable, onTap]);
 
   const handleLongPress = useCallback(() => {
     if (!isMyTurn || !isPlayable || multiplicity < 2) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     onLongPress(card);
   }, [card, isMyTurn, isPlayable, multiplicity, onLongPress]);
 
@@ -204,7 +201,6 @@ function HandCard({
       .activateAfterLongPress(350)
       .onStart((e) => {
         'worklet';
-        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
         if (_onDragStart) runOnJS(_onDragStart)(_card, e.absoluteX, e.absoluteY);
       })
       .onUpdate((e) => {
@@ -428,7 +424,6 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
     if (!enabled) return;
     const ids = activeCards.filter((c) => c.value === value).map((c) => c.id);
     if (ids.length === 0) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     setSelectedCardId(null);
     onPlayCards(ids);
   }, [activeCards, onPlayCards]);
@@ -606,13 +601,11 @@ function FaceUpCardSlot({
 
   const handlePress = useCallback(() => {
     if (!isMyTurn || !isPlayable) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onTap(card);
   }, [card, isMyTurn, isPlayable, onTap]);
 
   const handleLongPress = useCallback(() => {
     if (!isMyTurn || !isPlayable || multiplicity < 2) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     onLongPress(card);
   }, [card, isMyTurn, isPlayable, multiplicity, onLongPress]);
 
