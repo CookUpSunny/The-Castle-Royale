@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
+import JackpotArenaBackground from './JackpotArenaBackground';
 import { ARENA_TABLE_TINT } from '@/lib/sceneAssets';
 import {
   type SceneId,
@@ -30,7 +31,7 @@ function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] 
   if (sceneId === 'flamingoFloor')   return ['#1a0008', '#2d0015', '#0f0006'];
   if (sceneId === 'matrixArena')     return ['#001a08', '#000e04', '#000000'];
   // casinoGreen
-  return ['#120010', '#22002a', '#07000f'];
+  return ['#06120c', '#030a06', '#000000'];
 }
 
 // ── Cosmic Sanctum blackhole HTML — adapted from the design brief ─────────────
@@ -242,7 +243,7 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
 
       <LinearGradient colors={[...arenaTint]} style={StyleSheet.absoluteFill} />
 
-      {sceneId === 'casinoGreen' ? <FlamingoAmbience /> : null}
+      {sceneId === 'casinoGreen' ? <JackpotArenaBackground /> : null}
       {sceneId === 'waterfallCavern' ? <WaterfallAmbience /> : null}
       {sceneId === 'olympusThrone' ? <OlympusAmbience /> : null}
       {sceneId === 'cosmicSanctum' ? <CosmicAmbience /> : null}
