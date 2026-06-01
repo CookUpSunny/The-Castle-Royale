@@ -29,7 +29,7 @@
         "distribution": "store"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "REPLACE_WITH_YOUR_DEPLOYED_DOMAIN"
+        "EXPO_PUBLIC_DOMAIN": "The-castle-royale.replit.app"
       }
     }
   },
