@@ -200,7 +200,8 @@ const ARENA_IMAGES: Record<ArenaId, ImageSourcePropType> = {
   cosmic:    require('../assets/arenas/cosmic_sanctum.png'),
   royal:     require('../assets/arenas/olympus_throne.png'),
   lightning: require('../assets/arenas/oasis_cave.png'),
-  matrix:    require('../assets/arenas/matrix_arena.png'),
+  matrix:      require('../assets/arenas/matrix_arena.png'),
+  rainbowRoad: require('../assets/scenes/rainbowRoad/portrait/L0_far.png'),
 };
 
 function ArenaPreview({ arenaId }: { arenaId: ArenaId }) {

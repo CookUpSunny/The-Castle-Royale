@@ -63,4 +63,8 @@ export const FELT_TINT: Record<
     vertical:   ['transparent', 'rgba(0,80,30,0.07)', 'rgba(0,160,60,0.18)', 'rgba(0,160,60,0.18)', 'rgba(0,80,30,0.07)', 'transparent'],
     horizontal: ['transparent', 'rgba(0,120,45,0.11)', 'transparent'],
   },
+  rainbowRoad: {
+    vertical:   ['transparent', 'rgba(60,20,120,0.08)', 'rgba(140,50,220,0.18)', 'rgba(140,50,220,0.18)', 'rgba(60,20,120,0.08)', 'transparent'],
+    horizontal: ['transparent', 'rgba(100,40,180,0.12)', 'transparent'],
+  },
 };

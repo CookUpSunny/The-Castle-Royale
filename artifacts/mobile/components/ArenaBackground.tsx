@@ -15,7 +15,8 @@ export const ARENA_IMAGES: Partial<Record<ArenaId, number>> = {
   cosmic:    require('@/assets/arenas/cosmic_sanctum.png') as number,
   royal:     require('@/assets/arenas/olympus_throne.png') as number,
   lightning: require('@/assets/arenas/oasis_cave.png') as number,
-  matrix:    require('@/assets/scenes/matrixArena/portrait/L0_far.png') as number,
+  matrix:      require('@/assets/scenes/matrixArena/portrait/L0_far.png') as number,
+  rainbowRoad: require('@/assets/scenes/rainbowRoad/portrait/L0_far.png') as number,
 };
 
 export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps) {
@@ -26,7 +27,8 @@ export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps)
   if (which === 'cosmic')    return <CosmicArena />;
   if (which === 'royal')     return <RoyalArena />;
   if (which === 'lightning') return <LightningArena />;
-  if (which === 'matrix')    return <MatrixArena />;
+  if (which === 'matrix')      return <MatrixArena />;
+  if (which === 'rainbowRoad') return <RainbowRoadArena />;
   return <ClassicArena />;
 }
 
@@ -73,6 +75,13 @@ const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, str
     'rgba(0,160,60,0.18)',
     'transparent',
   ],
+  rainbowRoad: [
+    'transparent',
+    'rgba(120,40,200,0.16)',
+    'rgba(200,60,255,0.26)',
+    'rgba(120,40,200,0.16)',
+    'transparent',
+  ],
 };
 
 const ARENA_PHOTO_LABELS: Partial<Record<ArenaId, string>> = {
@@ -89,7 +98,8 @@ const ARENA_FALLBACK_COLORS: Record<ArenaId, readonly [string, string, string]> 
   cosmic:     ['#0d0520', '#1a0840', '#100530'],
   royal:      ['#1e1200', '#3a2200', '#2a1a00'],
   lightning:  ['#031a1a', '#062e28', '#041f1c'],
-  matrix:     ['#001a08', '#002e10', '#001a08'],
+  matrix:      ['#001a08', '#002e10', '#001a08'],
+  rainbowRoad: ['#020013', '#090028', '#02000f'],
 };
 
 function ArenaPhotoBase({ arenaId }: { arenaId: ArenaId }) {
@@ -292,6 +302,25 @@ function MatrixArena() {
       <TableEdgeBlend arenaId="matrix" />
       <LinearGradient
         colors={['rgba(0,200,60,0.16)', 'transparent', 'rgba(0,160,50,0.12)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rainbow Road
+// ---------------------------------------------------------------------------
+
+function RainbowRoadArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="rainbowRoad" />
+      <TableEdgeBlend arenaId="rainbowRoad" />
+      <LinearGradient
+        colors={['rgba(180,60,255,0.18)', 'transparent', 'rgba(80,120,255,0.14)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}

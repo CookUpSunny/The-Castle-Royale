@@ -1,0 +1,75 @@
+{
+  "frames": [
+    {
+      "filename": "empress_0",
+      "frame": {
+        "x": 31,
+        "y": 166,
+        "w": 216,
+        "h": 430
+      }
+    },
+    {
+      "filename": "empress_1",
+      "frame": {
+        "x": 269,
+        "y": 166,
+        "w": 204,
+        "h": 434
+      }
+    },
+    {
+      "filename": "empress_2",
+      "frame": {
+        "x": 510,
+        "y": 170,
+        "w": 187,
+        "h": 430
+      }
+    },
+    {
+      "filename": "empress_3",
+      "frame": {
+        "x": 714,
+        "y": 169,
+        "w": 196,
+        "h": 430
+      }
+    },
+    {
+      "filename": "empress_4",
+      "frame": {
+        "x": 930,
+        "y": 167,
+        "w": 210,
+        "h": 431
+      }
+    },
+    {
+      "filename": "empress_5",
+      "frame": {
+        "x": 1158,
+        "y": 170,
+        "w": 188,
+        "h": 430
+      }
+    }
+  ],
+  "meta": {
+    "app": "rainbow-road-turnaround",
+    "image": "empress_turnaround_v1.png",
+    "size": {
+      "w": 1376,
+      "h": 768
+    },
+    "grid": {
+      "cols": 6,
+      "rows": 1
+    },
+    "frameCount": 6,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.99
+    }
+  }
+}

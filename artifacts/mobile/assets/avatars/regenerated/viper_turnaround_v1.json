@@ -1,0 +1,75 @@
+{
+  "frames": [
+    {
+      "filename": "viper_0",
+      "frame": {
+        "x": 34,
+        "y": 145,
+        "w": 209,
+        "h": 450
+      }
+    },
+    {
+      "filename": "viper_1",
+      "frame": {
+        "x": 275,
+        "y": 148,
+        "w": 202,
+        "h": 445
+      }
+    },
+    {
+      "filename": "viper_2",
+      "frame": {
+        "x": 516,
+        "y": 160,
+        "w": 183,
+        "h": 435
+      }
+    },
+    {
+      "filename": "viper_3",
+      "frame": {
+        "x": 726,
+        "y": 149,
+        "w": 197,
+        "h": 444
+      }
+    },
+    {
+      "filename": "viper_4",
+      "frame": {
+        "x": 945,
+        "y": 150,
+        "w": 202,
+        "h": 444
+      }
+    },
+    {
+      "filename": "viper_5",
+      "frame": {
+        "x": 1168,
+        "y": 159,
+        "w": 182,
+        "h": 435
+      }
+    }
+  ],
+  "meta": {
+    "app": "rainbow-road-turnaround",
+    "image": "viper_turnaround_v1.png",
+    "size": {
+      "w": 1376,
+      "h": 768
+    },
+    "grid": {
+      "cols": 6,
+      "rows": 1
+    },
+    "frameCount": 6,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.99
+    }
+  }
+}

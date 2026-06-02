@@ -1,8 +1,19 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
+import RainbowRoadBackground from '@/components/RainbowRoadBackground';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { ARENA_TABLE_TINT } from '@/lib/sceneAssets';
 import {
@@ -24,6 +35,7 @@ function variantFromDimensions(w: number, h: number): SceneVariant {
 const SCREEN_BLEND_LAYERS: ReadonlySet<SceneLayerId> = new Set(['L1_mid', 'L3_fx']);
 
 function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] {
+  if (sceneId === 'rainbowRoad') return ['#020013', '#090028', '#02000f'];
   if (sceneId === 'waterfallCavern') return ['#01130e', '#032b1f', '#000a07'];
   if (sceneId === 'olympusThrone')   return ['#0d0a00', '#1a1400', '#0a0800'];
   if (sceneId === 'cosmicSanctum')   return ['#000008', '#050010', '#000005'];
@@ -226,6 +238,42 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
   const variant = useMemo(() => variantFromDimensions(width, height), [width, height]);
   const pack = useMemo(() => getScenePack(sceneId), [sceneId]);
 
+  const drift = useSharedValue(0);
+  const kenBurns = useSharedValue(0);
+  const sparkle = useSharedValue(0);
+
+  useEffect(() => {
+    drift.value = 0;
+    drift.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 16000, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0, { duration: 16000, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(drift);
+  }, [drift, sceneId, variant]);
+
+  useEffect(() => {
+    kenBurns.value = 0;
+    kenBurns.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 24000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 24000, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(kenBurns);
+  }, [kenBurns, sceneId, variant]);
+
+  useEffect(() => {
+    sparkle.value = 0;
+    sparkle.value = withRepeat(withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.quad) }), -1, true);
+    return () => cancelAnimation(sparkle);
+  }, [sparkle, sceneId, variant]);
+
   const vignette = useMemo(
     () => ['rgba(0,0,0,0.32)', 'rgba(0,0,0,0.04)', 'rgba(0,0,0,0.55)'] as const,
     [],
@@ -236,19 +284,30 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <LinearGradient colors={[...sceneBaseGradient(sceneId)]} style={StyleSheet.absoluteFill} />
 
-      <StaticLayer variant={variant} layerId="L0_far" pack={pack} mode="backdrop" />
+      {sceneId === 'rainbowRoad' ? (
+        <RainbowRoadBreathWrapper drift={drift} kenBurns={kenBurns}>
+          <RainbowRoadBackground />
+        </RainbowRoadBreathWrapper>
+      ) : (
+        <StaticLayer variant={variant} layerId="L0_far" pack={pack} mode="backdrop" />
+      )}
 
       {sceneId === 'matrixArena' ? <MatrixAmbience /> : null}
 
       <LinearGradient colors={[...arenaTint]} style={StyleSheet.absoluteFill} />
 
+      {sceneId === 'rainbowRoad' ? <RainbowRoadAmbience sparkle={sparkle} /> : null}
       {sceneId === 'casinoGreen' ? <FlamingoAmbience /> : null}
       {sceneId === 'waterfallCavern' ? <WaterfallAmbience /> : null}
       {sceneId === 'olympusThrone' ? <OlympusAmbience /> : null}
       {sceneId === 'cosmicSanctum' ? <CosmicAmbience /> : null}
       {sceneId === 'flamingoFloor' ? <FlamingoFloorAmbience /> : null}
 
-      <StaticLayer variant={variant} layerId="L3_fx" pack={pack} opacity={0.55} mode="particles" />
+      {sceneId === 'rainbowRoad' ? (
+        <AnimatedFxLayer variant={variant} pack={pack} drift={drift} kenBurns={kenBurns} />
+      ) : (
+        <StaticLayer variant={variant} layerId="L3_fx" pack={pack} opacity={0.55} mode="particles" />
+      )}
 
       <LinearGradient colors={[...vignette]} style={StyleSheet.absoluteFill} />
     </View>
@@ -257,6 +316,94 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
 
 
 type ParallaxMode = 'default' | 'backdrop' | 'particles';
+
+function RainbowRoadBreathWrapper({
+  drift,
+  kenBurns,
+  children,
+}: {
+  drift: SharedValue<number>;
+  kenBurns: SharedValue<number>;
+  children: React.ReactNode;
+}) {
+  const style = useAnimatedStyle(() => {
+    const t = drift.value;
+    const kb = kenBurns.value;
+    const dx = (t - 0.5) * 28;
+    const dy = (0.5 - kb) * 12;
+    const scale = 1.11 + (kb - 0.5) * 0.024;
+    return {
+      transform: [{ translateX: dx }, { translateY: dy }, { scale }],
+    };
+  });
+
+  return (
+    <View style={styles.rainbowBreathClip} pointerEvents="box-none">
+      <Animated.View style={[StyleSheet.absoluteFill, style]} pointerEvents="box-none">
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
+
+function RainbowRoadAmbience({ sparkle }: { sparkle: SharedValue<number> }) {
+  const s = useAnimatedStyle(() => ({ opacity: 0.26 + sparkle.value * 0.28 }));
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, s]} pointerEvents="none">
+      <LinearGradient
+        colors={[
+          'rgba(0,229,255,0.11)',
+          'rgba(192,132,252,0.11)',
+          'rgba(255,215,0,0.09)',
+          'rgba(255,127,0,0.09)',
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(255,255,255,0.08)', 'transparent']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </Animated.View>
+  );
+}
+
+function AnimatedFxLayer({
+  variant,
+  pack,
+  drift,
+  kenBurns,
+}: {
+  variant: SceneVariant;
+  pack: ReturnType<typeof getScenePack>;
+  drift: SharedValue<number>;
+  kenBurns: SharedValue<number>;
+}) {
+  const source = pack.layers[variant]?.L3_fx ?? null;
+  const style = useAnimatedStyle(() => {
+    const t = drift.value;
+    const kb = kenBurns.value;
+    const dx = (0.5 - t) * 22;
+    const dy = (kb - 0.5) * 10;
+    return {
+      opacity: 0.48,
+      transform: [{ translateX: dx }, { translateY: dy }, { scale: 1.13 }],
+    };
+  });
+
+  if (!source) return null;
+
+  const blendStyle = { mixBlendMode: 'screen' } as unknown as ViewStyle;
+
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, style, blendStyle]} pointerEvents="none">
+      <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={0} />
+    </Animated.View>
+  );
+}
 
 function StaticLayer({
   variant,
@@ -394,3 +541,10 @@ function WaterfallAmbience() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  rainbowBreathClip: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+});

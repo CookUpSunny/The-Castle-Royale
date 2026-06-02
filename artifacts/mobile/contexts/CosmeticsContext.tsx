@@ -26,7 +26,7 @@ export type CardSkinId =
   | 'cyber-punk'
   | 'vintage-casino';
 
-export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning' | 'matrix';
+export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning' | 'matrix' | 'rainbowRoad';
 
 /**
  * ─── ADDING A NEW CHARACTER AVATAR ───────────────────────────────────────────
@@ -163,6 +163,12 @@ export const ARENAS: Arena[] = [
     premium: false,
     description: 'Enter the digital realm where cascading code rains down through a world built entirely of data. Green characters stream endlessly as glowing circuits pulse beneath the surface — reality itself is just a program, and the cards you hold may already be written.\n\nThere is no spoon. Only the next hand.',
   },
+  {
+    id: 'rainbowRoad',
+    name: 'Rainbow Road',
+    premium: false,
+    description: 'Neon loop-de-loop starfield — trolls ride a glittering rainbow track through deep space. Sparkling trails, loop-the-loops, and cosmic glow surround the table as the road itself becomes the arena.\n\nHold on tight. The next hand is around the bend.',
+  },
 ];
 
 const VALID_SKIN_IDS = new Set<CardSkinId>(CARD_SKINS.map((s) => s.id));
@@ -194,7 +200,7 @@ const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 const isArenaId = (v: string | null): v is ArenaId =>
-  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning' || v === 'matrix';
+  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning' || v === 'matrix' || v === 'rainbowRoad';
 
 const AVATAR_ID_SET = new Set<string>(AVATARS.map((a) => a.id));
 const isAvatarId = (v: string | null): v is AvatarId =>
@@ -208,11 +214,12 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   // Derive the scene from the arena so the background imagery matches the
   // arena the player selected. Each arena now has its own scene.
   const scene: SceneId =
-    arena === 'lightning' ? 'waterfallCavern' :
-    arena === 'royal'     ? 'olympusThrone'   :
-    arena === 'cosmic'    ? 'cosmicSanctum'   :
-    arena === 'classic'   ? 'flamingoFloor'   :
-    arena === 'matrix'    ? 'matrixArena'     :
+    arena === 'rainbowRoad' ? 'rainbowRoad'     :
+    arena === 'lightning'   ? 'waterfallCavern' :
+    arena === 'royal'       ? 'olympusThrone'   :
+    arena === 'cosmic'      ? 'cosmicSanctum'   :
+    arena === 'classic'     ? 'flamingoFloor'   :
+    arena === 'matrix'      ? 'matrixArena'     :
     'casinoGreen';
 
   useEffect(() => {

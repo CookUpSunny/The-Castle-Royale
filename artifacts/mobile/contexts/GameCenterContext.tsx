@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { resolveRestApiUrl } from '@/lib/apiUrl';
 
 /**
  * Game Center is only available in native iOS builds made with EAS.
@@ -40,10 +41,7 @@ interface GameCenterContextType {
 
 const GameCenterContext = createContext<GameCenterContextType | null>(null);
 
-const API_BASE = (() => {
-  const domain = process.env['EXPO_PUBLIC_DOMAIN'];
-  return domain ? `https://${domain}/api` : 'http://localhost:8080/api';
-})();
+const API_BASE = resolveRestApiUrl();
 
 // ── Strict types for react-native-game-center ─────────────────────────────────
 interface GCPlayer {

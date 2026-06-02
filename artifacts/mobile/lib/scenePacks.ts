@@ -1,6 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export type SceneId = 'casinoGreen' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum' | 'flamingoFloor' | 'matrixArena';
+export type SceneId = 'rainbowRoad' | 'casinoGreen' | 'waterfallCavern' | 'olympusThrone' | 'cosmicSanctum' | 'flamingoFloor' | 'matrixArena';
 export type SceneVariant = 'portrait' | 'landscape';
 export type SceneLayerId = 'L0_far' | 'L1_mid' | 'L2_table' | 'L3_fx' | 'L4_vignette';
 
@@ -24,6 +24,23 @@ export interface ScenePack {
 }
 
 export const SCENE_PACKS: Record<SceneId, ScenePack> = {
+  rainbowRoad: {
+    layers: {
+      portrait: {
+        L0_far: require('../assets/scenes/rainbowRoad/portrait/L0_far.png'),
+        L1_mid: require('../assets/scenes/rainbowRoad/portrait/L1_mid.png'),
+        L2_table: require('../assets/scenes/rainbowRoad/portrait/L2_table.png'),
+        L3_fx: require('../assets/scenes/rainbowRoad/portrait/L3_fx.png'),
+      },
+      landscape: {
+        L0_far: require('../assets/scenes/rainbowRoad/landscape/L0_far.png'),
+        L1_mid: require('../assets/scenes/rainbowRoad/landscape/L1_mid.png'),
+        L2_table: require('../assets/scenes/rainbowRoad/landscape/L2_table.png'),
+        L3_fx: require('../assets/scenes/rainbowRoad/landscape/L3_fx.png'),
+      },
+    },
+    parallax: { L0_far: 0.04, L1_mid: 0.12, L2_table: 0.06, L3_fx: 0.22 },
+  },
   casinoGreen: {
     layers: {
       portrait: {

@@ -21,7 +21,8 @@ const ARENA_FELT_SHADOW: Record<ArenaId, string> = {
   cosmic:     '#200850',
   royal:      '#503800',
   lightning:  '#003040',
-  matrix:     '#003810',
+  matrix:      '#003810',
+  rainbowRoad: '#180830',
 };
 
 interface CardProps {

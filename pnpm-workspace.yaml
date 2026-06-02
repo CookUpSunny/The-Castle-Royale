@@ -4,6 +4,11 @@ packages:
   - lib/integrations/*
   - scripts
 
+allowBuilds:
+  '@shopify/react-native-skia': set this to true or false
+  dtrace-provider: set this to true or false
+  esbuild: set this to true or false
+
 autoInstallPeers: false
 
 catalog:

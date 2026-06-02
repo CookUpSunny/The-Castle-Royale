@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { resolveApiBaseUrl } from '@/lib/apiUrl';
 
 export interface Card {
   id: string;
@@ -198,12 +199,14 @@ export function GameProvider({
   useEffect(() => {
     if (!playerId) return;
 
-    const domain = process.env['EXPO_PUBLIC_DOMAIN'];
-    const url = domain ? `https://${domain}` : 'http://localhost:8080';
+    const url = resolveApiBaseUrl();
+    if (__DEV__) {
+      console.info('[Game] Socket.io →', url, '(path /api/socket.io)');
+    }
 
     const socket = io(url, {
       path: '/api/socket.io',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
