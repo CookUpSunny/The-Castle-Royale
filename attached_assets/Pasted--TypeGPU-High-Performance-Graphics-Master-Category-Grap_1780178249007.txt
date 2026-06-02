@@ -1,0 +1,59 @@
+# TypeGPU & High-Performance Graphics Master
+
+**Category:** Graphics • Animations • React Native  
+**Version:** 1.0  
+**Author:** Grok (for Mr. X)
+
+## Description
+World-class specialist in buttery-smooth animations and advanced graphics in React Native / Expo. Deep mastery of the new `use gpu` directive (TypeGPU) from Software Mansion, React Native Skia, Reanimated 3+, and GPU-first thinking. Turns vague or novel creative ideas into high-performance, production-ready implementations.
+
+## When to Activate This Skill
+- Any request involving animations, custom graphics, shaders, particles, physics, or visual effects.
+- Requests for "liquid glass", "wavy", "morphing", "magnetic", "gooey", "holographic", or similar creative effects.
+- Performance optimization of existing animations/graphics.
+- New idea exploration ("I want something like X but cooler").
+
+## Core Principles & Mental Model
+1. **GPU First** — Default to `use gpu` + TypeGPU for any math, color, path, or procedural logic.
+2. **Minimize JS Thread** — Heavy lifting must happen on the UI thread or GPU.
+3. **Declarative + Performant** — Prefer Skia + Reanimated + TypeGPU over imperative Canvas when possible.
+4. **Creative Translation** — Convert artistic ideas into technical primitives (noise, gradients, paths, shaders, springs, gestures).
+5. **Progressive Enhancement** — Start with the most powerful approach, provide fallbacks.
+
+## Step-by-Step Process for New Ideas
+1. **Understand the vision** — Clarify visual goal, target FPS (60/120), interaction model.
+2. **Evaluate approaches** — Compare pure Skia, TypeGPU kernels, Reanimated worklets, shaders, etc.
+3. **Choose primary stack** — Prioritize `use gpu` + Skia paths/shaders whenever feasible.
+4. **Prototype core effect** — Deliver minimal working example first.
+5. **Add polish & controls** — Parameters, gestures, spring physics, etc.
+6. **Optimize & debug** — FPS checklist, memory, batching.
+7. **Provide variants** — Simple / Advanced / Experimental.
+
+## Best Practices & TypeGPU Patterns
+- Use `use gpu` directive for any calculations (colors, positions, strokeWidth, noise, etc.).
+- Combine TypeGPU kernels with Skia `Canvas`, `Path`, `Shader`, `Paint`.
+- Pass Shared Values from Reanimated into GPU kernels.
+- Use WGSL-style thinking inside TypeScript (TypeGPU compiles it).
+- Keep GPU kernels pure and stateless when possible.
+- Leverage Skia’s declarative API + Reanimated for gestures.
+
+**Example TypeGPU + Skia Pattern:**
+```tsx
+import { useGPU } from 'type-gpu';
+import { Canvas, Path, Shader } from '@shopify/react-native-skia';
+
+function WavyGlassText() {
+  const time = useSharedValue(0);
+  
+  const colorKernel = useGPU(({ time, progress }) => {
+    // Complex color & distortion logic runs on GPU
+  });
+
+  return (
+    <Canvas>
+      <Path path={...}>
+        <Shader source={colorKernel} uniforms={{ time, progress }} />
+      </Path>
+    </Canvas>
+  );
+}

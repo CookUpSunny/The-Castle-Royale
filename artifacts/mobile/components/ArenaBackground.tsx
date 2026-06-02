@@ -1,0 +1,347 @@
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useCosmetics } from '@/contexts/CosmeticsContext';
+import type { ArenaId } from '@/contexts/CosmeticsContext';
+
+interface ArenaBackgroundProps {
+  arenaOverride?: ArenaId;
+}
+
+export const ARENA_IMAGES: Partial<Record<ArenaId, number>> = {
+  greenTable: require('@/assets/arenas/casino_green.png') as number,
+  classic:   require('@/assets/arenas/flamingo_floor.png') as number,
+  cosmic:    require('@/assets/arenas/cosmic_sanctum.png') as number,
+  royal:     require('@/assets/arenas/olympus_throne.png') as number,
+  lightning: require('@/assets/arenas/oasis_cave.png') as number,
+  matrix:      require('@/assets/scenes/matrixArena/portrait/L0_far.png') as number,
+  rainbowRoad: require('@/assets/scenes/rainbowRoad/portrait/L0_far.png') as number,
+};
+
+export default function ArenaBackground({ arenaOverride }: ArenaBackgroundProps) {
+  const { arena } = useCosmetics();
+  const which = arenaOverride ?? arena;
+
+  if (which === 'greenTable') return <GreenTableArena />;
+  if (which === 'cosmic')    return <CosmicArena />;
+  if (which === 'royal')     return <RoyalArena />;
+  if (which === 'lightning') return <LightningArena />;
+  if (which === 'matrix')      return <MatrixArena />;
+  if (which === 'rainbowRoad') return <RainbowRoadArena />;
+  return <ClassicArena />;
+}
+
+const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, string]> = {
+  greenTable: [
+    'transparent',
+    'rgba(20,90,40,0.14)',
+    'rgba(20,90,40,0.24)',
+    'rgba(20,90,40,0.14)',
+    'transparent',
+  ],
+  classic: [
+    'transparent',
+    'rgba(200,50,120,0.18)',
+    'rgba(200,50,120,0.30)',
+    'rgba(200,50,120,0.18)',
+    'transparent',
+  ],
+  royal: [
+    'transparent',
+    'rgba(180,110,10,0.18)',
+    'rgba(180,110,10,0.28)',
+    'rgba(180,110,10,0.18)',
+    'transparent',
+  ],
+  cosmic: [
+    'transparent',
+    'rgba(60,30,180,0.20)',
+    'rgba(60,30,180,0.32)',
+    'rgba(60,30,180,0.20)',
+    'transparent',
+  ],
+  lightning: [
+    'transparent',
+    'rgba(10,140,130,0.16)',
+    'rgba(10,140,130,0.26)',
+    'rgba(10,140,130,0.16)',
+    'transparent',
+  ],
+  matrix: [
+    'transparent',
+    'rgba(0,160,60,0.18)',
+    'rgba(0,200,70,0.28)',
+    'rgba(0,160,60,0.18)',
+    'transparent',
+  ],
+  rainbowRoad: [
+    'transparent',
+    'rgba(120,40,200,0.16)',
+    'rgba(200,60,255,0.26)',
+    'rgba(120,40,200,0.16)',
+    'transparent',
+  ],
+};
+
+const ARENA_PHOTO_LABELS: Partial<Record<ArenaId, string>> = {
+  greenTable: 'CASINO GREEN',
+  classic:   'FLAMINGO FLOOR',
+  cosmic:    'COSMIC SANCTUM',
+  royal:     'OLYMPUS THRONE',
+  lightning: 'OASIS IN THE CAVE',
+};
+
+const ARENA_FALLBACK_COLORS: Record<ArenaId, readonly [string, string, string]> = {
+  greenTable: ['#0a2e14', '#0d3b1a', '#0a2e14'],
+  classic:    ['#3d0a28', '#5c1040', '#8a1050'],
+  cosmic:     ['#0d0520', '#1a0840', '#100530'],
+  royal:      ['#1e1200', '#3a2200', '#2a1a00'],
+  lightning:  ['#031a1a', '#062e28', '#041f1c'],
+  matrix:      ['#001a08', '#002e10', '#001a08'],
+  rainbowRoad: ['#020013', '#090028', '#02000f'],
+};
+
+function ArenaPhotoBase({ arenaId }: { arenaId: ArenaId }) {
+  const fallback = ARENA_FALLBACK_COLORS[arenaId];
+  const label = ARENA_PHOTO_LABELS[arenaId];
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Fallback gradient — always visible; photo renders on top when available */}
+      <LinearGradient
+        colors={[...fallback]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <Image
+        source={ARENA_IMAGES[arenaId]}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
+      <View style={[StyleSheet.absoluteFill, styles.darkOverlay]} />
+      {/* Muted fallback label — tiny caps top-left; ensures arenas are identifiable
+          even when the photo asset is a transparent placeholder */}
+      {label ? (
+        <View style={styles.photoLabelContainer} pointerEvents="none">
+          <Text style={styles.photoLabel}>{label}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function TableEdgeBlend({ arenaId }: { arenaId: ArenaId }) {
+  const blendColors = ARENA_BLEND[arenaId];
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <LinearGradient
+        colors={[...blendColors]}
+        locations={[0, 0.22, 0.5, 0.78, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['transparent', blendColors[2], 'transparent']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Casino Green Table
+// ---------------------------------------------------------------------------
+
+function GreenTableArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="greenTable" />
+      <TableEdgeBlend arenaId="greenTable" />
+      <LinearGradient
+        colors={['rgba(20,100,40,0.18)', 'transparent', 'rgba(180,140,0,0.12)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Classic (Flamingo Floor)
+// ---------------------------------------------------------------------------
+
+function ClassicArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="classic" />
+      <TableEdgeBlend arenaId="classic" />
+      <LinearGradient
+        colors={['rgba(255,20,160,0.18)', 'transparent', 'rgba(255,80,180,0.14)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Royal (Olympus Throne)
+// ---------------------------------------------------------------------------
+
+function RoyalArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="royal" />
+      <TableEdgeBlend arenaId="royal" />
+      <LinearGradient
+        colors={['rgba(255,240,180,0.35)', 'transparent', 'rgba(251,191,36,0.20)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cosmic (Cosmic Sanctum)
+// ---------------------------------------------------------------------------
+
+function CosmicArena() {
+  const stars = useMemo(() => {
+    const arr: { left: string; top: string; size: number; opacity: number }[] = [];
+    for (let i = 0; i < 36; i++) {
+      arr.push({
+        left: `${(i * 37 + 11) % 100}%`,
+        top: `${(i * 53 + 7) % 100}%`,
+        size: 1 + (i % 3) * 0.9,
+        opacity: 0.45 + (i % 5) * 0.11,
+      });
+    }
+    return arr;
+  }, []);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="cosmic" />
+      <TableEdgeBlend arenaId="cosmic" />
+      {/* Static nebula glow */}
+      <View style={[StyleSheet.absoluteFill, { opacity: 0.42 }]} pointerEvents="none">
+        <LinearGradient
+          colors={['transparent', 'rgba(120,80,255,0.28)', 'rgba(60,30,160,0.14)', 'transparent']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={['rgba(255,80,200,0.14)', 'transparent', 'rgba(80,200,255,0.14)']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      {/* Static stars */}
+      {stars.map((s, i) => (
+        <View
+          key={i}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: s.left as unknown as number,
+            top: s.top as unknown as number,
+            width: s.size,
+            height: s.size,
+            borderRadius: s.size / 2,
+            backgroundColor: '#ffffff',
+            opacity: s.opacity,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Lightning Storm (Oasis in the Cave) — static, no bolt/cloud animation
+// ---------------------------------------------------------------------------
+
+function LightningArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="lightning" />
+      <TableEdgeBlend arenaId="lightning" />
+      <LinearGradient
+        colors={['rgba(20,180,120,0.16)', 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[StyleSheet.absoluteFill, { height: '45%' }]}
+      />
+      {/* Static cloud blobs */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: '5%',  top: '4%',  width: 260, height: 90,  borderRadius: 50, backgroundColor: 'rgba(100,80,200,0.28)', opacity: 0.55 }} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: '40%', top: '10%', width: 310, height: 100, borderRadius: 55, backgroundColor: 'rgba(80,60,180,0.22)',   opacity: 0.55 }} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: '60%', top: '2%',  width: 240, height: 80,  borderRadius: 44, backgroundColor: 'rgba(120,90,220,0.30)',  opacity: 0.55 }} />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Matrix Arena
+// ---------------------------------------------------------------------------
+
+function MatrixArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="matrix" />
+      <TableEdgeBlend arenaId="matrix" />
+      <LinearGradient
+        colors={['rgba(0,200,60,0.16)', 'transparent', 'rgba(0,160,50,0.12)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rainbow Road
+// ---------------------------------------------------------------------------
+
+function RainbowRoadArena() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <ArenaPhotoBase arenaId="rainbowRoad" />
+      <TableEdgeBlend arenaId="rainbowRoad" />
+      <LinearGradient
+        colors={['rgba(180,60,255,0.18)', 'transparent', 'rgba(80,120,255,0.14)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  darkOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.48)',
+  },
+  photoLabelContainer: {
+    position: 'absolute',
+    top: 8,
+    left: 10,
+  },
+  photoLabel: {
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+});

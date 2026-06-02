@@ -1,0 +1,1 @@
+- [TypeGPU graphics skill](typegpu-graphics.md) — GPU-first animations for Expo/RN; load `.local/skills/typegpu-graphics/SKILL.md` for shaders, particles, wavy/holographic/morphing effects.

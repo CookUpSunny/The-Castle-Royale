@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Castle Royale Matrix Arena Background</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020802;
+    }
+
+    #matrixCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background:
+        radial-gradient(circle at center, rgba(0, 255, 90, 0.18), transparent 35%),
+        linear-gradient(180deg, #001a08 0%, #000000 100%);
+      z-index: -1;
+    }
+
+    .game-overlay {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100vh;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="matrixCanvas"></canvas>
+
+  <div class="game-overlay">
+    <!-- Your game UI/cards go here -->
+  </div>
+
+  <script>
+    const canvas = document.getElementById("matrixCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let width, height, columns;
+    const fontSize = 20;
+    const characters =
+      "アァカサタナハマヤャラワガザダバパ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ♠♣♥♦";
+
+    let drops = [];
+    let speeds = [];
+
+    function resizeCanvas() {
+      width = canvas.width = window.innerWidth * window.devicePixelRatio;
+      height = canvas.height = window.innerHeight * window.devicePixelRatio;
+
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+      columns = Math.floor(window.innerWidth / fontSize);
+      drops = Array(columns).fill(0).map(() => Math.random() * -100);
+      speeds = Array(columns).fill(0).map(() => 0.5 + Math.random() * 2.2);
+    }
+
+    function drawMatrixRain() {
+      ctx.fillStyle = "rgba(0, 8, 2, 0.13)";
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+      ctx.font = `${fontSize}px monospace`;
+      ctx.textAlign = "center";
+
+      for (let i = 0; i < columns; i++) {
+        const x = i * fontSize + fontSize / 2;
+        const y = drops[i] * fontSize;
+
+        const char = characters[Math.floor(Math.random() * characters.length)];
+
+        // Lead character glow white
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = "#ffffff";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(char, x, y);
+
+        // Green trail behind lead
+        for (let t = 1; t < 12; t++) {
+          const trailChar = characters[Math.floor(Math.random() * characters.length)];
+          const alpha = 1 - t / 12;
+          const trailY = y - t * fontSize;
+
+          ctx.shadowBlur = 8 * alpha;
+          ctx.shadowColor = "#00ff66";
+          ctx.fillStyle = `rgba(0, ${180 - t * 8}, 70, ${alpha})`;
+          ctx.fillText(trailChar, x, trailY);
+        }
+
+        drops[i] += speeds[i] * 0.35;
+
+        if (y > window.innerHeight + Math.random() * 500) {
+          drops[i] = Math.random() * -50;
+          speeds[i] = 0.5 + Math.random() * 2.2;
+        }
+      }
+
+      requestAnimationFrame(drawMatrixRain);
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+
+    resizeCanvas();
+    drawMatrixRain();
+  </script>
+</body>
+</html>

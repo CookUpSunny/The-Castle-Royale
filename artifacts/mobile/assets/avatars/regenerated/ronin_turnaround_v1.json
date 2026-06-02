@@ -1,0 +1,75 @@
+{
+  "frames": [
+    {
+      "filename": "ronin_0",
+      "frame": {
+        "x": 62,
+        "y": 153,
+        "w": 187,
+        "h": 396
+      }
+    },
+    {
+      "filename": "ronin_1",
+      "frame": {
+        "x": 292,
+        "y": 156,
+        "w": 176,
+        "h": 394
+      }
+    },
+    {
+      "filename": "ronin_2",
+      "frame": {
+        "x": 507,
+        "y": 159,
+        "w": 176,
+        "h": 391
+      }
+    },
+    {
+      "filename": "ronin_3",
+      "frame": {
+        "x": 730,
+        "y": 157,
+        "w": 179,
+        "h": 392
+      }
+    },
+    {
+      "filename": "ronin_4",
+      "frame": {
+        "x": 951,
+        "y": 155,
+        "w": 174,
+        "h": 391
+      }
+    },
+    {
+      "filename": "ronin_5",
+      "frame": {
+        "x": 1170,
+        "y": 159,
+        "w": 175,
+        "h": 391
+      }
+    }
+  ],
+  "meta": {
+    "app": "rainbow-road-turnaround",
+    "image": "ronin_turnaround_v1.png",
+    "size": {
+      "w": 1376,
+      "h": 768
+    },
+    "grid": {
+      "cols": 6,
+      "rows": 1
+    },
+    "frameCount": 6,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.99
+    }
+  }
+}

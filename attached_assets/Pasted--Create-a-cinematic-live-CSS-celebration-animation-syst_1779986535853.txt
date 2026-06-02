@@ -1,0 +1,71 @@
+[Create a cinematic live CSS celebration animation system inspired by premium casino wins, luxury mobile games, and futuristic reward interfaces.
+
+Dozens of glowing confetti particles explode from above the screen and rain downward naturally with varied motion physics. The particles should include circles, thin rectangles, rounded squares, shards, and tiny glowing fragments — each moving independently with unique speed, size, spin, opacity, and trajectory.
+
+The animation should feel euphoric, rewarding, and expensive — the universal visual language of victory.
+
+Animation Behavior:
+• Confetti bursts from the top of the screen in layered waves
+• Particles fall at different speeds with realistic gravity
+• Some particles drift slowly side-to-side while falling
+• Others spin rapidly or tumble in 3D space
+• A few larger hero particles float elegantly with slower motion
+• Motion should feel organic and chaotic, never repetitive
+• Add subtle easing and bounce behavior to some pieces
+• Smaller particles fade away before reaching the bottom
+• Occasional sparkle flares and micro-glow bursts appear between particles
+• The animation loops seamlessly while still feeling random and alive
+
+Visual Style:
+• Entirely live CSS animation
+• Ultra-clean luxury UI aesthetic
+• Warm dark background for maximum contrast
+• Cinematic lighting with layered bloom and glow
+• Premium casino / AAA mobile game victory screen energy
+• Elegant, not childish — sophisticated celebration
+
+Color Palette:
+• Electric violet
+• Neon teal
+• Amber gold
+• Soft magenta
+• White-hot highlights
+• Occasional holographic gradient particles
+
+Particle Details:
+• Varied particle sizes from tiny sparks to large floating tiles
+• Semi-transparent materials with glossy reflections
+• Some particles emit soft glow trails
+• Metallic shimmer effects on select pieces
+• Depth layering creates foreground and background particle fields
+
+Technical Direction:
+• Pure CSS animation system
+• GPU-accelerated transforms
+• Randomized animation delays and durations
+• Layered parallax movement
+• Blur and glow effects using filter and box-shadow
+• Transform rotations using rotateX, rotateY, rotateZ
+• Smooth opacity transitions and motion interpolation
+
+Additional Atmosphere:
+• Add faint ambient floating dust particles in the background
+• Include occasional lens flare flashes near brighter particles
+• Some confetti pieces should softly illuminate nearby UI surfaces
+• Motion should feel celebratory without becoming visually noisy
+
+Used For:
+• Game victories
+• Jackpot wins
+• Checkout success moments
+• App rewards
+• Milestone completions
+• Achievement unlocks
+• VIP unlock screens
+• Premium onboarding reveals
+
+Overall feeling:
+Victory.
+Momentum.
+Luxury reward feedback.
+A futuristic celebration made of light, motion, and energy.]
