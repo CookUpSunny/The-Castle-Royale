@@ -1,6 +1,21 @@
+const path = require("path");
 const { getDefaultConfig } = require("expo/metro-config");
 
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, "../..");
+
+const config = getDefaultConfig(projectRoot);
+
+// Monorepo: watch the whole workspace so Metro can resolve shared libs
+config.watchFolders = [workspaceRoot];
+
+// Monorepo: prefer project-local node_modules, fall back to workspace root
+// This fixes "Unable to resolve ../../App from expo/AppEntry.js" in pnpm workspaces
+// where packages are stored in deep content-addressable paths (node_modules/.pnpm/...)
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, "node_modules"),
+  path.resolve(workspaceRoot, "node_modules"),
+];
 
 config.resolver.assetExts.push("wasm");
 

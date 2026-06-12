@@ -1,1 +1,2 @@
 - [TypeGPU graphics skill](typegpu-graphics.md) — GPU-first animations for Expo/RN; load `.local/skills/typegpu-graphics/SKILL.md` for shaders, particles, wavy/holographic/morphing effects.
+- [EAS pnpm workspace Metro fix](eas-pnpm-metro.md) — EAS builds fail with "Unable to resolve ../../App from expo/AppEntry.js" in pnpm workspaces; fix is watchFolders + nodeModulesPaths in metro.config.js.
