@@ -1,0 +1,46 @@
+Upon reviewing your app's workspace's logs, here's what we managed to find (regarding the "Something unexpected happened. Contact support@replit.com if the issue persists" error that you're currently experiencing when publishing to the App Store).
+ 
+It appears that your deployment to the App Store results in the following error log:
+ 
+<html>
+<head><title>413 Payload Too Large</title></head>
+<body>
+<center><h1>413 Payload Too Large</h1></center>
+<hr><center>cloudflare</center>
+</body>
+</html>
+ 
+What this means is that the deployment bundle being uploaded is exceeding the maximum allowed request body size. This is typically caused by the app's total output (JavaScript bundles + assets) being too large.
+ 
+The root cause for this error seems to be the deployment payload potentially being too large for Cloudflare's request size limit (typically 100 MB).
+ 
+The biggest contributors (based on what we were able to find) are the following:
+Your app's uploads/ folder across files, which includes user-uploaded content that is being bundled into the deployment.
+Your app's assets/videos/ folder, which contains up to of video files bundled directly into the app
+assets/images/, where there are several MB of large PNGs.
+ 
+The fix for this would likely involve one or more of the following:
+Exclude uploads/ from deployment — this folder contains user-uploaded files that should be served from external storage (like Replit App Storage), not bundled into the app build.
+Optimize or externalize large video assets — the video files in assets/videos/ could be hosted externally and loaded via URL rather than bundled.
+Compress large images — several avatar and empty-state PNGs are over 1MB each and could be optimized.
+ 
+Agent may be able to assist you with setting up these optimizations. To help you get started, feel free to prompt Agent with the following prompt (in Plan mode):
+ 
+I am currently unable to publish this app to the app store due to the following error log:
+ 
+<html> 
+<head><title>413 Payload Too Large</title></head> 
+<body> 
+<center><h1>413 Payload Too Large</h1></center> 
+<hr><center>cloudflare</center>
+</body> 
+</html>
+ 
+It appears that the root cause of this issue stems from the deployment bundle size being too big, due to the size of this app's uploads/, assets/videos/, and assets/images/ directories.
+ 
+Can you please help me devise a plan to optimize my deployment bundle size, based on the following suggestions (without compromising or removing any existing functionality)?
+ 
+Exclude uploads/ from deployment — this folder contains user-uploaded files that should be served from external storage (like Replit App Storage), not bundled into the app build.
+Optimize or externalize if there are large video assets — the video files in assets/videos/. could be hosted externally and loaded via URL rather than bundled.
+Compress large images — several avatar and empty-state PNGs are over 1MB each and could be optimized.
+ 

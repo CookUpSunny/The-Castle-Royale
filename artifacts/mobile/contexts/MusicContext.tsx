@@ -8,17 +8,17 @@
  *              seamless loop); otherwise shuffled playlist of tracks 1–4.
  *
  * ─── TRACKS ──────────────────────────────────────────────────────────────────
- *   track1.wav   — Sparks In These Eyes  ← greenTable arena ("Casino Green")
- *   track2.wav   — Sparks Fly           ← splash screen track
- *   track3.wav   — Wife Changing Money  ┐ shuffled playlist for arenas
- *   track4.wav   — Go! Go! Go!          ┘ without a dedicated track
- *   oasis.wav    — Underground Kingdom  ← lightning arena  ("An Oasis in the Cave")
- *   flamingo.wav — Go! Go! Go!          ← classic arena   ("The Flamingo Floor")
- *   olympus.wav  — Winning Man Anthem   ← royal arena     ("Olympus Throne")
- *   cosmic.wav   — All In               ← cosmic arena    ("Cosmic Sanctum")
- *   matrix.wav  — Whispers Dipped in Dye ← matrix arena  ("Matrix")
+ *   track1.m4a   — Sparks In These Eyes  ← greenTable arena ("Casino Green")
+ *   track2.m4a   — Sparks Fly           ← splash screen track
+ *   track3.m4a   — Wife Changing Money  ┐ shuffled playlist for arenas
+ *   track4.m4a   — Go! Go! Go!          ┘ without a dedicated track
+ *   oasis.m4a    — Underground Kingdom  ← lightning arena  ("An Oasis in the Cave")
+ *   flamingo.m4a — Go! Go! Go!          ← classic arena   ("The Flamingo Floor")
+ *   olympus.m4a  — Winning Man Anthem   ← royal arena     ("Olympus Throne")
+ *   cosmic.m4a   — All In               ← cosmic arena    ("Cosmic Sanctum")
+ *   matrix.m4a  — Whispers Dipped in Dye ← matrix arena  ("Matrix")
  *
- * To add a new arena track: copy the .wav into assets/music/, require() it in
+ * To add a new arena track: copy the .m4a into assets/music/, require() it in
  * TRACKS below, and add one line to ARENA_TRACK mapping the ArenaId → index.
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -73,23 +73,23 @@ const ARENA_TRACK: Partial<Record<ArenaId, number>> = {
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const TRACKS: number[] = [
-  require('../assets/music/track1.wav') as number,
+  require('../assets/music/track1.m4a') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/track2.wav') as number,
+  require('../assets/music/track2.m4a') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/track3.wav') as number,
+  require('../assets/music/track3.m4a') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/track4.wav') as number,
+  require('../assets/music/track4.m4a') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/oasis.wav') as number,
+  require('../assets/music/oasis.m4a') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/flamingo.wav') as number,
+  require('../assets/music/flamingo.m4a') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/olympus.wav') as number,
+  require('../assets/music/olympus.m4a') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/cosmic.wav') as number,   // index 7 — All In
+  require('../assets/music/cosmic.m4a') as number,   // index 7 — All In
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../assets/music/matrix.wav') as number,  // index 8 — Whispers Dipped in Dye
+  require('../assets/music/matrix.m4a') as number,  // index 8 — Whispers Dipped in Dye
 ];
 
 // Shuffle queue only spans the generic playlist tracks; arena tracks are excluded.

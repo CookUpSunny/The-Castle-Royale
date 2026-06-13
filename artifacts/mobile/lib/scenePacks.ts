@@ -27,13 +27,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   rainbowRoad: {
     layers: {
       portrait: {
-        L0_far: require('../assets/scenes/rainbowRoad/portrait/L0_far.png'),
+        L0_far: require('../assets/scenes/rainbowRoad/portrait/L0_far.jpg'),
         L1_mid: require('../assets/scenes/rainbowRoad/portrait/L1_mid.png'),
         L2_table: require('../assets/scenes/rainbowRoad/portrait/L2_table.png'),
         L3_fx: require('../assets/scenes/rainbowRoad/portrait/L3_fx.png'),
       },
       landscape: {
-        L0_far: require('../assets/scenes/rainbowRoad/landscape/L0_far.png'),
+        L0_far: require('../assets/scenes/rainbowRoad/landscape/L0_far.jpg'),
         L1_mid: require('../assets/scenes/rainbowRoad/landscape/L1_mid.png'),
         L2_table: require('../assets/scenes/rainbowRoad/landscape/L2_table.png'),
         L3_fx: require('../assets/scenes/rainbowRoad/landscape/L3_fx.png'),
@@ -44,13 +44,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   casinoGreen: {
     layers: {
       portrait: {
-        L0_far:   require('../assets/scenes/flamingoCasino/portrait/L0_far.png'),
+        L0_far:   require('../assets/scenes/flamingoCasino/portrait/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
       },
       landscape: {
-        L0_far:   require('../assets/scenes/flamingoCasino/landscape/L0_far.png'),
+        L0_far:   require('../assets/scenes/flamingoCasino/landscape/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
@@ -61,13 +61,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   flamingoFloor: {
     layers: {
       portrait: {
-        L0_far:   require('../assets/scenes/flamingoFloor/portrait/L0_far.png'),
+        L0_far:   require('../assets/scenes/flamingoFloor/portrait/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
       },
       landscape: {
-        L0_far:   require('../assets/scenes/flamingoFloor/landscape/L0_far.png'),
+        L0_far:   require('../assets/scenes/flamingoFloor/landscape/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
@@ -95,13 +95,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   olympusThrone: {
     layers: {
       portrait: {
-        L0_far:   require('../assets/scenes/olympusThrone/portrait/L0_far.png'),
+        L0_far:   require('../assets/scenes/olympusThrone/portrait/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
       },
       landscape: {
-        L0_far:   require('../assets/scenes/olympusThrone/landscape/L0_far.png'),
+        L0_far:   require('../assets/scenes/olympusThrone/landscape/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
@@ -112,13 +112,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   waterfallCavern: {
     layers: {
       portrait: {
-        L0_far:   require('../assets/scenes/waterfallCavern/portrait/L0_far.png'),
+        L0_far:   require('../assets/scenes/waterfallCavern/portrait/L0_far.jpg'),
         L1_mid:   require('../assets/scenes/waterfallCavern/portrait/L1_mid.png'),
         L2_table: null,
         L3_fx:    require('../assets/scenes/waterfallCavern/portrait/L3_fx.png'),
       },
       landscape: {
-        L0_far:   require('../assets/scenes/waterfallCavern/landscape/L0_far.png'),
+        L0_far:   require('../assets/scenes/waterfallCavern/landscape/L0_far.jpg'),
         L1_mid:   require('../assets/scenes/waterfallCavern/landscape/L1_mid.png'),
         L2_table: null,
         L3_fx:    require('../assets/scenes/waterfallCavern/landscape/L3_fx.png'),
@@ -129,13 +129,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   matrixArena: {
     layers: {
       portrait: {
-        L0_far:   require('../assets/scenes/matrixArena/portrait/L0_far.png'),
+        L0_far:   require('../assets/scenes/matrixArena/portrait/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
       },
       landscape: {
-        L0_far:   require('../assets/scenes/matrixArena/landscape/L0_far.png'),
+        L0_far:   require('../assets/scenes/matrixArena/landscape/L0_far.jpg'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
