@@ -452,7 +452,7 @@ export default function RainbowRoadBackground() {
   }, [width, height]);
 
   const bgImage = useImage(
-    require("../assets/scenes/rainbowRoad/portrait/L0_far.png"),
+    require("../assets/scenes/rainbowRoad/portrait/L0_far.jpg"),
   );
 
   const stars = useMemo(() => generateStars(width, height), [width, height]);

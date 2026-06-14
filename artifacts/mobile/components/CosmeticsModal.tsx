@@ -201,7 +201,7 @@ const ARENA_IMAGES: Record<ArenaId, ImageSourcePropType> = {
   royal:     require('../assets/arenas/olympus_throne.png'),
   lightning: require('../assets/arenas/oasis_cave.png'),
   matrix:      require('../assets/arenas/matrix_arena.png'),
-  rainbowRoad: require('../assets/scenes/rainbowRoad/portrait/L0_far.png'),
+  rainbowRoad: require('../assets/scenes/rainbowRoad/portrait/L0_far.jpg'),
 };
 
 function ArenaPreview({ arenaId }: { arenaId: ArenaId }) {
