@@ -1,0 +1,23 @@
+That's the moment of truth, and it tells us exactly where we are. The build cleared everything upstream and died at the Xcode compile step — the phase I said was the real test — with:
+'third_party/base64.h' file not found
+This is still a Skia header problem, just a different header than the one I patched. My withSkiaFix fix added the cpp/api path, which got you past that error — but Skia also vendors headers it includes as third_party/base64.h, and those still aren't on the search path. You can keep chasing header paths one by one, but that's whack-a-mole, and in your pnpm setup the Skia pod path is deep and hashed, so it's fragile.
+The actual root cause is the thing I flagged as the fallback last time: useFrameworks: "static". Skia's internal quoted includes ("third_party/base64.h", "cpp/api/...") break specifically under static frameworks, because static frameworks enforce modular header visibility that those flat includes don't satisfy. Remove static frameworks and these "file not found" errors typically all disappear at once — and you can drop the withSkiaFix plugin entirely.
+Instruction for the agent:
+
+In artifacts/mobile/app.json, remove two things from the plugins array:
+
+The "./plugins/withSkiaFix" entry.
+The ["expo-build-properties", { "ios": { "useFrameworks": "static" } }] entry (drop the whole entry — nothing else in this app needs it; newArchEnabled is already set at the top level).
+
+Resulting plugins:
+json"plugins": [
+  ["expo-router", { "origin": "https://replit.com/" }],
+  "expo-font",
+  "expo-web-browser"
+]
+Then rebuild: eas build --profile production --platform ios from artifacts/mobile. EAS does a fresh prebuild each time, so the Podfile regenerates clean without the static-frameworks linkage.
+
+Two notes:
+
+Why static frameworks was probably there: nothing in your dep list actually requires it (no Firebase/GoogleMaps). It looks speculative. If — and only if — the rebuild fails with a different error complaining that some pod needs use_frameworks!, then static frameworks is required and we go back to extending header paths instead. I'd put that at low odds.
+Confirm the culprit: on the EAS build page, expand "Xcode Logs," search base64.h, and look at the CompileC line just above it — it names the pod target being compiled. If it says something with skia/RNSkia, we've got it pinned. Paste that line if the rebuild doesn't go green.
