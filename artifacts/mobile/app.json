@@ -13,13 +13,13 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.replit.thecastleroyale",
+      "bundleIdentifier": "com.krazi.thecastleroyale",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "app.replit.thecastleroyale",
+      "package": "com.krazi.thecastleroyale",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#07000f"

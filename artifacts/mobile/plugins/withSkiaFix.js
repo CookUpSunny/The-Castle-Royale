@@ -18,7 +18,7 @@ module.exports = function withSkiaFix(config) {
   # Fix: @shopify/react-native-skia missing cpp header search paths
   # Needed for: cpp/api/*.h (RNSkia API), cpp/third_party/base64.h, etc.
   installer.pods_project.targets.each do |target|
-    if target.name == 'react-native-skia'
+    if target.name.include?('react-native-skia')
       target.build_configurations.each do |build_config|
         existing = build_config.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
         unless existing.include?('$(PODS_TARGET_SRCROOT)/cpp ')
