@@ -1,20 +1,24 @@
-# EAS upload excludes — trims the ~1.3 GB archive to ~100 MB.
-# None of these are needed to install dependencies or compile/bundle the iOS app.
-# This only affects what gets uploaded to EAS; it does NOT touch git or your repo.
+# EAS upload excludes.
+#
+# IMPORTANT: when this file exists, EAS uses it INSTEAD of .gitignore to decide
+# what to upload. So everything you relied on .gitignore to exclude must also be
+# listed here. This file must live at the workspace root (next to pnpm-workspace.yaml),
+# not inside artifacts/mobile — in a monorepo EAS archives from the workspace root.
 
-# Replit scratch dumps — screenshots, audio, generated media (~660 MB)
+# --- caches / local tooling that MUST be excluded (was covered by .gitignore) ---
+.cache/
+**/.cache/
+**/React Native DevTools*
+.expo/
+**/.expo/
+node_modules/
+**/node_modules/
+
+# --- large items not needed to build the iOS app ---
 attached_assets/
-
-# Git history — committed binaries (~530 MB). EAS doesn't need it in the file archive.
 .git/
-
-# Backend server — the app talks to it at runtime over sockets; its source is never bundled into the IPA
 artifacts/api-server/
-
-# Mockups / sandbox previews
 artifacts/mockup-sandbox/
-
-# Stray preview file
 artifacts/mobile/sfx-alternatives-preview.html
 
 .DS_Store
