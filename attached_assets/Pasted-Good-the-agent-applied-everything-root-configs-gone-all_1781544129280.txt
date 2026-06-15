@@ -1,0 +1,19 @@
+Good — the agent applied everything (root configs gone, allowBuilds removed, withSkiaFix corrected) and the build is now running from artifacts/mobile. It cleared every stage that was previously blocking: credentials validated, profile active, archive uploaded, now compiling. That's real progress.
+But two things in that log need your eyes. Let me check the repo to ground them.I cannot provide a summary because the user prompt is emptyI cannot provide a summary because the user prompt is emptyThe build is healthy and past the parts that were broken. But my local clone is the pre-fix commit, so it still shows the old state — the screenshot is the truth. Two things to flag, one of them important.
+First, the archive size. Confirmed the bloat: attached_assets/ is 660 MB (179 files — Replit's scratch dumps, screenshots, generated media) and .git is 530 MB. That's your 1.3 GB. None of attached_assets is needed to compile the app — app.json only references artifacts/mobile/assets, not the root scratch folder. Add this .easignore and the archive drops to ~100 MB, shaving minutes off every build:Unable to generate summary; user prompt is emptyUnable to generate summary; user prompt is emptyPut it at the repo root (next to pnpm-workspace.yaml) — that's the archive root EAS tars from. I deliberately left assets/ and media globs out: your app bundles real assets (icons, the casino soundtrack via expo-audio, possibly a WebView HTML game), so a blanket media exclude would break the build. Watch the next build's "Compressed project files" line — it should report a fraction of 1.3 GB.
+Second, and more important — the bundle ID. I need to correct something I said earlier. I called com.krazi.thecastleroyale the "stray/wrong" one based on a line in your TESTFLIGHT_SETUP.md template. The live log overrules me: the agent consolidated to com.krazi.thecastleroyale, and Apple returned a valid, active distribution cert + provisioning profile for it on team 329HG4LB2B. So for the build, com.krazi is correct and credentialed. Good.
+The catch: a successful build won't tell you whether submit will work. Your eas.json submit block points at App Store Connect app ascAppId: 6772010192. An ASC app's bundle ID is fixed at creation and can't be changed. So before you run eas submit:
+
+Open App Store Connect → that app → App Information → Bundle ID.
+If it reads com.krazi.thecastleroyale → you're clear end to end.
+If it reads app.replit.thecastleroyale → the build will finish fine but eas submit will reject it for a bundle mismatch. Fix is either create a new ASC app for com.krazi.thecastleroyale and update ascAppId, or revert the bundle ID to app.replit.thecastleroyale and rebuild.
+
+That's the only remaining trap, and it's downstream — you have until the submit step to confirm it.
+Where things stand:
+
+Config + credentials — fixed and validated. ✅
+Archive bloat — add the .easignore above; not blocking, just slow.
+Bundle ID — build is fine on com.krazi; verify the ASC app uses the same ID before submitting.
+The actual test still running — the Skia native compile. The corrected plugin's payoff happens at the "Run fastlane" / Xcode phase. Watch your build at the expo.dev URL: clear that phase and the header fix worked; if it still dies on a missing Skia header, the fallback is dropping useFrameworks: static from expo-build-properties. Tell me which way it goes.
+
+Separately, that 530 MB .git means large binaries got committed to history at some point — not urgent, but worth a cleanup pass later so clones and pushes stay fast.
