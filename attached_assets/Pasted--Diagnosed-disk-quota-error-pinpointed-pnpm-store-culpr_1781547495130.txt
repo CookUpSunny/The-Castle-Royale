@@ -1,0 +1,23 @@
+
+Diagnosed disk quota error, pinpointed pnpm store culprit
+Each error is marching strictly downstream — compile → packaging → and now just one more heavy folder to exclude. We're close. Here's what this one is:
+
+That cryptic Unknown system error -122 is EDQUOT — disk quota exceeded. libuv just doesn't have a friendly name for it, so Node prints the raw number. Look at what it was copying when it ran out of room:
+
+copyfile '/home/runner/workspace/.local/share/pnpm/store/v10/files/...'
+That's the pnpm content-addressable store — multiple gigabytes — and it lives at .local/share/pnpm/store inside your workspace. The EAS_NO_VCS=1 flag the agent added tells eas-cli to copy the working directory verbatim instead of using git, so now it's trying to clone your entire pnpm store into /tmp and blowing the disk quota.
+
+The fix is one line: my .easignore excluded node_modules/ and .cache/ but not .local/. Add it. Complete file:
+
+
+Ran a command, read a file
+Ran a command, read a file
+Why this keeps moving each time: because a .easignore overrides .gitignore instead of stacking with it, every heavy folder that used to be silently excluded by .gitignore has to be re-named here one at a time. This version names all of them — pnpm store (.local/), node_modules/, .cache/, attached_assets/ — so there shouldn't be another heavy dir hiding behind it.
+
+Make sure of two things, then rebuild:
+
+The file is at the workspace root (next to pnpm-workspace.yaml), not in artifacts/mobile.
+Keep EAS_NO_VCS=1 if you want — it's fine now that the ignore is complete. (Dropping it also works, since git mode never copies the store in the first place. Either is fine; don't change both at once.)
+The tell that it finally worked: the "Compressed project files" line reports something like tens of MB instead of GB, and it proceeds past upload into the actual queued build.
+
+Bundle ID is settled at app.replit.thecastleroyale and credentials are valid for it — just confirm App Store Connect app 6772010192 is registered to that same ID before you hit submit, and you're clean end to end. We solved the hard part (the Skia compile) three errors ago; this is the last packaging hurdle.
