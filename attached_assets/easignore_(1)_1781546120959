@@ -1,0 +1,24 @@
+# EAS upload excludes.
+#
+# IMPORTANT: when this file exists, EAS uses it INSTEAD of .gitignore to decide
+# what to upload. So everything you relied on .gitignore to exclude must also be
+# listed here. PLACE THIS FILE AT THE WORKSPACE ROOT (next to pnpm-workspace.yaml),
+# not inside artifacts/mobile — in a monorepo EAS archives from the workspace root.
+
+# --- caches / local tooling that MUST be excluded (was covered by .gitignore) ---
+.cache/
+**/.cache/
+**/React Native DevTools*
+.expo/
+**/.expo/
+node_modules/
+**/node_modules/
+
+# --- large items not needed to build the iOS app ---
+attached_assets/            # tracked .wav soundtrack etc. (~660 MB)
+.git/
+artifacts/api-server/
+artifacts/mockup-sandbox/
+artifacts/mobile/sfx-alternatives-preview.html
+
+.DS_Store

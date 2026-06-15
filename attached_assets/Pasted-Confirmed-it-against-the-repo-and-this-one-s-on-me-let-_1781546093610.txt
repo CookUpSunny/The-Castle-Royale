@@ -1,0 +1,23 @@
+Confirmed it against the repo, and this one's on me — let me explain.
+The static-frameworks call was right: this build compiled clean and got all the way to the upload step. The new failure isn't your app at all:
+Failed to upload the project tarball to EAS Build
+EACCES: permission denied, rmdir '.../shallow-clone/.cache/dotslash/.../React Native DevTools-linux-x64'
+eas-cli copies your working tree into a temp folder to tar it, and that copy is dragging in .cache/dotslash/React Native DevTools-linux-x64 — a read-only binary that React Native's DevTools fetches locally. eas-cli can't delete it during cleanup, so the whole archive step dies. Nothing wrong with your code.
+Here's the part that's my fault: .cache/ is already in your .gitignore (line 48), so this never happened before. But the moment you add a .easignore, eas-cli stops consulting .gitignore entirely and uses only .easignore. My version didn't re-list .cache/, so a folder that used to be protected suddenly started getting copied — and that's what's hitting the EACCES. The .easignore replaces .gitignore for uploads; it doesn't stack with it.
+Updated, complete version:Ran a command, read a fileRan a command, read a fileTwo placement facts that matter:
+
+The .easignore must sit at the workspace root (next to pnpm-workspace.yaml), not inside artifacts/mobile. In a pnpm monorepo EAS archives from the workspace root, so a .easignore in the app folder does nothing. If the agent put the earlier one there, that also explains why your archive was still 1.3 GB — none of the excludes were firing.
+Before the next build, clear the local cache and the stale eas temp so nothing read-only lingers:
+
+bash# from repo root
+chmod -R u+w .cache **/.cache 2>/dev/null; rm -rf .cache artifacts/mobile/.cache
+rm -rf /tmp/runner/eas-cli-nodejs/* 2>/dev/null
+That gets you a clean upload. The "uses Expo Go for development" warning at the top is just noise — ignorable.
+One more thing I want you to lock down, because it's quietly bouncing around. The bundle ID changed again. This build ran as app.replit.thecastleroyale (provisioning profile 25MS9MB35L); the previous one ran as com.krazi.thecastleroyale (profile 8AW2HR26MX). The build number even reset — 15→16 last time, 11→12 now — which confirms EAS is tracking them as two separate apps. Both have valid credentials, so builds pass either way, but submit will only work for the one your App Store Connect app 6772010192 is actually registered as. Pick that one, set it in artifacts/mobile/app.json, and stop letting it change between builds — otherwise you'll get a green build that TestFlight rejects.
+So, in order:
+
+Move/confirm .easignore at the workspace root with .cache/ included (above).
+Run the cleanup commands, then rebuild from artifacts/mobile.
+Check App Store Connect app 6772010192's bundle ID and pin artifacts/mobile/app.json to match it — once.
+
+The compile is solved; this last error is just packaging. Send me the next result.
