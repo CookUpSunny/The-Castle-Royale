@@ -30,34 +30,9 @@ export type SfxName =
   | 'fanfare-epic'
   | 'fanfare-victory';
 
-function getSource(name: SfxName): number | null {
-  try {
-    switch (name) {
-      case 'coin':
-        return require('../assets/audio/coin.wav');
-      case 'coin-stack':
-        return require('../assets/audio/coin-stack.wav');
-      case 'bell':
-        return require('../assets/audio/bell.wav');
-      case 'reset':
-        return require('../assets/audio/reset.wav');
-      case 'jackpot':
-        return require('../assets/audio/jackpot.wav');
-      case 'pickup':
-        return require('../assets/audio/pickup.wav');
-      case 'slot-bright':
-        return require('../assets/audio/slot-alt-b-bright.wav');
-      case 'fanfare-cathedral':
-        return require('../assets/audio/fanfare-opt-e-cathedral.wav');
-      case 'fanfare-epic':
-        return require('../assets/audio/fanfare-epic.wav');
-      case 'fanfare-victory':
-        return require('../assets/audio/fanfare-victory.wav');
-    }
-  } catch (err) {
-    console.warn('[sfx] failed to resolve asset', name, err);
-    return null;
-  }
+// TODO: Add real .wav/.m4a files to assets/audio/ and wire them up here.
+// Each case should return: require('../assets/audio/<name>.wav') as number
+function getSource(_name: SfxName): number | null {
   return null;
 }
 
