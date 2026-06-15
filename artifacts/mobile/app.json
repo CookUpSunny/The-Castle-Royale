@@ -40,16 +40,7 @@
         }
       ],
       "expo-font",
-      "expo-web-browser",
-      "./plugins/withSkiaFix",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ]
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
