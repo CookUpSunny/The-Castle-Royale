@@ -31,11 +31,14 @@ config.resolver.blockList = [
 //   2. Prevent Metro from bundling Node.js-only canvaskit / fs / path / os on native.
 const originalResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Fix 1: intercept expo/AppEntry's ../../App relative import
+  // Fix 1: intercept expo/AppEntry's ../../App relative import.
+  // Catches any ../../App import that originates from inside node_modules
+  // (the only legitimate source of this pattern is expo/AppEntry.js in pnpm
+  // workspaces where the package lives deep in node_modules/.pnpm/).
   if (
     moduleName === "../../App" &&
     context.originModulePath &&
-    context.originModulePath.includes("/expo/AppEntry")
+    context.originModulePath.includes("node_modules")
   ) {
     return {
       filePath: path.resolve(projectRoot, "AppEntry.shim.js"),
