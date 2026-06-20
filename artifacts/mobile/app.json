@@ -8,7 +8,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "thecastleroyale",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "splash": {
       "backgroundColor": "#1a1a1a"
     },

@@ -64,16 +64,17 @@
   },
   "dependencies": {
     "@expo-google-fonts/cinzel": "^0.4.2",
-    "expo-modules-autolinking": "~55.0.24",
     "@shopify/react-native-skia": "~2.4.18",
+    "expo": "~55.0.26",
+    "expo-asset": "^56.0.17",
     "expo-audio": "~55.0.14",
     "expo-build-properties": "~55.0.14",
+    "expo-modules-autolinking": "~55.0.24",
     "expo-sensors": "~55.0.15",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
     "react-native-game-center": "^1.2.3",
     "react-native-webview": "13.16.0",
-    "socket.io-client": "^4.8.3",
-    "expo": "~55.0.26",
-    "react": "19.2.0",
-    "react-native": "0.83.6"
+    "socket.io-client": "^4.8.3"
   }
 }
