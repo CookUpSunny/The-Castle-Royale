@@ -21,6 +21,17 @@
 node_modules/
 **/node_modules/
 
+# --- build outputs (gitignored but NOT excluded by default — must be listed here) ---
+# dist/ is the Expo/Metro build output and can be 300-400 MB — never upload it
+dist/
+**/dist/
+web-build/
+**/web-build/
+static-build/
+**/static-build/
+*.tsbuildinfo
+**/*.tsbuildinfo
+
 # --- vcs + large media not needed to build the app ---
 .git/
 attached_assets/
