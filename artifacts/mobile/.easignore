@@ -1,0 +1,17 @@
+# EAS project-level ignore file — must live next to eas.json (artifacts/mobile/).
+# EAS reads THIS file, not the workspace-root .easignore, when deciding what to upload.
+
+# Locally-generated native projects.
+# ios/ and android/ are created by `expo prebuild` on the developer's machine and
+# contain absolute paths like /Users/<name>/... that break EAS Linux build servers.
+# Excluding them forces EAS to run a clean `expo prebuild` on every build.
+ios/
+android/
+
+# Expo + Metro caches
+.expo/
+dist/
+node_modules/
+
+# macOS noise
+.DS_Store
