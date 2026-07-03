@@ -14,6 +14,7 @@ runButton = "Project"
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
+integrations = ["revenuecat:1.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -58,3 +59,4 @@ externalPort = 5000
 
 [nix]
 packages = ["nano"]
+channel = "stable-25_05"
