@@ -126,6 +126,12 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  if (pathname === "/app-ads.txt") {
+    res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+    res.end("google.com, pub-2426597243989008, DIRECT, f08c47fec0942fa0\n");
+    return;
+  }
+
   serveStaticFile(pathname, res);
 });
 
