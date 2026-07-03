@@ -16,8 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ARENAS, AVATARS, type ArenaId, type AvatarId, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import { useSubscription } from '@/lib/revenuecat';
 import ArenaBackground from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
+import PaywallModal from '@/components/PaywallModal';
 
 
 const OUTLINE_OFFSETS: [number, number][] = [
@@ -52,11 +54,14 @@ export default function ArenaPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode: string }>();
   const { arena, setArena, avatarId, setAvatar } = useCosmetics();
   const { quickPlayBot, joinQueue, connectionStatus, gameView, isInQueue } = useGame();
+  const { isSubscribed } = useSubscription();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [selectedArena, setSelectedArena] = useState<ArenaId>(arena);
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarId>(avatarId);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const [paywallFeature, setPaywallFeature] = useState<string | undefined>(undefined);
 
   const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -230,12 +235,19 @@ export default function ArenaPickerScreen() {
 
         {ARENAS.map((arenaItem) => {
           const isSelected = selectedArena === arenaItem.id;
-          const isLocked = arenaItem.premium;
+          const isLocked = arenaItem.premium && !isSubscribed;
 
           return (
             <Pressable
               key={arenaItem.id}
-              onPress={() => { if (!isLocked) setSelectedArena(arenaItem.id); }}
+              onPress={() => {
+                if (isLocked) {
+                  setPaywallFeature(`Unlock the "${arenaItem.name}" arena`);
+                  setPaywallVisible(true);
+                  return;
+                }
+                setSelectedArena(arenaItem.id);
+              }}
               style={({ pressed }) => [
                 styles.arenaCard,
                 {
@@ -310,6 +322,12 @@ export default function ArenaPickerScreen() {
           </LinearGradient>
         </Pressable>
       </View>
+
+      <PaywallModal
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+        featureLabel={paywallFeature}
+      />
     </View>
   );
 }

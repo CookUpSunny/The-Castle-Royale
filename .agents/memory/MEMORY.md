@@ -1,2 +1,3 @@
 - [TypeGPU graphics skill](typegpu-graphics.md) — GPU-first animations for Expo/RN; load `.local/skills/typegpu-graphics/SKILL.md` for shaders, particles, wavy/holographic/morphing effects.
 - [EAS pnpm workspace Metro fix](eas-pnpm-metro.md) — EAS builds fail with "Unable to resolve ../../App from expo/AppEntry.js" in pnpm workspaces; fix is watchFolders + nodeModulesPaths in metro.config.js.
+- [Expo web preview blank screen](expo-web-preview-blank.md) — Castle Royale mobile web preview can render blank with zero console errors; confirmed pre-existing/environmental, not a code regression.

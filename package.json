@@ -116,6 +116,8 @@
     }
   },
   "dependencies": {
+    "@replit/connectors-sdk": "^0.4.1",
+    "@replit/revenuecat-sdk": "^5.0.0",
     "expo": "~55.0.26",
     "react": "19.2.0",
     "react-native": "0.83.6"

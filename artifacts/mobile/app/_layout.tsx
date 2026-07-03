@@ -21,8 +21,15 @@ import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
 import { MusicProvider } from '@/contexts/MusicContext';
+import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
 
 SplashScreen.preventAutoHideAsync();
+
+try {
+  initializeRevenueCat();
+} catch (err) {
+  console.warn('RevenueCat unavailable:', err instanceof Error ? err.message : err);
+}
 
 const queryClient = new QueryClient();
 
@@ -75,23 +82,25 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <MusicProvider>
-                <CosmeticsProvider>
-                  <GameCenterProvider>
-                    <GameProviderBridge>
-                      {/* Render navigator only once fonts are ready; intro overlay covers during load */}
-                      {appReady && <RootLayoutNav />}
-                      {splashPhase === 'intro' && (
-                        <SplashIntro onDone={() => setSplashPhase('gravity')} />
-                      )}
-                      {splashPhase === 'gravity' && (
-                        <SplashGravity onDone={() => setSplashPhase('studio')} />
-                      )}
-                      {splashPhase === 'studio' && (
-                        <SplashStudio onDone={() => setSplashPhase('done')} />
-                      )}
-                    </GameProviderBridge>
-                  </GameCenterProvider>
-                </CosmeticsProvider>
+                <SubscriptionProvider>
+                  <CosmeticsProvider>
+                    <GameCenterProvider>
+                      <GameProviderBridge>
+                        {/* Render navigator only once fonts are ready; intro overlay covers during load */}
+                        {appReady && <RootLayoutNav />}
+                        {splashPhase === 'intro' && (
+                          <SplashIntro onDone={() => setSplashPhase('gravity')} />
+                        )}
+                        {splashPhase === 'gravity' && (
+                          <SplashGravity onDone={() => setSplashPhase('studio')} />
+                        )}
+                        {splashPhase === 'studio' && (
+                          <SplashStudio onDone={() => setSplashPhase('done')} />
+                        )}
+                      </GameProviderBridge>
+                    </GameCenterProvider>
+                  </CosmeticsProvider>
+                </SubscriptionProvider>
               </MusicProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

@@ -47,7 +47,6 @@ externalPort = 5173
 [[ports]]
 localPort = 18115
 externalPort = 3000
-exposeLocalhost = true
 
 [[ports]]
 localPort = 18116
@@ -60,3 +59,14 @@ externalPort = 5000
 [nix]
 packages = ["nano"]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = "test_CaNTypntbbWYLGgYYRNGmiiBfeL"
+EXPO_PUBLIC_REVENUECAT_IOS_API_KEY = "appl_ukPSCuoDfExSGXNZEZmFQVfVuzm"
+EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY = "goog_bAlTbhzRftnGjRxXJcgWZShnyjT"
+REVENUECAT_PROJECT_ID = "proj8ce5148c"
+REVENUECAT_TEST_STORE_APP_ID = "app62f95ca454"
+REVENUECAT_APPLE_APP_STORE_APP_ID = "app0e49fff2f7"
+REVENUECAT_GOOGLE_PLAY_STORE_APP_ID = "app6a50ae251e"

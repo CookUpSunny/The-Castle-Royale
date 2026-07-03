@@ -101,7 +101,7 @@ export const AVATARS: AvatarOption[] = [
 export interface CardSkin {
   id: CardSkinId;
   name: string;
-  /** True when the player can equip this skin today. Locked skins show a 🔒 badge. */
+  /** True when every player can equip this skin for free. False = premium (requires an active subscription). */
   unlocked: boolean;
   description: string;
 }
@@ -142,13 +142,13 @@ export const ARENAS: Arena[] = [
   {
     id: 'cosmic',
     name: 'Cosmic Sanctum',
-    premium: false,
+    premium: true,
     description: 'Drift into the depths of the universe where galaxies spiral endlessly and ancient cosmic forces surround the arena. Suspended beside a collapsing black hole, players duel among glowing crystals, celestial energy, and the silence of deep space.\n\nEvery match feels written in the stars.',
   },
   {
     id: 'royal',
     name: 'Olympus Throne',
-    premium: false,
+    premium: true,
     description: 'Ascend into a divine kingdom carved from marble and gold, where towering columns and heavenly statues overlook the battlefield from above the clouds. Golden sunlight pours across the arena as thunder echoes through the skies of the gods themselves.\n\nEnter the throne room of immortals.',
   },
   {
@@ -160,13 +160,13 @@ export const ARENAS: Arena[] = [
   {
     id: 'matrix',
     name: 'Matrix',
-    premium: false,
+    premium: true,
     description: 'Enter the digital realm where cascading code rains down through a world built entirely of data. Green characters stream endlessly as glowing circuits pulse beneath the surface — reality itself is just a program, and the cards you hold may already be written.\n\nThere is no spoon. Only the next hand.',
   },
   {
     id: 'rainbowRoad',
     name: 'Rainbow Road',
-    premium: false,
+    premium: true,
     description: 'Neon loop-de-loop starfield — trolls ride a glittering rainbow track through deep space. Sparkling trails, loop-the-loops, and cosmic glow surround the table as the road itself becomes the arena.\n\nHold on tight. The next hand is around the bend.',
   },
 ];
@@ -186,11 +186,12 @@ interface CosmeticsContextType {
   arena: ArenaId;
   scene: SceneId;
   avatarId: AvatarId;
-  setCardSkin: (id: CardSkinId) => void;
+  /** Pass `isSubscribed` so premium skins can be equipped by active subscribers. */
+  setCardSkin: (id: CardSkinId, isSubscribed?: boolean) => void;
   setArena: (id: ArenaId) => void;
   setAvatar: (id: AvatarId) => void;
-  /** True if the given skin can be equipped today. */
-  isSkinUnlocked: (id: CardSkinId) => boolean;
+  /** True if the given skin is free, or `isSubscribed` is true. */
+  isSkinUnlocked: (id: CardSkinId, isSubscribed?: boolean) => boolean;
 }
 
 const CosmeticsContext = createContext<CosmeticsContextType | null>(null);
@@ -255,8 +256,8 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     void warmGameVisualCache(scene, arena);
   }, [scene, arena]);
 
-  const setCardSkin = useCallback((id: CardSkinId) => {
-    if (!UNLOCKED_SKIN_IDS.has(id)) return; // Refuse to equip locked skins.
+  const setCardSkin = useCallback((id: CardSkinId, isSubscribed = false) => {
+    if (!UNLOCKED_SKIN_IDS.has(id) && !isSubscribed) return; // Refuse to equip premium skins without an active subscription.
     setCardSkinState(id);
     AsyncStorage.setItem(STORAGE_CARD_KEY, id).catch(() => {});
   }, []);
@@ -271,7 +272,10 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_AVATAR_KEY, id).catch(() => {});
   }, []);
 
-  const isSkinUnlocked = useCallback((id: CardSkinId) => UNLOCKED_SKIN_IDS.has(id), []);
+  const isSkinUnlocked = useCallback(
+    (id: CardSkinId, isSubscribed = false) => UNLOCKED_SKIN_IDS.has(id) || isSubscribed,
+    [],
+  );
 
   return (
     <CosmeticsContext.Provider value={{ cardSkin, arena, scene, avatarId, setCardSkin, setArena, setAvatar, isSkinUnlocked }}>

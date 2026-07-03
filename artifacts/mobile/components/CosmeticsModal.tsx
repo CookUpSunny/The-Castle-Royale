@@ -5,6 +5,7 @@ import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, T
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CardBack } from '@/components/Card';
 import ArenaBackground from '@/components/ArenaBackground';
+import PaywallModal from '@/components/PaywallModal';
 import {
   ARENAS,
   CARD_SKINS,
@@ -15,6 +16,7 @@ import {
   useCosmetics,
 } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
+import { useSubscription } from '@/lib/revenuecat';
 
 
 interface CosmeticsModalProps {
@@ -24,24 +26,39 @@ interface CosmeticsModalProps {
 
 /**
  * Full-screen cosmetics picker with two tabs: ARENAS and CARDS.
+ * Premium arenas and premium card skins are gated behind an active
+ * RevenueCat subscription — tapping one while unsubscribed opens the paywall.
  */
 export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { cardSkin, arena, setCardSkin, setArena } = useCosmetics();
+  const { isSubscribed } = useSubscription();
   const [tab, setTab] = useState<'arenas' | 'cards'>('arenas');
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const [paywallFeature, setPaywallFeature] = useState<string | undefined>(undefined);
 
-  const pickArena = (id: ArenaId) => {
-    Haptics.selectionAsync().catch(() => {});
-    setArena(id);
+  const openPaywall = (feature: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    setPaywallFeature(feature);
+    setPaywallVisible(true);
   };
-  const pickCard = (skin: CardSkin) => {
-    if (!skin.unlocked) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+
+  const pickArena = (a: Arena) => {
+    if (a.premium && !isSubscribed) {
+      openPaywall(`Unlock the "${a.name}" arena`);
       return;
     }
     Haptics.selectionAsync().catch(() => {});
-    setCardSkin(skin.id);
+    setArena(a.id);
+  };
+  const pickCard = (skin: CardSkin) => {
+    if (!skin.unlocked && !isSubscribed) {
+      openPaywall(`Unlock the "${skin.name}" card skin`);
+      return;
+    }
+    Haptics.selectionAsync().catch(() => {});
+    setCardSkin(skin.id, isSubscribed);
   };
 
   return (
@@ -74,9 +91,9 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
                 name={a.name}
                 description={a.description}
                 badge={a.premium ? 'premium' : null}
-                locked={false}
+                locked={a.premium && !isSubscribed}
                 selected={arena === a.id}
-                onPress={() => pickArena(a.id)}
+                onPress={() => pickArena(a)}
                 preview={<ArenaPreview arenaId={a.id} />}
               />
             ))}
@@ -87,8 +104,8 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
                 key={c.id}
                 name={c.name}
                 description={c.description}
-                badge={c.unlocked ? 'premium' : 'locked'}
-                locked={!c.unlocked}
+                badge={c.unlocked ? null : 'premium'}
+                locked={!c.unlocked && !isSubscribed}
                 selected={cardSkin === c.id}
                 onPress={() => pickCard(c)}
                 preview={<CardSkinPreview cardSkinId={c.id} />}
@@ -96,10 +113,16 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
             ))}
 
           <Text style={[styles.footnote, { color: colors.mutedForeground }]}>
-            🔒 Locked decks unlock with the upcoming premium tier — full purchase flow coming soon.
+            👑 Premium arenas and card skins unlock with Castle Royale Premium — $4.99/month.
           </Text>
         </ScrollView>
       </View>
+
+      <PaywallModal
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+        featureLabel={paywallFeature}
+      />
     </Modal>
   );
 }
@@ -131,7 +154,7 @@ function TabButton({ label, active, onPress }: { label: string; active: boolean;
 interface CosmeticRowProps {
   name: string;
   description: string;
-  badge: 'premium' | 'locked' | null;
+  badge: 'premium' | null;
   locked: boolean;
   selected: boolean;
   onPress: () => void;
@@ -169,11 +192,6 @@ function CosmeticRow({ name, description, badge, locked, selected, onPress, prev
           {badge === 'premium' ? (
             <View style={[styles.premiumBadge, { borderColor: colors.neonGold }]}>
               <Text style={[styles.premiumText, { color: colors.neonGold }]}>👑 PREMIUM</Text>
-            </View>
-          ) : null}
-          {badge === 'locked' ? (
-            <View style={[styles.premiumBadge, { borderColor: '#94a3b8', backgroundColor: '#1e293b80' }]}>
-              <Text style={[styles.premiumText, { color: '#cbd5e1' }]}>🔒 COMING SOON</Text>
             </View>
           ) : null}
         </View>
