@@ -20,6 +20,7 @@ export const secondChanceOffersTable = pgTable(
     id: text("id").primaryKey(),
     playerId: text("player_id").notNull(),
     gameId: text("game_id").notNull(),
+    tournamentId: text("tournament_id"),
     nonce: text("nonce").notNull(),
     mode: text("mode").notNull(),
     expiresAt: timestamp("expires_at").notNull(),
@@ -30,6 +31,7 @@ export const secondChanceOffersTable = pgTable(
   },
   (table) => [
     uniqueIndex("second_chance_player_game_idx").on(table.playerId, table.gameId),
+    uniqueIndex("second_chance_player_tournament_idx").on(table.playerId, table.tournamentId),
     uniqueIndex("second_chance_transaction_idx").on(table.transactionId),
   ],
 );

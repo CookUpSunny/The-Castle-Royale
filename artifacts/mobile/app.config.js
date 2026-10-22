@@ -1,7 +1,10 @@
 const appJson = require("./app.json");
 
-/** Google's public sample App IDs. Real IDs come from EXPO_PUBLIC_ADMOB_* and are not committed. */
-const GOOGLE_TEST_IOS_APP_ID = "ca-app-pub-3940256099942544~1458002511";
+/**
+ * Live AdMob iOS app (publisher pub-2426597243989008), linked to App Store ID 6772010192.
+ * This App ID is public. Ad units do not exist yet, so those stay on Google's test IDs.
+ */
+const ADMOB_IOS_APP_ID = "ca-app-pub-2426597243989008~4741781660";
 const GOOGLE_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";
 
 function fromEnv(name, fallback) {
@@ -21,10 +24,10 @@ module.exports = () => {
           "react-native-google-mobile-ads",
           {
             androidAppId: fromEnv("EXPO_PUBLIC_ADMOB_ANDROID_APP_ID", GOOGLE_TEST_ANDROID_APP_ID),
-            iosAppId: fromEnv("EXPO_PUBLIC_ADMOB_IOS_APP_ID", GOOGLE_TEST_IOS_APP_ID),
+            iosAppId: fromEnv("EXPO_PUBLIC_ADMOB_IOS_APP_ID", ADMOB_IOS_APP_ID),
             delayAppMeasurementInit: true,
             userTrackingUsageDescription:
-              "Castle Royale uses this identifier to show ads to free players. Subscribers and lifetime unlocks do not see forced ads.",
+              "Castle Royale uses this identifier to show ads to free players. High Roller and VIP members do not see forced ads.",
           },
         ],
       ],
