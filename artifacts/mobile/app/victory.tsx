@@ -388,7 +388,7 @@ export default function VictoryScreen() {
     if (confettiVisible) confettiOpacity.value = withTiming(0, { duration: CONFETTI_FADE_MS });
     setTimeout(() => {
       void (async () => {
-        if (!isWin) await resolveAdBreak();
+        await resolveAdBreak();
         next();
       })();
     }, delay);

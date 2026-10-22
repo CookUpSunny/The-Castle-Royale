@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { MatchMode, Settlement } from '@workspace/monetization';
+import { decideInterstitial, type MatchMode, type Settlement } from '@workspace/monetization';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { declineSecondChance, reportLoss } from '@/lib/adsApi';
-import { writeLocalLossCount, writeSettledLossCount } from '@/lib/adLossStorage';
+import { reportLoss } from '@/lib/adsApi';
+import { readInterstitialGate, writeInterstitialShown, writeLocalLossCount, writeSettledLossCount } from '@/lib/adLossStorage';
 import { resolveApiBaseUrl } from '@/lib/apiUrl';
 import { showInterstitialAd } from '@/lib/mobileAds';
 import { clientPremiumRef } from '@/lib/revenuecat';
@@ -387,18 +387,26 @@ export function GameProvider({
     if (!current) return;
     resolvingAdBreak.current = true;
     try {
-      let next = current;
-      if (current.secondChance.status === 'pending' && !current.secondChance.granted) {
-        const declined = await declineSecondChance(current.secondChance.offerId, current.playerId).catch(() => null);
-        next = declined ?? {
-          ...current,
-          showInterstitial: current.interstitialPending && !current.isPremium,
-          secondChance: { ...current.secondChance, status: 'declined', granted: false },
-        };
+      const premium = current.isPremium || clientPremiumRef.current;
+      const gate = await readInterstitialGate();
+      const decision = current.showInterstitial
+        ? decideInterstitial({
+            isMember: premium,
+            lossCount: current.lossCount,
+            betweenCompletedMatches: true,
+            gameActive: false,
+            tournamentRoundActive: false,
+            lastShownAtMs: gate.lastShownAtMs,
+            shownInUtcDay: gate.shownInUtcDay,
+            nowMs: Date.now(),
+          })
+        : 'skip';
+      if (decision === 'defer') return;
+      if (decision === 'show') {
+        await showInterstitialAd();
+        await writeInterstitialShown();
       }
-      const premium = next.isPremium || clientPremiumRef.current;
-      if (next.showInterstitial && !premium) await showInterstitialAd();
-      await writeSettledLossCount(next.lossCount);
+      await writeSettledLossCount(current.lossCount);
       settlementRef.current = null;
       setPendingSettlement(null);
     } finally {

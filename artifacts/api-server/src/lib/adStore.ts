@@ -32,6 +32,7 @@ function mapOffer(row: typeof secondChanceOffersTable.$inferSelect): SecondChanc
     id: row.id,
     playerId: row.playerId,
     gameId: row.gameId,
+    tournamentId: row.tournamentId,
     nonce: row.nonce,
     mode: row.mode as MatchMode,
     expiresAt: row.expiresAt,
@@ -92,6 +93,16 @@ export const drizzleAdStore: AdStore = {
       .select()
       .from(secondChanceOffersTable)
       .where(and(eq(secondChanceOffersTable.playerId, playerId), eq(secondChanceOffersTable.gameId, gameId)))
+      .limit(1);
+    return row ? mapOffer(row) : null;
+  },
+  async getRedemptionByPlayerTournament(playerId, tournamentId) {
+    const [row] = await db
+      .select()
+      .from(secondChanceOffersTable)
+      .where(
+        and(eq(secondChanceOffersTable.playerId, playerId), eq(secondChanceOffersTable.tournamentId, tournamentId)),
+      )
       .limit(1);
     return row ? mapOffer(row) : null;
   },

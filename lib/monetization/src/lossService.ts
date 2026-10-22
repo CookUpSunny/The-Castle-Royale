@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
   SECOND_CHANCE_WINDOW_MS,
+  decideInterstitial,
   isPremiumActive,
   reconcileLossCount,
-  shouldShowInterstitial,
   type MatchMode,
 } from "./adRules";
 import {
@@ -29,6 +29,8 @@ export interface Settlement {
     expiresAt: string;
     granted: boolean;
     status: SecondChanceOffer["status"];
+    /** Set only when this loss opened the one Second Chance for a tournament. */
+    tournamentId: string | null;
   };
 }
 
@@ -44,28 +46,38 @@ const defaultDeps: LossDeps = {
   nonce: () => randomUUID().replace(/-/g, ""),
 };
 
-function toSettlement(account: AdAccount, offer: SecondChanceOffer, now: Date): Settlement {
+function toSettlement(
+  account: AdAccount,
+  offer: SecondChanceOffer,
+  now: Date,
+  inTournament: boolean,
+): Settlement {
   const isPremium = isPremiumActive(account, now);
-  const granted = offer.status === "granted";
-  const interstitialPending = !isPremium && account.adLossCount % 3 === 0;
+  const decision = decideInterstitial({
+    isMember: isPremium,
+    lossCount: account.adLossCount,
+    betweenCompletedMatches: true,
+    gameActive: false,
+    tournamentRoundActive: inTournament,
+    lastShownAtMs: null,
+    shownInUtcDay: 0,
+    nowMs: now.getTime(),
+  });
   return {
     playerId: account.playerId,
     gameId: offer.gameId,
     mode: offer.mode,
     lossCount: account.adLossCount,
     isPremium,
-    interstitialPending,
-    showInterstitial: shouldShowInterstitial({
-      isPremium,
-      lossCount: account.adLossCount,
-      secondChance: offer.status,
-    }),
+    interstitialPending: decision !== "skip",
+    showInterstitial: decision === "show",
     secondChance: {
       offerId: offer.id,
       nonce: offer.nonce,
       expiresAt: offer.expiresAt.toISOString(),
-      granted,
+      granted: offer.status === "granted",
       status: offer.status,
+      tournamentId: offer.tournamentId,
     },
   };
 }
@@ -74,7 +86,13 @@ const inflight = new Map<string, Promise<Settlement>>();
 
 export async function recordLoss(
   store: AdStore,
-  input: { playerId: string; gameId: string; gameCenterId?: string | null; mode: MatchMode },
+  input: {
+    playerId: string;
+    gameId: string;
+    gameCenterId?: string | null;
+    mode: MatchMode;
+    tournamentId?: string | null;
+  },
   deps: LossDeps = defaultDeps,
 ): Promise<Settlement> {
   const key = `${input.playerId}:${input.gameId}`;
@@ -89,10 +107,17 @@ export async function recordLoss(
 
 async function recordLossInner(
   store: AdStore,
-  input: { playerId: string; gameId: string; gameCenterId?: string | null; mode: MatchMode },
+  input: {
+    playerId: string;
+    gameId: string;
+    gameCenterId?: string | null;
+    mode: MatchMode;
+    tournamentId?: string | null;
+  },
   deps: LossDeps,
 ): Promise<Settlement> {
   const now = deps.now();
+  const tournamentId = input.tournamentId?.trim() || null;
   const existingOffer = await store.getOfferByPlayerGame(input.playerId, input.gameId);
   let account = await loadAccount(store, input.playerId, input.gameCenterId ?? null, now);
 
@@ -101,23 +126,28 @@ async function recordLossInner(
       existingOffer.status = "expired";
       await store.saveOffer(existingOffer);
     }
-    return toSettlement(account, existingOffer, now);
+    return toSettlement(account, existingOffer, now, tournamentId !== null);
   }
 
   account.adLossCount += 1;
   account.updatedAt = now;
   await store.saveAccount(account);
 
-  const premium = isPremiumActive(account, now);
+  const member = isPremiumActive(account, now);
+  const priorRedemption = tournamentId
+    ? await store.getRedemptionByPlayerTournament(input.playerId, tournamentId)
+    : null;
+  const opensSecondChance = tournamentId !== null && priorRedemption === null;
   const offer: SecondChanceOffer = {
     id: (deps.id ?? defaultDeps.id!)(),
     playerId: input.playerId,
     gameId: input.gameId,
+    tournamentId: opensSecondChance ? tournamentId : null,
     nonce: (deps.nonce ?? defaultDeps.nonce!)(),
     mode: input.mode,
     expiresAt: new Date(now.getTime() + SECOND_CHANCE_WINDOW_MS),
-    status: premium ? "granted" : "pending",
-    grantSource: premium ? "premium" : null,
+    status: opensSecondChance ? (member ? "granted" : "pending") : "recorded",
+    grantSource: opensSecondChance && member ? "premium" : null,
     transactionId: null,
     createdAt: now,
   };
@@ -127,12 +157,12 @@ async function recordLossInner(
   } catch (err) {
     if (err instanceof DuplicateOfferError) {
       const raced = await store.getOfferByPlayerGame(input.playerId, input.gameId);
-      if (raced) return toSettlement(account, raced, now);
+      if (raced) return toSettlement(account, raced, now, tournamentId !== null);
     }
     throw err;
   }
 
-  return toSettlement(account, offer, now);
+  return toSettlement(account, offer, now, tournamentId !== null);
 }
 
 async function loadAccount(
@@ -206,7 +236,7 @@ export async function resolveSecondChance(
     await store.saveOffer(offer);
   }
 
-  return toSettlement(account, offer, now);
+  return toSettlement(account, offer, now, offer.tournamentId !== null);
 }
 
 export async function readSettlement(
@@ -222,7 +252,7 @@ export async function readSettlement(
     await store.saveOffer(offer);
   }
   const account = (await store.getByPlayerId(playerId)) ?? emptyAdAccount(playerId, now);
-  return toSettlement(account, offer, now);
+  return toSettlement(account, offer, now, offer.tournamentId !== null);
 }
 
 /**
@@ -238,7 +268,7 @@ export async function grantSecondChanceFromSsv(
     const prior = await store.getOfferByTransactionId(input.transactionId);
     if (prior) {
       const account = (await store.getByPlayerId(prior.playerId)) ?? emptyAdAccount(prior.playerId, now);
-      return { settlement: toSettlement(account, prior, now), reason: "duplicate" };
+      return { settlement: toSettlement(account, prior, now, prior.tournamentId !== null), reason: "duplicate" };
     }
   }
 
@@ -251,19 +281,19 @@ export async function grantSecondChanceFromSsv(
   }
   const account = (await store.getByPlayerId(offer.playerId)) ?? emptyAdAccount(offer.playerId, now);
   if (offer.status === "granted") {
-    return { settlement: toSettlement(account, offer, now), reason: "duplicate" };
+    return { settlement: toSettlement(account, offer, now, offer.tournamentId !== null), reason: "duplicate" };
   }
-  if (offer.status !== "pending" || offer.expiresAt.getTime() <= now.getTime()) {
+  if (offer.tournamentId === null || offer.status !== "pending" || offer.expiresAt.getTime() <= now.getTime()) {
     if (offer.status === "pending") {
       offer.status = "expired";
       await store.saveOffer(offer);
     }
-    return { settlement: toSettlement(account, offer, now), reason: "expired" };
+    return { settlement: toSettlement(account, offer, now, offer.tournamentId !== null), reason: "expired" };
   }
 
   offer.status = "granted";
   offer.grantSource = "admob_ssv";
   offer.transactionId = input.transactionId;
   await store.saveOffer(offer);
-  return { settlement: toSettlement(account, offer, now), reason: "granted" };
+  return { settlement: toSettlement(account, offer, now, true), reason: "granted" };
 }

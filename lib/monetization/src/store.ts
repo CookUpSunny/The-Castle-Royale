@@ -14,6 +14,8 @@ export interface SecondChanceOffer {
   id: string;
   playerId: string;
   gameId: string;
+  /** Set only on the one redemption row for a tournament. Loss ledger rows leave this null. */
+  tournamentId: string | null;
   nonce: string;
   mode: MatchMode;
   expiresAt: Date;
@@ -30,6 +32,8 @@ export interface AdStore {
   saveAccount(account: AdAccount): Promise<void>;
   getOffer(id: string): Promise<SecondChanceOffer | null>;
   getOfferByPlayerGame(playerId: string, gameId: string): Promise<SecondChanceOffer | null>;
+  /** The single Second Chance redemption for this player in this tournament, if any. */
+  getRedemptionByPlayerTournament(playerId: string, tournamentId: string): Promise<SecondChanceOffer | null>;
   getOfferByTransactionId(transactionId: string): Promise<SecondChanceOffer | null>;
   /** Inserts a new offer. Rejects when this player already has an offer for the game. */
   insertOffer(offer: SecondChanceOffer): Promise<void>;

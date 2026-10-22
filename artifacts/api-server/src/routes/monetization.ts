@@ -30,6 +30,7 @@ const lossBodySchema = z.object({
   gameId: gameIdSchema,
   gameCenterId: z.string().trim().min(1).max(128).nullable().optional(),
   mode: modeSchema,
+  tournamentId: z.string().trim().min(1).max(128).nullable().optional(),
 });
 
 const linkBodySchema = z.object({
