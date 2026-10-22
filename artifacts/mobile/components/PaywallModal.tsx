@@ -5,6 +5,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ArenaBackground from '@/components/ArenaBackground';
 import { useSubscription } from '@/lib/revenuecat';
+import { isUnassignedNonConsumable, premiumPaywallRank } from '@workspace/monetization';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useColors } from '@/hooks/useColors';
 
@@ -33,7 +34,12 @@ export default function PaywallModal({ visible, onClose, featureLabel }: Paywall
   const { offerings, purchase, restore, isPurchasing, isRestoring, isLoading } = useSubscription();
   const [error, setError] = useState<string | null>(null);
 
-  const packages = offerings?.current?.availablePackages ?? [];
+  const packages = (offerings?.current?.availablePackages ?? [])
+    .filter((pkg) => !isUnassignedNonConsumable(pkg.product.identifier))
+    .slice()
+    .sort(
+      (a, b) => premiumPaywallRank(a.product.identifier) - premiumPaywallRank(b.product.identifier),
+    );
 
   const handlePurchase = async (packageToPurchase: PurchasesPackage) => {
     setError(null);
@@ -134,7 +140,7 @@ export default function PaywallModal({ visible, onClose, featureLabel }: Paywall
           </Pressable>
 
           <Text style={[styles.footnote, { color: colors.mutedForeground }]}>
-            Payment is charged to your Apple ID. Subscriptions renew until you cancel. A lifetime unlock is billed once.
+            Payment is charged to your Apple ID. Monthly and yearly VIP subscriptions renew until you cancel them in Settings.
           </Text>
         </ScrollView>
       </View>

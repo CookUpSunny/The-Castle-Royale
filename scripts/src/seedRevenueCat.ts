@@ -1,3 +1,8 @@
+import {
+  PREMIUM_ENTITLEMENT_ID,
+  PREMIUM_SUBSCRIPTION_PRODUCT_IDS,
+  UNASSIGNED_NON_CONSUMABLE_PRODUCT_IDS,
+} from '@workspace/monetization';
 import { getUncachableRevenueCatClient } from './revenueCatClient';
 
 import {
@@ -28,36 +33,51 @@ import {
 
 const PROJECT_NAME = 'Castle Royale';
 
-const PRODUCT_IDENTIFIER = 'premium_monthly';
-const PLAY_STORE_PRODUCT_IDENTIFIER = 'premium_monthly:monthly';
-
-const PRODUCT_DISPLAY_NAME = 'Premium Monthly';
-const PRODUCT_USER_FACING_TITLE = 'Premium Monthly';
-const PRODUCT_DURATION = 'P1M';
-
 const APP_STORE_APP_NAME = 'Castle Royale iOS';
 const APP_STORE_BUNDLE_ID = 'app.replit.thecastleroyale';
 const PLAY_STORE_APP_NAME = 'Castle Royale Android';
 const PLAY_STORE_PACKAGE_NAME = 'app.replit.thecastleroyale';
 
-const ENTITLEMENT_IDENTIFIER = 'premium';
+const ENTITLEMENT_IDENTIFIER = PREMIUM_ENTITLEMENT_ID;
 const ENTITLEMENT_DISPLAY_NAME = 'Premium Access';
 
 const OFFERING_IDENTIFIER = 'default';
 const OFFERING_DISPLAY_NAME = 'Default Offering';
 
-const PACKAGE_IDENTIFIER = '$rc_monthly';
-const PACKAGE_DISPLAY_NAME = 'Monthly Subscription';
+/**
+ * App Store subscription group "The Castle Royale VIP" (22108578).
+ * Prices stay in App Store Connect. This seed does not invent them.
+ * beginner_luck and 004 are created so they can be imported, and are not
+ * attached to `premium` until the owner decides what they unlock.
+ */
+const SUBSCRIPTIONS = [
+  {
+    storeIdentifier: 'monthly_high_roller',
+    displayName: 'Monthly High Roller',
+    duration: 'P1M',
+    packageLookup: '$rc_monthly',
+    packageDisplayName: 'Monthly',
+  },
+  {
+    storeIdentifier: 'vip_year',
+    displayName: 'VIP Year',
+    duration: 'P1Y',
+    packageLookup: '$rc_annual',
+    packageDisplayName: 'Yearly',
+  },
+] as const;
 
-// Pricing configuration (amount in micros = dollars * 1,000,000)
-const PRODUCT_PRICES = [
-  { amount_micros: 4990000, currency: 'USD' }, // $4.99
-];
+const NON_CONSUMABLES = [
+  { storeIdentifier: 'beginner_luck', displayName: "Beginner's Luck" },
+  { storeIdentifier: '004', displayName: 'The Castle Kingdom' },
+] as const;
 
-type TestStorePricesResponse = {
-  object: string;
-  prices: { amount_micros: number; currency: string }[];
-};
+if (SUBSCRIPTIONS.map((item) => item.storeIdentifier).join() !== PREMIUM_SUBSCRIPTION_PRODUCT_IDS.join()) {
+  throw new Error('Seed subscriptions no longer match PREMIUM_SUBSCRIPTION_PRODUCT_IDS');
+}
+if (NON_CONSUMABLES.map((item) => item.storeIdentifier).join() !== UNASSIGNED_NON_CONSUMABLE_PRODUCT_IDS.join()) {
+  throw new Error('Seed non-consumables no longer match UNASSIGNED_NON_CONSUMABLE_PRODUCT_IDS');
+}
 
 async function seedRevenueCat() {
   const client = await getUncachableRevenueCatClient();
@@ -151,7 +171,7 @@ async function seedRevenueCat() {
     targetApp: App,
     label: string,
     productIdentifier: string,
-    isTestStore: boolean,
+    body: CreateProductData['body'],
   ): Promise<Product> => {
     const existingProduct = existingProducts.items?.find(
       (p) => p.store_identifier === productIdentifier && p.app_id === targetApp.id,
@@ -162,62 +182,48 @@ async function seedRevenueCat() {
       return existingProduct;
     }
 
-    const body: CreateProductData['body'] = {
-      store_identifier: productIdentifier,
-      app_id: targetApp.id,
-      type: 'subscription',
-      display_name: PRODUCT_DISPLAY_NAME,
-    };
-
-    if (isTestStore) {
-      body.subscription = { duration: PRODUCT_DURATION };
-      body.title = PRODUCT_USER_FACING_TITLE;
-    }
-
     const { data: createdProduct, error } = await createProduct({
       client,
       path: { project_id: project.id },
       body,
     });
 
-    if (error) throw new Error('Failed to create ' + label + ' product');
-    console.log('Created ' + label + ' product:', createdProduct.id);
+    if (error) throw new Error('Failed to create ' + label + ' product ' + productIdentifier);
+    console.log('Created ' + label + ' product:', createdProduct.id, productIdentifier);
     return createdProduct;
   };
 
-  const testStoreProduct = await ensureProductForApp(app, 'Test Store', PRODUCT_IDENTIFIER, true);
-  const appStoreProduct = await ensureProductForApp(appStoreApp, 'App Store', PRODUCT_IDENTIFIER, false);
-  const playStoreProduct = await ensureProductForApp(
-    playStoreApp,
-    'Play Store',
-    PLAY_STORE_PRODUCT_IDENTIFIER,
-    false,
-  );
-
-  console.log('Adding test store prices for product:', testStoreProduct.id);
-  console.log('Prices to add:', JSON.stringify(PRODUCT_PRICES, null, 2));
-
-  const { data: priceData, error: priceError } = await client.post<TestStorePricesResponse>({
-    url: '/projects/{project_id}/products/{product_id}/test_store_prices',
-    path: { project_id: project.id, product_id: testStoreProduct.id },
-    body: { prices: PRODUCT_PRICES },
-  });
-
-  if (priceError) {
-    if (
-      priceError &&
-      typeof priceError === 'object' &&
-      'type' in priceError &&
-      priceError['type'] === 'resource_already_exists'
-    ) {
-      console.log('Test store prices already exist for this product');
-    } else {
-      throw new Error('Failed to add test store prices');
-    }
-  } else {
-    console.log('Successfully added test store prices');
-    console.log('Response:', JSON.stringify(priceData, null, 2));
+  const premiumProducts: Product[] = [];
+  for (const subscription of SUBSCRIPTIONS) {
+    const testStoreProduct = await ensureProductForApp(app, 'Test Store', subscription.storeIdentifier, {
+      store_identifier: subscription.storeIdentifier,
+      app_id: app.id,
+      type: 'subscription',
+      display_name: subscription.displayName,
+      title: subscription.displayName,
+      subscription: { duration: subscription.duration },
+    });
+    const appStoreProduct = await ensureProductForApp(appStoreApp, 'App Store', subscription.storeIdentifier, {
+      store_identifier: subscription.storeIdentifier,
+      app_id: appStoreApp.id,
+      type: 'subscription',
+      display_name: subscription.displayName,
+    });
+    premiumProducts.push(testStoreProduct, appStoreProduct);
   }
+
+  for (const product of NON_CONSUMABLES) {
+    await ensureProductForApp(appStoreApp, 'App Store', product.storeIdentifier, {
+      store_identifier: product.storeIdentifier,
+      app_id: appStoreApp.id,
+      type: 'non_consumable',
+      display_name: product.displayName,
+    });
+  }
+
+  console.log(
+    'Leaving beginner_luck and 004 off the premium entitlement. Prices stay in App Store Connect.',
+  );
 
   let entitlement: Entitlement | undefined;
   const { data: existingEntitlements, error: listEntitlementsError } = await listEntitlements({
@@ -251,7 +257,7 @@ async function seedRevenueCat() {
     client,
     path: { project_id: project.id, entitlement_id: entitlement.id },
     body: {
-      product_ids: [testStoreProduct.id, appStoreProduct.id, playStoreProduct.id],
+      product_ids: premiumProducts.map((product) => product.id),
     },
   });
 
@@ -303,7 +309,6 @@ async function seedRevenueCat() {
     console.log('Set offering as current');
   }
 
-  let pkg: Package | undefined;
   const { data: existingPackages, error: listPackagesError } = await listPackages({
     client,
     path: { project_id: project.id, offering_id: offering.id },
@@ -312,48 +317,59 @@ async function seedRevenueCat() {
 
   if (listPackagesError) throw new Error('Failed to list packages');
 
-  const existingPackage = existingPackages.items?.find((p) => p.lookup_key === PACKAGE_IDENTIFIER);
+  for (const subscription of SUBSCRIPTIONS) {
+    let pkg: Package | undefined = existingPackages.items?.find(
+      (item) => item.lookup_key === subscription.packageLookup,
+    );
 
-  if (existingPackage) {
-    console.log('Package already exists:', existingPackage.id);
-    pkg = existingPackage;
-  } else {
-    const { data: newPackage, error } = await createPackages({
+    if (pkg) {
+      console.log('Package already exists:', pkg.id, subscription.packageLookup);
+    } else {
+      const { data: newPackage, error } = await createPackages({
+        client,
+        path: { project_id: project.id, offering_id: offering.id },
+        body: {
+          lookup_key: subscription.packageLookup,
+          display_name: subscription.packageDisplayName,
+        },
+      });
+      if (error) throw new Error('Failed to create package ' + subscription.packageLookup);
+      console.log('Created package:', newPackage.id, subscription.packageLookup);
+      pkg = newPackage;
+    }
+
+    const productsForPackage = premiumProducts.filter(
+      (product) => product.store_identifier === subscription.storeIdentifier,
+    );
+    const { error: attachPackageError } = await attachProductsToPackage({
       client,
-      path: { project_id: project.id, offering_id: offering.id },
+      path: { project_id: project.id, package_id: pkg.id },
       body: {
-        lookup_key: PACKAGE_IDENTIFIER,
-        display_name: PACKAGE_DISPLAY_NAME,
+        products: productsForPackage.map((product) => ({
+          product_id: product.id,
+          eligibility_criteria: 'all' as const,
+        })),
       },
     });
-    if (error) throw new Error('Failed to create package');
-    console.log('Created package:', newPackage.id);
-    pkg = newPackage;
-  }
 
-  const { error: attachPackageError } = await attachProductsToPackage({
-    client,
-    path: { project_id: project.id, package_id: pkg.id },
-    body: {
-      products: [
-        { product_id: testStoreProduct.id, eligibility_criteria: 'all' },
-        { product_id: appStoreProduct.id, eligibility_criteria: 'all' },
-        { product_id: playStoreProduct.id, eligibility_criteria: 'all' },
-      ],
-    },
-  });
-
-  if (attachPackageError) {
-    if (
-      attachPackageError.type === 'unprocessable_entity_error' &&
-      attachPackageError.message?.includes('Cannot attach product')
-    ) {
-      console.log('Skipping package attach: package already has incompatible product');
+    if (attachPackageError) {
+      if (
+        attachPackageError.type === 'unprocessable_entity_error' &&
+        attachPackageError.message?.includes('Cannot attach product')
+      ) {
+        console.log(
+          'Skipping package attach for ' +
+            subscription.packageLookup +
+            '. If premium_monthly is still on this package, detach it and attach ' +
+            subscription.storeIdentifier +
+            '.',
+        );
+      } else {
+        throw new Error('Failed to attach products to package ' + subscription.packageLookup);
+      }
     } else {
-      throw new Error('Failed to attach products to package');
+      console.log('Attached ' + subscription.storeIdentifier + ' to ' + subscription.packageLookup);
     }
-  } else {
-    console.log('Attached products to package');
   }
 
   const { data: testStoreApiKeys, error: testStoreApiKeysError } = await listAppPublicApiKeys({
@@ -384,10 +400,12 @@ async function seedRevenueCat() {
   console.log('Test Store App ID:', app.id);
   console.log('App Store App ID:', appStoreApp.id);
   console.log('Play Store App ID:', playStoreApp.id);
-  console.log('Test Store Product ID:', testStoreProduct.id);
-  console.log('App Store Product ID:', appStoreProduct.id);
-  console.log('Play Store Product ID:', playStoreProduct.id);
+  console.log(
+    'Premium products:',
+    premiumProducts.map((product) => product.store_identifier + ' (' + product.id + ')').join(', '),
+  );
   console.log('Entitlement Identifier:', ENTITLEMENT_IDENTIFIER);
+  console.log('Offering:', OFFERING_IDENTIFIER, 'packages $rc_monthly and $rc_annual');
   console.log(
     'Public API Keys - Test Store:',
     testStoreApiKeys?.items.map((item) => item.key).join(', ') ?? 'N/A',
