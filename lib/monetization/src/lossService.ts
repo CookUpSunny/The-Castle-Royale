@@ -261,7 +261,13 @@ export async function readSettlement(
  */
 export async function grantSecondChanceFromSsv(
   store: AdStore,
-  input: { offerId: string; nonce: string; playerId: string | null; transactionId: string },
+  input: {
+    offerId: string;
+    nonce: string;
+    playerId: string | null;
+    transactionId: string;
+    grantSource?: "admob_ssv" | "client_fallback";
+  },
   now = new Date(),
 ): Promise<{ settlement: Settlement | null; reason: "granted" | "duplicate" | "expired" | "mismatch" | "missing" }> {
   if (input.transactionId) {
@@ -292,8 +298,39 @@ export async function grantSecondChanceFromSsv(
   }
 
   offer.status = "granted";
-  offer.grantSource = "admob_ssv";
+  offer.grantSource = input.grantSource ?? "admob_ssv";
   offer.transactionId = input.transactionId;
   await store.saveOffer(offer);
   return { settlement: toSettlement(account, offer, now, true), reason: "granted" };
+}
+
+/**
+ * Temporary grant used until AdMob Server-Side Verification is saved on the
+ * rewarded unit. It can confirm only the one pending tournament offer the
+ * server already created. It does not open a second entry. Set ssvEnabled
+ * after the callback URL is live so this path stops granting.
+ */
+export async function grantSecondChanceFromClientFallback(
+  store: AdStore,
+  input: { offerId: string; nonce: string; playerId: string },
+  options: { ssvEnabled: boolean },
+  now = new Date(),
+): Promise<{
+  settlement: Settlement | null;
+  reason: "granted" | "duplicate" | "expired" | "mismatch" | "missing" | "ssv_required";
+}> {
+  if (options.ssvEnabled) {
+    return { settlement: null, reason: "ssv_required" };
+  }
+  return grantSecondChanceFromSsv(
+    store,
+    {
+      offerId: input.offerId,
+      nonce: input.nonce,
+      playerId: input.playerId,
+      transactionId: `fallback:${input.offerId}`,
+      grantSource: "client_fallback",
+    },
+    now,
+  );
 }
