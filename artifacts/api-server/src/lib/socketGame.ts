@@ -16,6 +16,8 @@ import { db } from '@workspace/db';
 import { playersTable } from '@workspace/db/schema';
 import { eq } from 'drizzle-orm';
 import { submitLeaderboardScore } from './gamecenter.js';
+import { recordLoss, type MatchMode } from '@workspace/monetization';
+import { drizzleAdStore } from './adStore.js';
 
 interface QueueEntry {
   socketId: string;
@@ -32,6 +34,8 @@ interface PrivateRoom {
 
 const queue: QueueEntry[] = [];
 const games = new Map<string, GameState>();
+/** How the match was started. Used for the Second Chance rematch. */
+const gameModes = new Map<string, MatchMode>();
 const playerToGame = new Map<string, string>();
 const socketToPlayer = new Map<string, string>();
 /**
@@ -127,13 +131,61 @@ function clearActiveGameForParticipants(gameId: string): void {
  * Players without a Game Center ID are silently skipped; the other player still
  * receives their update (e.g. authenticated user beats a bot or anonymous opponent).
  */
-async function updatePlayerStats(gameId: string, winnerId: string): Promise<void> {
+function modeForGame(gameId: string, state?: GameState): MatchMode {
+  const explicit = gameModes.get(gameId);
+  if (explicit) return explicit;
+  if (state?.playerOrder.some((id) => isBotId(id))) return 'bot';
+  return 'online';
+}
+
+function socketIdForPlayer(playerId: string): string | undefined {
+  for (const [sid, mapped] of socketToPlayer.entries()) {
+    if (mapped === playerId) return sid;
+  }
+  return undefined;
+}
+
+async function emitLossSettlement(
+  io: Server,
+  playerId: string,
+  gameCenterId: string | undefined,
+  gameId: string,
+  mode: MatchMode,
+): Promise<void> {
+  try {
+    const settlement = await recordLoss(drizzleAdStore, {
+      playerId,
+      gameId,
+      gameCenterId: gameCenterId ?? null,
+      mode,
+    });
+    const sid = socketIdForPlayer(playerId);
+    if (sid) io.to(sid).emit('match_settlement', settlement);
+  } catch (err) {
+    logger.error({ err, playerId, gameId }, 'Failed to record loss for ads');
+  }
+}
+
+async function updatePlayerStats(io: Server, gameId: string, winnerId: string): Promise<void> {
   // Clear active-game linkage first (before gameParticipants is deleted below).
   clearActiveGameForParticipants(gameId);
 
   const participants = gameParticipants.get(gameId);
   gameParticipants.delete(gameId);
+  const mode = modeForGame(gameId, games.get(gameId));
+  gameModes.delete(gameId);
   if (!participants || participants.length < 2) return;
+
+  for (const participant of participants) {
+    if (participant.playerId === winnerId || isBotId(participant.playerId)) continue;
+    void emitLossSettlement(
+      io,
+      participant.playerId,
+      participant.gameCenterId ?? playerToGameCenterId.get(participant.playerId),
+      gameId,
+      mode,
+    );
+  }
 
   const winner = participants.find((p) => p.playerId === winnerId);
   const loser = participants.find((p) => p.playerId !== winnerId);
@@ -326,8 +378,14 @@ function botThinkTime(): number {
 function notifyAndTeardownGame(io: Server, gameId: string, exceptPlayerId?: string): void {
   const state = games.get(gameId);
   if (!state) return;
+  // Leaving an in-progress match is a loss for the player who walked away.
+  if (state.phase !== 'finished' && exceptPlayerId && !isBotId(exceptPlayerId)) {
+    const winnerId = state.playerOrder.find((id) => id !== exceptPlayerId);
+    if (winnerId) void updatePlayerStats(io, gameId, winnerId);
+  }
   // Clear DB active-game links before deleting gameParticipants.
-  clearActiveGameForParticipants(gameId);
+  // updatePlayerStats already clears them when it records a forfeit.
+  if (gameParticipants.has(gameId)) clearActiveGameForParticipants(gameId);
   for (const id of state.playerOrder) {
     if (id === exceptPlayerId) continue;
     if (isBotId(id)) continue;
@@ -341,6 +399,7 @@ function notifyAndTeardownGame(io: Server, gameId: string, exceptPlayerId?: stri
   for (const id of state.playerOrder) playerToGame.delete(id);
   games.delete(gameId);
   gameParticipants.delete(gameId);
+  gameModes.delete(gameId);
 }
 
 function removeFromQueue(playerId: string): void {
@@ -488,7 +547,7 @@ function scheduleBotTurn(io: Server, gameId: string): void {
 
       if (outcome.result.gameOver) {
         // Bot won — winner is the bot (no DB update needed for bot winner)
-        void updatePlayerStats(gameId, botId);
+        void updatePlayerStats(io, gameId, botId);
         games.delete(gameId);
         for (const id of outcome.newState.playerOrder) playerToGame.delete(id);
         logger.info({ gameId, winner: botId }, 'Bot won game');
@@ -552,6 +611,7 @@ export function initSocketGame(httpServer: HttpServer): void {
         const state = dealGame([p1.playerId, p2.playerId], [p1.playerName, p2.playerName]);
 
         games.set(state.gameId, state);
+        gameModes.set(state.gameId, 'online');
         playerToGame.set(p1.playerId, state.gameId);
         playerToGame.set(p2.playerId, state.gameId);
         registerParticipants(state.gameId, [p1, p2]);
@@ -579,6 +639,7 @@ export function initSocketGame(httpServer: HttpServer): void {
           const state = dealGame([entry.playerId, botId], [entry.playerName, botName]);
 
           games.set(state.gameId, state);
+          gameModes.set(state.gameId, 'bot');
           playerToGame.set(entry.playerId, state.gameId);
           playerToGame.set(botId, state.gameId);
           registerParticipants(state.gameId, [
@@ -626,6 +687,7 @@ export function initSocketGame(httpServer: HttpServer): void {
 
       const humanEntry = { socketId: socket.id, playerId, playerName, gameCenterId };
       games.set(state.gameId, state);
+      gameModes.set(state.gameId, 'bot');
       playerToGame.set(playerId, state.gameId);
       playerToGame.set(botId, state.gameId);
       registerParticipants(state.gameId, [
@@ -719,6 +781,7 @@ export function initSocketGame(httpServer: HttpServer): void {
 
       const joinerEntry = { socketId: socket.id, playerId, playerName, gameCenterId };
       games.set(state.gameId, state);
+      gameModes.set(state.gameId, 'private');
       playerToGame.set(room.creator.playerId, state.gameId);
       playerToGame.set(playerId, state.gameId);
       registerParticipants(state.gameId, [room.creator, joinerEntry]);
@@ -788,7 +851,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       });
 
       if (outcome.result.gameOver) {
-        void updatePlayerStats(data.gameId, pid);
+        void updatePlayerStats(io, data.gameId, pid);
         games.delete(data.gameId);
         for (const id of outcome.newState.playerOrder) playerToGame.delete(id);
         logger.info({ gameId: data.gameId, winner: pid }, 'Game over');
