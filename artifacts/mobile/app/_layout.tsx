@@ -9,11 +9,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import AdBreakHost from '@/components/AdBreakHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import RevenueCatIdentity from '@/components/RevenueCatIdentity';
 import SplashGravity from '@/components/SplashGravity';
 import SplashIntro from '@/components/SplashIntro';
 import SplashStudio from '@/components/SplashStudio';
@@ -21,6 +24,7 @@ import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
 import { MusicProvider } from '@/contexts/MusicContext';
+import { initializeAds } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
 
 SplashScreen.preventAutoHideAsync();
@@ -31,13 +35,19 @@ try {
   console.warn('RevenueCat unavailable:', err instanceof Error ? err.message : err);
 }
 
+void initializeAds();
+
 const queryClient = new QueryClient();
 
 function GameProviderBridge({ children }: { children: React.ReactNode }) {
   const { profile } = useGameCenter();
   return (
     <GameProvider gameCenterId={profile?.gameCenterId ?? null}>
-      {children}
+      <View style={{ flex: 1 }}>
+        <RevenueCatIdentity gameCenterId={profile?.gameCenterId ?? null} />
+        {children}
+        <AdBreakHost />
+      </View>
     </GameProvider>
   );
 }

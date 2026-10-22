@@ -5,6 +5,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ArenaBackground from '@/components/ArenaBackground';
 import { useSubscription } from '@/lib/revenuecat';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { useColors } from '@/hooks/useColors';
 
 interface PaywallModalProps {
@@ -17,7 +18,8 @@ interface PaywallModalProps {
 const PERKS = [
   '🎴  Unlock every premium card skin',
   '🏟️  Unlock every premium arena',
-  '✦  Support ongoing development of Castle Royale',
+  '✦  No forced ads',
+  '♛  Second Chance after a loss, without watching an ad',
 ];
 
 /**
@@ -31,16 +33,9 @@ export default function PaywallModal({ visible, onClose, featureLabel }: Paywall
   const { offerings, purchase, restore, isPurchasing, isRestoring, isLoading } = useSubscription();
   const [error, setError] = useState<string | null>(null);
 
-  const currentOffering = offerings?.current;
-  const packageToPurchase = currentOffering?.availablePackages[0];
-  const priceString = packageToPurchase?.product.priceString ?? '—';
-  const productTitle = packageToPurchase?.product.title || 'Castle Royale Premium';
+  const packages = offerings?.current?.availablePackages ?? [];
 
-  const handlePurchase = async () => {
-    if (!packageToPurchase) {
-      setError('Subscription unavailable right now. Please try again later.');
-      return;
-    }
+  const handlePurchase = async (packageToPurchase: PurchasesPackage) => {
     setError(null);
     Haptics.selectionAsync().catch(() => {});
     try {
@@ -101,38 +96,36 @@ export default function PaywallModal({ visible, onClose, featureLabel }: Paywall
             ))}
           </View>
 
-          <View style={[styles.priceCard, { borderColor: colors.neonGold, backgroundColor: '#1a053590' }]}>
-            <Text style={[styles.productTitle, { color: colors.foreground }]}>{productTitle}</Text>
-            {isLoading ? (
-              <ActivityIndicator color={colors.neonGold} style={{ marginVertical: 8 }} />
-            ) : (
-              <Text style={[styles.price, { color: colors.neonGold }]}>
-                {priceString}
-                <Text style={[styles.priceSuffix, { color: colors.mutedForeground }]}> / month</Text>
-              </Text>
-            )}
-          </View>
+          {isLoading ? (
+            <ActivityIndicator color={colors.neonGold} style={{ marginVertical: 16 }} />
+          ) : packages.length === 0 ? (
+            <Text style={[styles.productTitle, { color: colors.mutedForeground }]}>
+              Purchases are unavailable right now.
+            </Text>
+          ) : (
+            packages.map((pkg) => (
+              <Pressable
+                key={pkg.identifier}
+                onPress={() => void handlePurchase(pkg)}
+                disabled={isPurchasing}
+                style={({ pressed }) => [styles.subscribeOuter, (pressed || isPurchasing) && { opacity: 0.85 }]}
+              >
+                <LinearGradient
+                  colors={['#f5e070', '#d4a820', '#f5e070']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.packagePill}
+                >
+                  <Text style={styles.subscribeText}>{pkg.product.title || 'Castle Royale Premium'}</Text>
+                  <Text style={styles.packagePrice}>{pkg.product.priceString}</Text>
+                </LinearGradient>
+              </Pressable>
+            ))
+          )}
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <Pressable
-            onPress={handlePurchase}
-            disabled={isPurchasing || isLoading || !packageToPurchase}
-            style={({ pressed }) => [styles.subscribeOuter, (pressed || isPurchasing) && { opacity: 0.85 }]}
-          >
-            <LinearGradient
-              colors={['#f5e070', '#d4a820', '#f5e070']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.subscribePill}
-            >
-              {isPurchasing ? (
-                <ActivityIndicator color="#1a0e00" />
-              ) : (
-                <Text style={styles.subscribeText}>SUBSCRIBE NOW</Text>
-              )}
-            </LinearGradient>
-          </Pressable>
+          {isPurchasing ? <ActivityIndicator color={colors.neonGold} style={{ marginTop: 12 }} /> : null}
 
           <Pressable onPress={handleRestore} disabled={isRestoring} style={styles.restoreBtn}>
             <Text style={[styles.restoreText, { color: colors.mutedForeground }]}>
@@ -141,7 +134,7 @@ export default function PaywallModal({ visible, onClose, featureLabel }: Paywall
           </Pressable>
 
           <Text style={[styles.footnote, { color: colors.mutedForeground }]}>
-            Subscription auto-renews monthly and can be cancelled anytime from your App Store account settings.
+            Payment is charged to your Apple ID. Subscriptions renew until you cancel. A lifetime unlock is billed once.
           </Text>
         </ScrollView>
       </View>
@@ -254,17 +247,26 @@ const styles = StyleSheet.create({
     elevation: 12,
     marginTop: 4,
   },
-  subscribePill: {
-    height: 56,
+  packagePill: {
+    minHeight: 64,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 32,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   subscribeText: {
     color: '#1a0e00',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
-    letterSpacing: 3,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  packagePrice: {
+    color: '#1a0e00',
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 2,
   },
   restoreBtn: {
     marginTop: 18,

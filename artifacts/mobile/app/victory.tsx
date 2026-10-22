@@ -326,7 +326,7 @@ export default function VictoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { clearGame, joinQueue } = useGame();
+  const { clearGame, joinQueue, gameView, resolveAdBreak, ensureLossSettlement } = useGame();
   const params = useLocalSearchParams<{ winner: string; myId: string; opponentName: string; fromGame?: string }>();
   // fromGame=1 means we arrived via the end-game curtain that already covered
   // the screen; skip the entry rain and start sweeping immediately.
@@ -334,6 +334,14 @@ export default function VictoryScreen() {
   const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
 
   const isWin = params.winner === params.myId;
+
+  useEffect(() => {
+    if (isWin || !gameView?.gameId) return;
+    const timer = setTimeout(() => {
+      void ensureLossSettlement(gameView.gameId);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [isWin, gameView?.gameId, ensureLossSettlement]);
 
   // When arriving from the game, the game's curtain already covered the screen.
   // Start hidden and fade in directly — no second card rain needed.
@@ -375,23 +383,30 @@ export default function VictoryScreen() {
 
   const CONFETTI_FADE_MS = 400;
 
-  const handlePlayAgain = () => {
+  const afterAdBreak = (next: () => void) => {
     const delay = confettiVisible ? CONFETTI_FADE_MS : 0;
     if (confettiVisible) confettiOpacity.value = withTiming(0, { duration: CONFETTI_FADE_MS });
     setTimeout(() => {
-      clearGame();
-      joinQueue();
-      router.replace('/matchmaking');
+      void (async () => {
+        if (!isWin) await resolveAdBreak();
+        next();
+      })();
     }, delay);
   };
 
+  const handlePlayAgain = () => {
+    afterAdBreak(() => {
+      clearGame();
+      joinQueue();
+      router.replace('/matchmaking');
+    });
+  };
+
   const handleLobby = () => {
-    const delay = confettiVisible ? CONFETTI_FADE_MS : 0;
-    if (confettiVisible) confettiOpacity.value = withTiming(0, { duration: CONFETTI_FADE_MS });
-    setTimeout(() => {
+    afterAdBreak(() => {
       clearGame();
       router.replace('/');
-    }, delay);
+    });
   };
 
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
