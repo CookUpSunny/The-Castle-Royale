@@ -299,3 +299,51 @@ test("RevenueCat webhook mirrors premium and keeps lifetime on subscription expi
   const notLowered = await raiseLossCount(store, "p1", 1, now);
   assert.equal(notLowered.adLossCount, 4);
 });
+
+test("VIP subscriptions grant premium and the unassigned IAPs do not", async () => {
+  const store = memoryStore();
+  const now = new Date("2026-06-01T00:00:00Z");
+  const monthly = await applyRevenueCatEvent(store, {
+    type: "INITIAL_PURCHASE",
+    app_user_id: "p-monthly",
+    product_id: "monthly_high_roller",
+    expiration_at_ms: now.getTime() + 86_400_000,
+  }, now);
+  assert.equal(monthly.applied, true);
+  assert.equal(monthly.isPremium, true);
+
+  const yearly = await applyRevenueCatEvent(store, {
+    type: "RENEWAL",
+    app_user_id: "p-year",
+    entitlement_ids: ["premium"],
+    product_id: "vip_year",
+    expiration_at_ms: now.getTime() + 86_400_000,
+  }, now);
+  assert.equal(yearly.isPremium, true);
+
+  const beginnersLuck = decidePremiumChange({
+    type: "NON_RENEWING_PURCHASE",
+    entitlement_ids: ["premium"],
+    product_id: "beginner_luck",
+    expiration_at_ms: null,
+  });
+  assert.equal(beginnersLuck.action, "ignore");
+
+  const kingdom = await applyRevenueCatEvent(store, {
+    type: "NON_RENEWING_PURCHASE",
+    app_user_id: "p-kingdom",
+    product_id: "004",
+    expiration_at_ms: null,
+  }, now);
+  assert.equal(kingdom.applied, false);
+  assert.equal(kingdom.isPremium, false);
+
+  const expired = await applyRevenueCatEvent(store, {
+    type: "EXPIRATION",
+    app_user_id: "p-monthly",
+    product_id: "monthly_high_roller",
+    expiration_at_ms: now.getTime(),
+  }, now);
+  assert.equal(expired.applied, true);
+  assert.equal(expired.isPremium, false);
+});

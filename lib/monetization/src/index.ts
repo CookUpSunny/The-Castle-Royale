@@ -41,3 +41,13 @@ export {
   webhookAuthorized,
 } from "./revenueCatWebhook";
 export type { PremiumDecision, RevenueCatEvent } from "./revenueCatWebhook";
+
+export {
+  PREMIUM_ENTITLEMENT_ID,
+  PREMIUM_SUBSCRIPTION_PRODUCT_IDS,
+  UNASSIGNED_NON_CONSUMABLE_PRODUCT_IDS,
+  isPremiumSubscriptionProduct,
+  isUnassignedNonConsumable,
+  premiumPaywallRank,
+  storeProductId,
+} from "./storeProducts";

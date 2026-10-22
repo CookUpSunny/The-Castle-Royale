@@ -1,6 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { isPremiumActive } from "./adRules";
 import { emptyAdAccount, type AdAccount, type AdStore } from "./store";
+import {
+  isPremiumSubscriptionProduct,
+  isUnassignedNonConsumable,
+  PREMIUM_ENTITLEMENT_ID,
+} from "./storeProducts";
 
 export interface RevenueCatEvent {
   type?: string;
@@ -35,8 +40,11 @@ export function webhookAuthorized(header: string | undefined, expected: string |
 }
 
 function mentionsPremium(event: RevenueCatEvent): boolean {
+  // These App Store IAPs are imported but not assigned an unlock yet.
+  if (isUnassignedNonConsumable(event.product_id)) return false;
   const entitlements = event.entitlement_ids ?? [];
-  if (entitlements.some((id) => id === "premium")) return true;
+  if (entitlements.some((id) => id === PREMIUM_ENTITLEMENT_ID)) return true;
+  if (isPremiumSubscriptionProduct(event.product_id)) return true;
   const product = event.product_id?.toLowerCase() ?? "";
   if (entitlements.length === 0 && product.includes("premium")) return true;
   return false;
