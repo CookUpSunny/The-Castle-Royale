@@ -37,7 +37,10 @@ function mapOffer(row: typeof secondChanceOffersTable.$inferSelect): SecondChanc
     mode: row.mode as MatchMode,
     expiresAt: row.expiresAt,
     status: row.status as OfferStatus,
-    grantSource: row.grantSource === "premium" || row.grantSource === "admob_ssv" ? row.grantSource : null,
+    grantSource:
+      row.grantSource === "premium" || row.grantSource === "admob_ssv" || row.grantSource === "client_fallback"
+        ? row.grantSource
+        : null,
     transactionId: row.transactionId,
     createdAt: row.createdAt,
   };

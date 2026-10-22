@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   ADMOB_VERIFIER_KEYS_URL,
   applyRevenueCatEvent,
+  grantSecondChanceFromClientFallback,
   grantSecondChanceFromSsv,
   isPremiumActive,
   linkAdIdentity,
@@ -205,6 +206,40 @@ router.post("/ads/second-chance/:offerId/test-grant", async (req, res) => {
     res.json(result.settlement);
   } catch (err) {
     logger.error({ err }, "Failed to grant unverified Second Chance");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * Temporary grant until AdMob SSV is configured. Confirms only the one pending
+ * tournament offer. Refuses once ADMOB_SSV_ENABLED=true.
+ */
+router.post("/ads/second-chance/:offerId/fallback-grant", async (req, res) => {
+  const offerId = z.string().min(1).max(80).safeParse(req.params["offerId"]);
+  const parsed = z
+    .object({ playerId: playerIdSchema, nonce: z.string().min(1).max(80) })
+    .safeParse(req.body);
+  if (!offerId.success || !parsed.success) {
+    res.status(400).json({ error: "Invalid fallback grant" });
+    return;
+  }
+  try {
+    const result = await grantSecondChanceFromClientFallback(
+      drizzleAdStore,
+      { offerId: offerId.data, nonce: parsed.data.nonce, playerId: parsed.data.playerId },
+      { ssvEnabled: process.env["ADMOB_SSV_ENABLED"] === "true" },
+    );
+    if (result.reason === "ssv_required") {
+      res.status(403).json({ error: "Server-side verification is required" });
+      return;
+    }
+    if (!result.settlement) {
+      res.status(404).json({ error: "Offer not found" });
+      return;
+    }
+    res.json(result.settlement);
+  } catch (err) {
+    logger.error({ err }, "Failed to grant fallback Second Chance");
     res.status(500).json({ error: "Internal server error" });
   }
 });

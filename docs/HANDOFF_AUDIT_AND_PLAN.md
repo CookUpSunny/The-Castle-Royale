@@ -54,7 +54,8 @@ Real ads and real purchases are unverified. This environment cannot build iOS.
 - The paywall lists all current offering packages, using store title and price, except the two unassigned non-consumables.
 - Webhook `POST /api/webhooks/revenuecat` mirrors a single entitlement, `premium`, onto `ad_accounts`. `monthly_high_roller` and `vip_year` grant it. Cancellation is ignored. Expiration clears the subscription and leaves a lifetime flag alone. `beginner_luck` and `004` do not grant `premium` even if a webhook lists that entitlement (`lib/monetization/src/revenueCatWebhook.ts`, `lib/monetization/src/storeProducts.ts`).
 - Loss counts are server-authoritative. The client cache can only raise the count.
-- AdMob SSV is `GET /api/ads/ssv`. Dev-only `POST /api/ads/second-chance/:offerId/test-grant` works when `ADMOB_ALLOW_UNVERIFIED_REWARDS=true`.
+- AdMob SSV is `GET /api/ads/ssv`. It is not turned on yet. Until `ADMOB_SSV_ENABLED=true`, `POST /api/ads/second-chance/:offerId/fallback-grant` can confirm the one pending tournament offer (matching nonce, 60 second window, no second entry). Dev-only `POST /api/ads/second-chance/:offerId/test-grant` still requires `ADMOB_ALLOW_UNVERIFIED_REWARDS=true`.
+- The iOS RevenueCat public SDK key is read from `EXPO_PUBLIC_REVENUECAT_IOS_KEY`. It is not in the repo. The owner sets it as an EAS environment variable.
 - `scripts/src/seedRevenueCat.ts` can create entitlement `premium`, offering `default`, packages `$rc_monthly` → `monthly_high_roller` and `$rc_annual` → `vip_year`. It does not attach `beginner_luck` or `004`.
 
 That single `premium` entitlement is the main mismatch with the handoff. The handoff wants separate entitlements `high_roller`, `vip`, and `beginners_luck`, plus one owned-SKU entitlement (or ledger row) per permanent arena, avatar, card back, and bundle. Do not collapse those into `premium`.
@@ -108,7 +109,7 @@ Still to do in Phase E: a consent form, a real frequency decision, and a server-
 
 Second Chance is one entry to a losers / Wild Card bracket per player per tournament. It is not a rematch, an extra move, or a redo of the lost hand.
 
-`recordLoss` (`lib/monetization/src/lossService.ts`) now writes an ordinary loss as status `recorded` and does not open a bracket. A `tournamentId` opens at most one redemption, enforced by `getRedemptionByPlayerTournament` and unique index `second_chance_player_tournament_idx` on `(player_id, tournament_id)`. A member's single entry is granted with no ad. A free player's entry stays `pending` until SSV. A second loss in the same tournament does not open another offer, including after the 60 second window expires. SSV refuses a `recorded` row. The client no longer shows "WATCH AD" / "REMATCH".
+`recordLoss` (`lib/monetization/src/lossService.ts`) now writes an ordinary loss as status `recorded` and does not open a bracket. A `tournamentId` opens at most one redemption, enforced by `getRedemptionByPlayerTournament` and unique index `second_chance_player_tournament_idx` on `(player_id, tournament_id)`. A member's single entry is granted with no ad. A free player's entry stays `pending` until SSV, or until the temporary fallback grant while SSV is off. A second loss in the same tournament does not open another offer, including after the 60 second window expires. SSV refuses a `recorded` row. The client no longer shows "WATCH AD" / "REMATCH".
 
 Not built, and required before tournaments ship: the bracket itself, where the Wild Card is seated, tie-breakers, bracket sizes, the defeat-screen copy ("Watch Ad to Enter" / "Enter Wild Card Bracket"), and a fair fallback when the rewarded ad cannot load. Ad inventory must not decide who may enter. The fallback rule is an open decision (section 11). Do not treat the dev-only test-grant route as that fallback.
 
@@ -135,11 +136,22 @@ The old "buy the app" / lifetime unlock is dropped. Do not create a lifetime pro
 
 - Publisher `pub-2426597243989008`.
 - iOS App ID `ca-app-pub-2426597243989008~4741781660`, linked to App Store ID `6772010192`. This id is public and is the default `iosAppId` in `artifacts/mobile/app.config.js`. `EXPO_PUBLIC_ADMOB_IOS_APP_ID` overrides it.
-- There are no interstitial or rewarded ad units yet. `artifacts/mobile/lib/adUnitIds.ts` keeps Google's test unit ids until `EXPO_PUBLIC_ADMOB_INTERSTITIAL_*` and `EXPO_PUBLIC_ADMOB_REWARDED_*` are set. Do not invent unit ids. A production binary that still has test unit ids will be rejected by AdMob once units exist, so set the env vars before the store build that is meant to show real ads.
-- Android still has no AdMob app. The plugin uses Google's test Android app id until `EXPO_PUBLIC_ADMOB_ANDROID_APP_ID` is set. iOS is the first platform.
+- Live iOS ad units, committed in `artifacts/mobile/lib/adUnitIds.ts`:
+  - Interstitial "Castle Royale - Between Matches Interstitial": `ca-app-pub-2426597243989008/9295637094`
+  - Rewarded "Castle Royale - Second Chance Rewarded": `ca-app-pub-2426597243989008/7498419820` (reward amount 1, item name "Second Chance")
+- `__DEV__` and internal EAS builds (`development` and `preview`, `EXPO_PUBLIC_ADMOB_USE_TEST_UNITS=true`) use Google's test unit ids. The production profile is the TestFlight and App Store build. It leaves that flag unset and uses the real iOS units. Android has no live units, so Android stays on Google's test units.
 - Console status, as reported by the owner: **Requires review / Limited ad serving – verify app**. Limited serving is not a working production ad setup. Do not claim live ads.
 - **app-ads.txt is not set up for AdMob.** `artifacts/mobile/server/serve.js` can answer `/app-ads.txt` with `google.com, pub-2426597243989008, DIRECT, f08c47fec0942fa0`. That route is the Expo static server. `thecastleroyale.com` does not appear anywhere in this repo, and AdMob still says the file is missing. The file must be served at `https://thecastleroyale.com/app-ads.txt` with that exact publisher line. The App Store listing's developer website must be `https://thecastleroyale.com` so AdMob checks that host. Putting the line only on `The-castle-royale.replit.app` does not finish verification.
-- Rewarded SSV, when a rewarded unit exists, must be `https://The-castle-royale.replit.app/api/ads/ssv` with the query string left intact. Test units cannot call it.
+
+### SSV callback to give AdMob
+
+SSV is not set up. The rewarded unit needs this callback URL, with no query string of our own. AdMob appends the signed query, and the API reads that raw query:
+
+`https://The-castle-royale.replit.app/api/ads/ssv`
+
+In the AdMob rewarded unit, also send `custom_data` as `offerId|nonce` and `user_id` as the client player id. The app already sets those when it requests the rewarded ad.
+
+Until that callback is saved, set neither `ADMOB_SSV_ENABLED` nor `EXPO_PUBLIC_ADMOB_SSV_ENABLED`. The temporary fallback is `POST /api/ads/second-chance/:offerId/fallback-grant` with the server-issued offer id, player id, and nonce. It grants only that one pending tournament offer, only inside the 60 second window, and it will not open a second entry. A modified client that already received the nonce can confirm it without the ad playing. That is weaker than SSV and is why it must be turned off: after the callback is saved, set `ADMOB_SSV_ENABLED=true` on the API and `EXPO_PUBLIC_ADMOB_SSV_ENABLED=true` on the production EAS build. The fallback then returns 403 and only the signed callback can grant. Google's test units cannot call the callback. Internal builds keep using `ADMOB_ALLOW_UNVERIFIED_REWARDS=true` on a dev server only.
 
 ## 8. Phases B–G
 
@@ -169,7 +181,7 @@ Each phase should be its own small PR, tested, and not merged on the strength of
 
 ### Phase E — Ads
 
-- Create the interstitial and rewarded units in AdMob. Put only those ids in EAS secrets.
+- The interstitial and rewarded units already exist. Production and TestFlight use the committed ids. Do not put those ids in EAS secrets. Set `EXPO_PUBLIC_REVENUECAT_IOS_KEY` as an EAS env var. Do not commit the key.
 - Finish app-ads.txt on `thecastleroyale.com` and the App Store developer-website field. Wait until AdMob review is no longer "verify app" before expecting real fill.
 - ATT is already declared. Add the consent flow the handoff requires, and a privacy link on the paywall.
 - Replace the provisional 3-minute / 3-per-day constants when the owner sets them.
@@ -229,7 +241,8 @@ These are the small contradictions with the handoff. The shop, entitlements, and
 
 - Ordinary losses no longer offer a rematch. Second Chance is stored once per `(player, tournament)`.
 - The every-3rd-loss interstitial is eligible only between completed matches. It is skipped for members, deferred during an active game or tournament round, and deferred inside the provisional cooldown. The daily cap skips further shows. Launch no longer forces an interstitial.
-- The iOS AdMob App ID in the config plugin is `ca-app-pub-2426597243989008~4741781660`. Interstitial and rewarded ids remain Google's test ids.
+- The iOS AdMob App ID in the config plugin is `ca-app-pub-2426597243989008~4741781660`. Release builds use the real interstitial and rewarded unit ids. Dev and internal builds keep Google's test units.
+- The RevenueCat iOS public key is read from `EXPO_PUBLIC_REVENUECAT_IOS_KEY` and is not in the repo.
 
 ## 13. What was verified for this audit
 

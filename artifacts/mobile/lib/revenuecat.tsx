@@ -17,7 +17,8 @@ import { selectRevenueCatApiKey, type RevenueCatPlatform } from '@workspace/mone
 export const clientPremiumRef = { current: false };
 
 const REVENUECAT_TEST_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY;
-const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
+/** Set on EAS by the owner. The public iOS SDK key is not stored in the repo. */
+const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
 const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
 
 export const REVENUECAT_ENTITLEMENT_IDENTIFIER = 'premium';

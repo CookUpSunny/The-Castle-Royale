@@ -18,6 +18,7 @@ export { DuplicateOfferError, emptyAdAccount, laterDate, mergePremium } from "./
 export type { AdAccount, AdStore, SecondChanceOffer } from "./store";
 
 export {
+  grantSecondChanceFromClientFallback,
   grantSecondChanceFromSsv,
   linkAdIdentity,
   raiseLossCount,

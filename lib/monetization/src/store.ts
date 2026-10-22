@@ -20,7 +20,7 @@ export interface SecondChanceOffer {
   mode: MatchMode;
   expiresAt: Date;
   status: OfferStatus;
-  grantSource: "premium" | "admob_ssv" | null;
+  grantSource: "premium" | "admob_ssv" | "client_fallback" | null;
   transactionId: string | null;
   createdAt: Date;
 }

@@ -53,6 +53,28 @@ export async function fetchSecondChance(offerId: string, playerId: string): Prom
   return parseJson(res);
 }
 
+/** True after the owner saves the SSV callback on the rewarded unit and sets this env. */
+export function admobSsvEnabled(): boolean {
+  return process.env.EXPO_PUBLIC_ADMOB_SSV_ENABLED === 'true';
+}
+
+/**
+ * Until SSV is on, ask the server to confirm the one pending tournament offer.
+ * The server rejects this once ADMOB_SSV_ENABLED=true. It cannot open a second entry.
+ */
+export async function confirmSecondChanceWithoutSsv(
+  offerId: string,
+  playerId: string,
+  nonce: string,
+): Promise<Settlement | null> {
+  const res = await fetch(`${resolveRestApiUrl()}/ads/second-chance/${encodeURIComponent(offerId)}/fallback-grant`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playerId, nonce }),
+  });
+  return parseJson(res);
+}
+
 export async function grantUnverifiedSecondChance(
   offerId: string,
   playerId: string,

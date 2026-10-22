@@ -12,6 +12,7 @@ import {
 import {
   applyRevenueCatEvent,
   decidePremiumChange,
+  grantSecondChanceFromClientFallback,
   grantSecondChanceFromSsv,
   linkAdIdentity,
   processAdMobSsv,
@@ -419,4 +420,55 @@ test("VIP subscriptions grant premium and the unassigned IAPs do not", async () 
   }, now);
   assert.equal(expired.applied, true);
   assert.equal(expired.isPremium, false);
+});
+
+test("the non-SSV fallback grants one tournament offer and stops once SSV is on", async () => {
+  const store = memoryStore();
+  const now = new Date("2026-06-01T00:00:00Z");
+  const opened = await recordLoss(
+    store,
+    { playerId: "p1", gameId: "g1", mode: "online", tournamentId: "cup" },
+    { now: () => now, id: () => "offer-1", nonce: () => "nonce-1" },
+  );
+  const blocked = await grantSecondChanceFromClientFallback(
+    store,
+    { offerId: opened.secondChance.offerId, nonce: "nonce-1", playerId: "p1" },
+    { ssvEnabled: true },
+    now,
+  );
+  assert.equal(blocked.reason, "ssv_required");
+  assert.equal(blocked.settlement, null);
+  assert.equal(store.offers.get("offer-1")?.status, "pending");
+
+  const granted = await grantSecondChanceFromClientFallback(
+    store,
+    { offerId: opened.secondChance.offerId, nonce: "nonce-1", playerId: "p1" },
+    { ssvEnabled: false },
+    now,
+  );
+  assert.equal(granted.reason, "granted");
+  assert.equal(granted.settlement?.secondChance.granted, true);
+  assert.equal(store.offers.get("offer-1")?.grantSource, "client_fallback");
+
+  const again = await grantSecondChanceFromClientFallback(
+    store,
+    { offerId: opened.secondChance.offerId, nonce: "nonce-1", playerId: "p1" },
+    { ssvEnabled: false },
+    now,
+  );
+  assert.equal(again.reason, "duplicate");
+
+  const ordinary = await recordLoss(
+    store,
+    { playerId: "p1", gameId: "g2", mode: "online" },
+    { now: () => now, id: () => "offer-2", nonce: () => "nonce-2" },
+  );
+  const refused = await grantSecondChanceFromClientFallback(
+    store,
+    { offerId: ordinary.secondChance.offerId, nonce: "nonce-2", playerId: "p1" },
+    { ssvEnabled: false },
+    now,
+  );
+  assert.equal(refused.reason, "expired");
+  assert.equal(refused.settlement?.secondChance.granted, false);
 });
