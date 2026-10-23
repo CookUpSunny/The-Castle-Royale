@@ -15,9 +15,13 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ],
+  "exclude": ["**/*.test.ts"],
   "references": [
     {
       "path": "../../lib/api-client-react"
+    },
+    {
+      "path": "../../lib/monetization"
     }
   ]
 }

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import BackButton from '@/components/BackButton';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
 
 export default function ModeSelectScreen() {
   const colors = useColors();
@@ -27,7 +28,11 @@ export default function ModeSelectScreen() {
     router.push('/arena-picker?mode=online');
   };
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const duo = useDuoWindow();
+  const verticalBook = duo.hinge === 'vertical';
+  const split = duo.mode !== 'compact';
+  const shortFold = duo.mode === 'compact' && duo.height < 700;
   const isConnected = connectionStatus === 'connected';
 
   return (
@@ -37,19 +42,33 @@ export default function ModeSelectScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
-        <View style={styles.headerRow}>
-          <BackButton label="← BACK" onPress={() => router.back()} />
-          <View style={{ flex: 1 }} />
+      <View style={[styles.inner, {
+        paddingTop: insets.top + webTopPad + 12,
+        paddingBottom: insets.bottom + 20,
+        paddingLeft: insets.left + 16,
+        paddingRight: insets.right + 16,
+        flexDirection: verticalBook ? 'row' : 'column',
+        alignItems: verticalBook ? 'stretch' : 'center',
+      }]}>
+        <View style={[styles.pane, shortFold && { flex: 0, justifyContent: 'flex-start' }]}>
+          <View style={styles.headerRow}>
+            <BackButton label="← BACK" onPress={() => router.back()} />
+            <View style={{ flex: 1 }} />
+          </View>
+
+          <View style={styles.titleBlock}>
+            <Text style={[styles.crown, { color: colors.neonGold }, shortFold && { fontSize: 22, marginBottom: 0 }]}>♛</Text>
+            <Text style={[styles.title, { color: colors.foreground }, shortFold && { fontSize: 28, letterSpacing: 5 }]}>SELECT</Text>
+            <Text style={[styles.titleSub, { color: colors.neonGold }, shortFold && { fontSize: 13, letterSpacing: 3 }]}>YOUR BATTLE</Text>
+          </View>
         </View>
 
-        <View style={styles.titleBlock}>
-          <Text style={[styles.crown, { color: colors.neonGold }]}>♛</Text>
-          <Text style={[styles.title, { color: colors.foreground }]}>SELECT</Text>
-          <Text style={[styles.titleSub, { color: colors.neonGold }]}>YOUR BATTLE</Text>
-        </View>
+        {split ? (
+          <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+        ) : null}
 
-        <View style={styles.buttonsBlock}>
+        <View style={styles.pane}>
+        <View style={[styles.buttonsBlock, shortFold && { gap: 8 }]}>
           <Pressable
             onPress={goBot}
             disabled={!isConnected}
@@ -59,10 +78,10 @@ export default function ModeSelectScreen() {
               colors={isConnected ? ['#f5e070', '#d4a820', '#f5e070'] : ['#3a3020', '#1e1a0a', '#3a3020']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.bigBtn}
+              style={[styles.bigBtn, shortFold && styles.bigBtnShort]}
             >
-              <Text style={[styles.bigBtnIcon, !isConnected && { color: '#5a5030' }]}>⚡</Text>
-              <Text style={[styles.bigBtnText, !isConnected && { color: '#5a5030' }]}>PLAY QUICK GAME</Text>
+              <Text style={[styles.bigBtnIcon, shortFold && styles.bigBtnIconShort, !isConnected && { color: '#5a5030' }]}>⚡</Text>
+              <Text style={[styles.bigBtnText, shortFold && { fontSize: 16, letterSpacing: 2 }, !isConnected && { color: '#5a5030' }]}>PLAY QUICK GAME</Text>
               <Text style={[styles.bigBtnSubText, !isConnected && { color: '#5a5030' }]}>· BOT ·</Text>
             </LinearGradient>
           </Pressable>
@@ -76,10 +95,10 @@ export default function ModeSelectScreen() {
               colors={isConnected ? ['#22d3ee', '#0891b2', '#0e7490'] : ['#0a2428', '#051214', '#0a2428']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.bigBtn}
+              style={[styles.bigBtn, shortFold && styles.bigBtnShort]}
             >
-              <Text style={[styles.bigBtnIcon, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>🌐</Text>
-              <Text style={[styles.bigBtnText, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>PLAY ONLINE</Text>
+              <Text style={[styles.bigBtnIcon, shortFold && styles.bigBtnIconShort, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>🌐</Text>
+              <Text style={[styles.bigBtnText, shortFold && { fontSize: 16, letterSpacing: 2 }, { color: '#fff' }, !isConnected && { color: '#1a4048' }]}>PLAY ONLINE</Text>
               <Text style={[styles.bigBtnSubText, { color: 'rgba(255,255,255,0.78)' }, !isConnected && { color: '#1a4048' }]}>
                 · FIND AN OPPONENT ·
               </Text>
@@ -95,10 +114,10 @@ export default function ModeSelectScreen() {
               colors={isConnected ? ['#a855f7', '#7e22ce', '#5b21b6'] : ['#2a1040', '#15081e', '#2a1040']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.bigBtn}
+              style={[styles.bigBtn, shortFold && styles.bigBtnShort]}
             >
-              <Text style={[styles.bigBtnIcon, { color: '#fff' }, !isConnected && { color: '#5a4078' }]}>♛</Text>
-              <Text style={[styles.bigBtnText, { color: '#fff' }, !isConnected && { color: '#5a4078' }]}>PLAY PRIVATE ROOM</Text>
+              <Text style={[styles.bigBtnIcon, shortFold && styles.bigBtnIconShort, { color: '#fff' }, !isConnected && { color: '#5a4078' }]}>♛</Text>
+              <Text style={[styles.bigBtnText, shortFold && { fontSize: 16, letterSpacing: 2 }, { color: '#fff' }, !isConnected && { color: '#5a4078' }]}>PLAY PRIVATE ROOM</Text>
               <Text style={[styles.bigBtnSubText, { color: 'rgba(255,255,255,0.78)' }, !isConnected && { color: '#5a4078' }]}>· INVITE A FRIEND ·</Text>
             </LinearGradient>
           </Pressable>
@@ -110,6 +129,7 @@ export default function ModeSelectScreen() {
             {isConnected ? 'ONLINE' : connectionStatus.toUpperCase()}
           </Text>
         </View>
+        </View>
       </View>
     </View>
   );
@@ -117,7 +137,8 @@ export default function ModeSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, alignItems: 'center', paddingHorizontal: 24, justifyContent: 'space-between' },
+  inner: { flex: 1, alignItems: 'center', justifyContent: 'space-between' },
+  pane: { flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' },
   headerRow: { width: '100%', flexDirection: 'row', alignItems: 'center' },
   titleBlock: { alignItems: 'center', marginTop: 12 },
   crown: { fontSize: 32, marginBottom: 4, textShadowColor: '#c8960a', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
@@ -138,7 +159,9 @@ const styles = StyleSheet.create({
     shadowColor: '#0891b2',
   },
   bigBtn: { paddingVertical: 26, justifyContent: 'center', alignItems: 'center', borderRadius: 18 },
+  bigBtnShort: { paddingVertical: 10 },
   bigBtnIcon: { fontSize: 28, fontWeight: '900', color: '#1a0e00', marginBottom: 6 },
+  bigBtnIconShort: { fontSize: 18, marginBottom: 2 },
   bigBtnText: { color: '#1a0e00', fontSize: 20, fontWeight: '900', letterSpacing: 4 },
   bigBtnSubText: { color: '#1a0e00', fontSize: 11, fontWeight: '700', letterSpacing: 3, marginTop: 4, opacity: 0.8 },
   connectionDot: { flexDirection: 'row', alignItems: 'center', gap: 6 },

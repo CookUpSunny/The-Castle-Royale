@@ -1,15 +1,19 @@
 import { router } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CardMosaic from '@/components/CardMosaic';
 import RulebookContent from '@/components/RulebookContent';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
+import { topContentInset } from '@/lib/duoLayout';
 
 type Phase = 'mosaic' | 'dissolve' | 'rulebook';
 
 export default function HowToPlayScreen() {
   const insets = useSafeAreaInsets();
+  const duo = useDuoWindow();
+  const book = duo.mode === 'wide';
   const [phase, setPhase] = useState<Phase>('mosaic');
   const dissolveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentOpacity = useSharedValue(0);
@@ -28,9 +32,17 @@ export default function HowToPlayScreen() {
 
   return (
     <View style={styles.root}>
-      <Animated.View style={[StyleSheet.absoluteFill, contentStyle]}>
-        <RulebookContent bottomInset={insets.bottom} />
+      <Animated.View style={[StyleSheet.absoluteFill, contentStyle, book && { width: duo.creaseStart, right: undefined }]}>
+        <RulebookContent bottomInset={insets.bottom} topInset={topContentInset(insets.top, Platform.OS)} />
       </Animated.View>
+      {book ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, left: duo.creaseEnd, right: 0, justifyContent: 'center', paddingHorizontal: 28 }}>
+          <Text style={{ color: '#f0d78c', fontSize: 28, fontWeight: '800' }}>The Rules</Text>
+          <Text style={{ color: '#d5c8ea', fontSize: 16, lineHeight: 22, marginTop: 8 }}>
+            Every player uses the same cards. Memberships do not change a match.
+          </Text>
+        </View>
+      ) : null}
 
       {phase !== 'rulebook' && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">

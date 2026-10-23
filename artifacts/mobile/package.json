@@ -48,7 +48,7 @@
     "expo-system-ui": "~55.0.18",
     "expo-web-browser": "~55.0.16",
     "react": "catalog:",
-    "react-dom": "catalog:",
+    "react-dom": "19.2.0",
     "react-native": "0.83.6",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-keyboard-controller": "1.20.7",
@@ -65,6 +65,7 @@
   "dependencies": {
     "@expo-google-fonts/cinzel": "^0.4.2",
     "@shopify/react-native-skia": "~2.4.18",
+    "@workspace/monetization": "workspace:*",
     "expo": "~55.0.26",
     "expo-asset": "^56.0.17",
     "expo-audio": "~55.0.14",
@@ -74,6 +75,7 @@
     "react": "19.2.0",
     "react-native": "0.83.6",
     "react-native-game-center": "^1.2.3",
+    "react-native-google-mobile-ads": "16.5.0",
     "react-native-purchases": "^10.4.1",
     "react-native-webview": "13.16.0",
     "socket.io-client": "^4.8.3"

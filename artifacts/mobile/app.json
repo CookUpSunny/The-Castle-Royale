@@ -13,9 +13,11 @@
     },
     "ios": {
       "supportsTablet": false,
+      "requireFullScreen": false,
       "bundleIdentifier": "app.replit.thecastleroyale",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIRequiresFullScreen": false
       }
     },
     "android": {

@@ -17,6 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -326,7 +327,7 @@ export default function VictoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { clearGame, joinQueue } = useGame();
+  const { clearGame, joinQueue, gameView, resolveAdBreak, ensureLossSettlement } = useGame();
   const params = useLocalSearchParams<{ winner: string; myId: string; opponentName: string; fromGame?: string }>();
   // fromGame=1 means we arrived via the end-game curtain that already covered
   // the screen; skip the entry rain and start sweeping immediately.
@@ -334,6 +335,14 @@ export default function VictoryScreen() {
   const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
 
   const isWin = params.winner === params.myId;
+
+  useEffect(() => {
+    if (isWin || !gameView?.gameId) return;
+    const timer = setTimeout(() => {
+      void ensureLossSettlement(gameView.gameId);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [isWin, gameView?.gameId, ensureLossSettlement]);
 
   // When arriving from the game, the game's curtain already covered the screen.
   // Start hidden and fade in directly — no second card rain needed.
@@ -375,26 +384,38 @@ export default function VictoryScreen() {
 
   const CONFETTI_FADE_MS = 400;
 
-  const handlePlayAgain = () => {
+  const afterAdBreak = (next: () => void) => {
     const delay = confettiVisible ? CONFETTI_FADE_MS : 0;
     if (confettiVisible) confettiOpacity.value = withTiming(0, { duration: CONFETTI_FADE_MS });
     setTimeout(() => {
+      void (async () => {
+        await resolveAdBreak();
+        next();
+      })();
+    }, delay);
+  };
+
+  const handlePlayAgain = () => {
+    afterAdBreak(() => {
       clearGame();
       joinQueue();
       router.replace('/matchmaking');
-    }, delay);
+    });
   };
 
   const handleLobby = () => {
-    const delay = confettiVisible ? CONFETTI_FADE_MS : 0;
-    if (confettiVisible) confettiOpacity.value = withTiming(0, { duration: CONFETTI_FADE_MS });
-    setTimeout(() => {
+    afterAdBreak(() => {
       clearGame();
       router.replace('/');
-    }, delay);
+    });
   };
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const duo = useDuoWindow();
+  const verticalBook = duo.hinge === 'vertical';
+  const split = duo.mode !== 'compact';
+  const pane = verticalBook ? (duo.width - duo.creaseBand) / 2 : duo.width - duo.insets.left - duo.insets.right;
+  const crown = Math.min(240, pane * 0.62, duo.height * 0.36);
   const cinzelBold = fontsLoaded ? 'Cinzel_700Bold' : SERIF_BOLD;
   const cinzelRegular = fontsLoaded ? 'Cinzel_400Regular' : SERIF_REGULAR;
 
@@ -404,13 +425,19 @@ export default function VictoryScreen() {
       <View style={[styles.container, styles.lossContainer]}>
         <DustParticles width={width} height={height} />
         <Animated.View style={innerContentStyle}>
-          <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
-            <BackButton label="← HOME" onPress={handleLobby} />
+          <View style={[styles.inner, {
+            paddingTop: insets.top + webTopPad + 12,
+            paddingBottom: insets.bottom + 20,
+            paddingLeft: insets.left + 12,
+            paddingRight: insets.right + 12,
+            flexDirection: verticalBook ? 'row' : 'column',
+          }]}>
+            <BackButton label="← HOME" onPress={handleLobby} style={split ? { position: 'absolute', top: 4, left: 4, zIndex: 4 } : undefined} />
 
             <View style={styles.lossCenterBlock}>
               <Image
                 source={crownLossImage}
-                style={styles.crownImage}
+                style={[styles.crownImage, { width: crown, height: crown }]}
                 resizeMode="contain"
               />
               <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>YOU LOSE</Text>
@@ -419,7 +446,11 @@ export default function VictoryScreen() {
               </Text>
             </View>
 
-            <View style={styles.buttonSection}>
+            {split ? (
+              <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+            ) : null}
+
+            <View style={[styles.buttonSection, split && { flex: 1, justifyContent: 'center' }]}>
               <Pressable
                 onPress={handlePlayAgain}
                 style={({ pressed }) => [styles.lossPrimaryBtn, pressed && { opacity: 0.8 }]}
@@ -440,7 +471,7 @@ export default function VictoryScreen() {
   }
 
   // ── WIN SCREEN ──────────────────────────────────────────────────────────────
-  const imageSize = Math.min(width * 0.82, 340);
+  const imageSize = crown;
   const topPad = insets.top + webTopPad + 16;
   const bottomPad = insets.bottom + 40;
 
@@ -451,10 +482,16 @@ export default function VictoryScreen() {
           <LuxuryConfetti visible={confettiVisible} width={width} height={height} />
         </Animated.View>
 
-        <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
-          <BackButton label="← HOME" onPress={handleLobby} />
+        <View style={[styles.winInner, {
+          paddingTop: topPad,
+          paddingBottom: bottomPad,
+          paddingLeft: insets.left + 12,
+          paddingRight: insets.right + 12,
+          flexDirection: verticalBook ? 'row' : 'column',
+        }]}>
+          <BackButton label="← HOME" onPress={handleLobby} style={split ? { position: 'absolute', top: 4, left: 4, zIndex: 4 } : undefined} />
 
-          <View style={styles.winCenterBlock}>
+          <View style={[styles.winCenterBlock, { paddingTop: duo.height < 720 ? 8 : '12%' }]}>
             <View style={[{ width: imageSize, height: imageSize }, styles.winImageWrap]}>
               <Image
                 source={crownWinImage}
@@ -469,7 +506,11 @@ export default function VictoryScreen() {
             </Text>
           </View>
 
-          <View style={styles.buttonSection}>
+          {split ? (
+            <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+          ) : null}
+
+          <View style={[styles.buttonSection, split && { flex: 1, justifyContent: 'center' }]}>
             <Pressable
               onPress={handlePlayAgain}
               style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}

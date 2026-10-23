@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -56,8 +56,7 @@ interface CardSpec {
   shineDelay: number;
 }
 
-function buildSpecs(): CardSpec[] {
-  const { width: W, height: H } = Dimensions.get('window');
+function buildSpecs(W: number, H: number): CardSpec[] {
   const cols = 4;
   const rows = Math.ceil(CARD_COUNT / cols);
   const colW = W / cols;
@@ -301,7 +300,8 @@ const FloatingCard = forwardRef<CardHandle, { spec: CardSpec }>(({ spec }, ref) 
 FloatingCard.displayName = 'FloatingCard';
 
 export default function SplashCards() {
-  const specs    = useMemo(buildSpecs, []);
+  const { width, height } = useWindowDimensions();
+  const specs    = useMemo(() => buildSpecs(width, height), [width, height]);
   const cardRefs = useRef(specs.map(() => React.createRef<CardHandle>()));
 
   const goldenIndices = useMemo(

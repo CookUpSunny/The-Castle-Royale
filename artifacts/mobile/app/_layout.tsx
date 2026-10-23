@@ -9,11 +9,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useState } from 'react';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import AdBreakHost from '@/components/AdBreakHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import RevenueCatIdentity from '@/components/RevenueCatIdentity';
 import SplashGravity from '@/components/SplashGravity';
 import SplashIntro from '@/components/SplashIntro';
 import SplashStudio from '@/components/SplashStudio';
@@ -21,6 +24,7 @@ import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
 import { MusicProvider } from '@/contexts/MusicContext';
+import { initializeAds } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
 
 SplashScreen.preventAutoHideAsync();
@@ -31,13 +35,29 @@ try {
   console.warn('RevenueCat unavailable:', err instanceof Error ? err.message : err);
 }
 
+void initializeAds();
+
 const queryClient = new QueryClient();
+
+function skipIntro(): boolean {
+  if (process.env.EXPO_PUBLIC_SKIP_SPLASH === '1') return true;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return new URLSearchParams(window.location.search).has('skipSplash');
+  }
+  return false;
+}
 
 function GameProviderBridge({ children }: { children: React.ReactNode }) {
   const { profile } = useGameCenter();
+  // GameProvider stays mounted above the navigator and is not keyed on window
+  // size, so a Duo fold or resize keeps the match in context.
   return (
     <GameProvider gameCenterId={profile?.gameCenterId ?? null}>
-      {children}
+      <View style={{ flex: 1 }}>
+        <RevenueCatIdentity gameCenterId={profile?.gameCenterId ?? null} />
+        {children}
+        <AdBreakHost />
+      </View>
     </GameProvider>
   );
 }
@@ -54,6 +74,10 @@ function RootLayoutNav() {
       <Stack.Screen name="game-loading" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="game" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="victory" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="store" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="legal" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="board-preview" options={{ headerShown: false, animation: 'fade' }} />
     </Stack>
   );
 }
@@ -65,7 +89,9 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  const [splashPhase, setSplashPhase] = useState<'intro' | 'gravity' | 'studio' | 'done'>('intro');
+  const [splashPhase, setSplashPhase] = useState<'intro' | 'gravity' | 'studio' | 'done'>(
+    skipIntro() ? 'done' : 'intro',
+  );
 
   // Hide native splash immediately — our dark-grey JS intro takes over from here.
   // Do NOT wait for font loading; the intro overlay covers the screen during that time.

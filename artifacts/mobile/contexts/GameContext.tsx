@@ -1,7 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { decideInterstitial, type MatchMode, type Settlement } from '@workspace/monetization/client';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { reportLoss } from '@/lib/adsApi';
+import { readInterstitialGate, writeInterstitialShown, writeLocalLossCount, writeSettledLossCount } from '@/lib/adLossStorage';
 import { resolveApiBaseUrl } from '@/lib/apiUrl';
+import { showInterstitialAd } from '@/lib/mobileAds';
+import { clientPremiumRef } from '@/lib/revenuecat';
 
 export interface Card {
   id: string;
@@ -100,6 +105,13 @@ interface GameContextType {
   myEmoteBubble: { emote: string; key: number } | null;
   /** Floating emote bubble for the opponent. */
   opponentEmoteBubble: { emote: string; key: number } | null;
+  lastMatchMode: MatchMode;
+  pendingSettlement: Settlement | null;
+  noteSettlement: (settlement: Settlement) => void;
+  clearSettlement: () => void;
+  /** Decline a pending Second Chance, then play the interstitial if this was a 3rd loss. */
+  resolveAdBreak: () => Promise<void>;
+  ensureLossSettlement: (gameId: string) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -148,6 +160,10 @@ export function GameProvider({
   const [roomError, setRoomError] = useState<string | null>(null);
   const [myEmoteBubble, setMyEmoteBubble] = useState<{ emote: string; key: number } | null>(null);
   const [opponentEmoteBubble, setOpponentEmoteBubble] = useState<{ emote: string; key: number } | null>(null);
+  const [lastMatchMode, setLastMatchMode] = useState<MatchMode>('online');
+  const [pendingSettlement, setPendingSettlement] = useState<Settlement | null>(null);
+  const settlementRef = useRef<Settlement | null>(null);
+  const resolvingAdBreak = useRef(false);
   const emoteCounterRef = useRef(0);
   const myEmoteBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opponentEmoteBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -306,6 +322,12 @@ export function GameProvider({
       console.warn('Play error:', data.message);
     });
 
+    socket.on('match_settlement', (settlement: Settlement) => {
+      settlementRef.current = settlement;
+      setPendingSettlement(settlement);
+      void writeLocalLossCount(settlement.lossCount);
+    });
+
     socket.on('emote_received', (data: { playerId: string; emote: string; ts: number }) => {
       emoteCounterRef.current += 1;
       const key = emoteCounterRef.current;
@@ -348,8 +370,65 @@ export function GameProvider({
     await AsyncStorage.setItem('playerName', name);
   }, []);
 
+  const noteSettlement = useCallback((settlement: Settlement) => {
+    settlementRef.current = settlement;
+    setPendingSettlement(settlement);
+    void writeLocalLossCount(settlement.lossCount);
+  }, []);
+
+  const clearSettlement = useCallback(() => {
+    settlementRef.current = null;
+    setPendingSettlement(null);
+  }, []);
+
+  const resolveAdBreak = useCallback(async () => {
+    if (resolvingAdBreak.current) return;
+    const current = settlementRef.current;
+    if (!current) return;
+    resolvingAdBreak.current = true;
+    try {
+      const premium = current.isPremium || clientPremiumRef.current;
+      const gate = await readInterstitialGate();
+      const decision = current.showInterstitial
+        ? decideInterstitial({
+            isMember: premium,
+            lossCount: current.lossCount,
+            betweenCompletedMatches: true,
+            gameActive: false,
+            tournamentRoundActive: false,
+            lastShownAtMs: gate.lastShownAtMs,
+            shownInUtcDay: gate.shownInUtcDay,
+            nowMs: Date.now(),
+          })
+        : 'skip';
+      if (decision === 'defer') return;
+      if (decision === 'show') {
+        await showInterstitialAd();
+        await writeInterstitialShown();
+      }
+      await writeSettledLossCount(current.lossCount);
+      settlementRef.current = null;
+      setPendingSettlement(null);
+    } finally {
+      resolvingAdBreak.current = false;
+    }
+  }, []);
+
+  const ensureLossSettlement = useCallback(async (gameId: string) => {
+    if (!playerId || settlementRef.current?.gameId === gameId) return;
+    const settlement = await reportLoss({
+      playerId,
+      gameId,
+      gameCenterId: gameCenterIdRef.current,
+      mode: lastMatchMode,
+    }).catch(() => null);
+    if (!settlement || settlementRef.current?.gameId === gameId) return;
+    noteSettlement(settlement);
+  }, [playerId, lastMatchMode, noteSettlement]);
+
   const joinQueue = useCallback(() => {
     if (!socketRef.current || connectionStatus !== 'connected') return;
+    setLastMatchMode('online');
     socketRef.current.emit('join_queue', {
       playerId,
       playerName,
@@ -359,6 +438,7 @@ export function GameProvider({
 
   const quickPlayBot = useCallback(() => {
     if (!socketRef.current || connectionStatus !== 'connected') return;
+    setLastMatchMode('bot');
     socketRef.current.emit('start_bot_game', {
       playerId,
       playerName,
@@ -376,6 +456,7 @@ export function GameProvider({
     if (!socketRef.current || connectionStatus !== 'connected') return;
     setRoomError(null);
     setHostedRoomCode(null);
+    setLastMatchMode('private');
     socketRef.current.emit('create_room', {
       playerId,
       playerName,
@@ -391,6 +472,7 @@ export function GameProvider({
       return;
     }
     setRoomError(null);
+    setLastMatchMode('private');
     socketRef.current.emit('join_room', {
       playerId,
       playerName,
@@ -493,6 +575,12 @@ export function GameProvider({
         sendEmote,
         myEmoteBubble,
         opponentEmoteBubble,
+        lastMatchMode,
+        pendingSettlement,
+        noteSettlement,
+        clearSettlement,
+        resolveAdBreak,
+        ensureLossSettlement,
       }}
     >
       {children}

@@ -8,7 +8,7 @@ import { verifyGameCenterIdentity } from "../lib/gamecenter.js";
 const router: IRouter = Router();
 
 const BUNDLE_ID =
-  process.env["GC_BUNDLE_ID"] ?? "com.thecastleroyale.app";
+  process.env["GC_BUNDLE_ID"] ?? "app.replit.thecastleroyale";
 
 const syncBodySchema = z.object({
   gameCenterId: z.string().min(1),
