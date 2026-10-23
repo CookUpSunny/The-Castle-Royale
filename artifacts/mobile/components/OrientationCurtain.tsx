@@ -14,6 +14,7 @@ import Animated, {
 import CardComponent from '@/components/Card';
 import { CardBack } from '@/components/Card';
 import { type Card as CardType } from '@/contexts/GameContext';
+import { classifyDuoWindow } from '@/lib/duoLayout';
 
 // ── Card definitions ────────────────────────────────────────────────────────
 // 5-card column down the screen centre.
@@ -86,6 +87,7 @@ export default function OrientationCurtain({
   onComplete,
 }: OrientationCurtainProps) {
   const { width: W, height: H } = useWindowDimensions();
+  const hingeShift = classifyDuoWindow(W, H).mode === 'wide' ? -0.18 : 0;
 
   // ── Shared values ─────────────────────────────────────────────────────────
   const dimOpacity = useSharedValue(0);
@@ -185,7 +187,7 @@ export default function OrientationCurtain({
       pointerEvents="none"
     >
       {CURTAIN_CARDS.map((def, i) => {
-        const left = W * def.xFrac - CARD_W / 2;
+        const left = W * (def.xFrac + hingeShift) - CARD_W / 2;
         const top  = H * def.yFrac - CARD_H / 2;
 
         return (

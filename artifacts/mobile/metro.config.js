@@ -57,6 +57,16 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     return { type: "empty" };
   }
 
+  // Native store and ad SDKs do not bundle for web. iOS still resolves them.
+  if (
+    platform === "web" &&
+    (moduleName === "react-native-google-mobile-ads" ||
+      moduleName === "react-native-purchases" ||
+      moduleName === "react-native-game-center")
+  ) {
+    return { type: "empty" };
+  }
+
   if (originalResolveRequest) {
     return originalResolveRequest(context, moduleName, platform);
   }

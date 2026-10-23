@@ -17,6 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -409,7 +410,12 @@ export default function VictoryScreen() {
     });
   };
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const duo = useDuoWindow();
+  const verticalBook = duo.hinge === 'vertical';
+  const split = duo.mode !== 'compact';
+  const pane = verticalBook ? (duo.width - duo.creaseBand) / 2 : duo.width - duo.insets.left - duo.insets.right;
+  const crown = Math.min(240, pane * 0.62, duo.height * 0.36);
   const cinzelBold = fontsLoaded ? 'Cinzel_700Bold' : SERIF_BOLD;
   const cinzelRegular = fontsLoaded ? 'Cinzel_400Regular' : SERIF_REGULAR;
 
@@ -419,13 +425,19 @@ export default function VictoryScreen() {
       <View style={[styles.container, styles.lossContainer]}>
         <DustParticles width={width} height={height} />
         <Animated.View style={innerContentStyle}>
-          <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 40 }]}>
-            <BackButton label="← HOME" onPress={handleLobby} />
+          <View style={[styles.inner, {
+            paddingTop: insets.top + webTopPad + 12,
+            paddingBottom: insets.bottom + 20,
+            paddingLeft: insets.left + 12,
+            paddingRight: insets.right + 12,
+            flexDirection: verticalBook ? 'row' : 'column',
+          }]}>
+            <BackButton label="← HOME" onPress={handleLobby} style={split ? { position: 'absolute', top: 4, left: 4, zIndex: 4 } : undefined} />
 
             <View style={styles.lossCenterBlock}>
               <Image
                 source={crownLossImage}
-                style={styles.crownImage}
+                style={[styles.crownImage, { width: crown, height: crown }]}
                 resizeMode="contain"
               />
               <Text style={[styles.lossTitle, { fontFamily: cinzelBold }]}>YOU LOSE</Text>
@@ -434,7 +446,11 @@ export default function VictoryScreen() {
               </Text>
             </View>
 
-            <View style={styles.buttonSection}>
+            {split ? (
+              <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+            ) : null}
+
+            <View style={[styles.buttonSection, split && { flex: 1, justifyContent: 'center' }]}>
               <Pressable
                 onPress={handlePlayAgain}
                 style={({ pressed }) => [styles.lossPrimaryBtn, pressed && { opacity: 0.8 }]}
@@ -455,7 +471,7 @@ export default function VictoryScreen() {
   }
 
   // ── WIN SCREEN ──────────────────────────────────────────────────────────────
-  const imageSize = Math.min(width * 0.82, 340);
+  const imageSize = crown;
   const topPad = insets.top + webTopPad + 16;
   const bottomPad = insets.bottom + 40;
 
@@ -466,10 +482,16 @@ export default function VictoryScreen() {
           <LuxuryConfetti visible={confettiVisible} width={width} height={height} />
         </Animated.View>
 
-        <View style={[styles.winInner, { paddingTop: topPad, paddingBottom: bottomPad }]}>
-          <BackButton label="← HOME" onPress={handleLobby} />
+        <View style={[styles.winInner, {
+          paddingTop: topPad,
+          paddingBottom: bottomPad,
+          paddingLeft: insets.left + 12,
+          paddingRight: insets.right + 12,
+          flexDirection: verticalBook ? 'row' : 'column',
+        }]}>
+          <BackButton label="← HOME" onPress={handleLobby} style={split ? { position: 'absolute', top: 4, left: 4, zIndex: 4 } : undefined} />
 
-          <View style={styles.winCenterBlock}>
+          <View style={[styles.winCenterBlock, { paddingTop: duo.height < 720 ? 8 : '12%' }]}>
             <View style={[{ width: imageSize, height: imageSize }, styles.winImageWrap]}>
               <Image
                 source={crownWinImage}
@@ -484,7 +506,11 @@ export default function VictoryScreen() {
             </Text>
           </View>
 
-          <View style={styles.buttonSection}>
+          {split ? (
+            <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+          ) : null}
+
+          <View style={[styles.buttonSection, split && { flex: 1, justifyContent: 'center' }]}>
             <Pressable
               onPress={handlePlayAgain}
               style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}

@@ -20,6 +20,7 @@ import { useSubscription } from '@/lib/revenuecat';
 import ArenaBackground from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 import PaywallModal from '@/components/PaywallModal';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
 
 
 const OUTLINE_OFFSETS: [number, number][] = [
@@ -107,12 +108,16 @@ export default function ArenaPickerScreen() {
     }
   };
 
-  const maxContentWidth = Math.min(width - 32, 460);
-  const arenaCardWidth = Math.min(width * 0.88, 420);
-  const avatarCardWidth = arenaCardWidth;
+  const duo = useDuoWindow();
+  const book = duo.mode === 'wide';
+  const shortFold = duo.mode === 'compact' && duo.height < 700;
+  const paneWidth = book ? (width - duo.creaseBand) / 2 : width - insets.left - insets.right;
+  const maxContentWidth = Math.min(paneWidth - 32, 460);
+  const arenaCardWidth = Math.min(paneWidth * 0.9, 420);
+  const avatarCardWidth = Math.min(arenaCardWidth, book ? 280 : 420);
   const avatarSnapInterval = avatarCardWidth + 14;
-  const avatarCarouselPad = (width - avatarCardWidth) / 2;
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const avatarCarouselPad = Math.max(12, (paneWidth - avatarCardWidth) / 2);
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
 
   const selectedAvatarData = AVATARS.find((a) => a.id === selectedAvatar);
 
@@ -123,7 +128,9 @@ export default function ArenaPickerScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={[styles.header, { paddingTop: insets.top + webTopPad + 8 }]}>
+      <View style={{ flex: 1, flexDirection: book ? 'row' : 'column', minHeight: 0 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
+      <View style={[styles.header, { paddingTop: insets.top + webTopPad + 8, paddingLeft: insets.left + 16, paddingRight: 16 }]}>
         <BackButton label="← BACK" onPress={() => router.back()} labelStyle={styles.backLabelShadow} />
         <Text style={[styles.title, { color: colors.foreground, textShadowColor: '#000000', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 2 }]}>YOUR LOADOUT</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground, textShadowColor: '#000000', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 2 }]}>
@@ -132,9 +139,10 @@ export default function ArenaPickerScreen() {
       </View>
 
       <ScrollView
+        style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 112 },
+          { paddingBottom: insets.bottom + 24 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -146,7 +154,7 @@ export default function ArenaPickerScreen() {
         </View>
 
         {/* Full-width snap carousel */}
-        <View style={{ width }}>
+        <View style={{ width: paneWidth }}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -168,6 +176,7 @@ export default function ArenaPickerScreen() {
                     styles.avatarCard,
                     {
                       width: avatarCardWidth,
+                      height: shortFold ? 168 : 240,
                       borderColor: isSelected ? av.color : 'rgba(255,255,255,0.10)',
                       borderWidth: isSelected ? 2.5 : 1,
                       shadowColor: av.color,
@@ -252,6 +261,7 @@ export default function ArenaPickerScreen() {
                 styles.arenaCard,
                 {
                   width: arenaCardWidth,
+                  height: shortFold ? 148 : 200,
                   borderColor: isSelected ? '#ffd700' : 'rgba(255,255,255,0.10)',
                   borderWidth: isSelected ? 2.5 : 1,
                   opacity: isLocked ? 0.62 : pressed ? 0.88 : 1,
@@ -294,8 +304,11 @@ export default function ArenaPickerScreen() {
           );
         })}
       </ScrollView>
+      </View>
 
-      <View style={[styles.confirmBar, { paddingBottom: insets.bottom + 18 }]}>
+      {book ? <View pointerEvents="none" style={{ width: duo.creaseBand }} /> : null}
+
+      <View style={[book ? styles.confirmSide : styles.confirmBar, { paddingBottom: insets.bottom + 18, paddingLeft: book ? 24 : insets.left + 24, paddingRight: insets.right + 24 }]}>
         <Pressable
           onPress={handleConfirm}
           disabled={connectionStatus !== 'connected'}
@@ -321,6 +334,12 @@ export default function ArenaPickerScreen() {
             </Text>
           </LinearGradient>
         </Pressable>
+        {book ? (
+          <Text style={[styles.subtitle, { color: colors.mutedForeground, marginTop: 16 }]}>
+            Play stays free. Memberships are cosmetic.
+          </Text>
+        ) : null}
+      </View>
       </View>
 
       <PaywallModal
@@ -457,11 +476,12 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 2,
   },
+  confirmSide: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: 24,
+  },
   confirmBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 24,
     paddingTop: 14,
     backgroundColor: 'rgba(7,0,15,0.94)',

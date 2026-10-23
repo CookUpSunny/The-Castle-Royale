@@ -373,11 +373,11 @@ function FaceDownCard() {
   );
 }
 
-export default function RulebookContent({ bottomInset = 0 }: { bottomInset?: number }) {
+export default function RulebookContent({ bottomInset = 0, topInset = 0 }: { bottomInset?: number; topInset?: number }) {
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={[s.page, { paddingBottom: 80 + bottomInset }]}
+      contentContainerStyle={[s.page, { paddingBottom: 80 + bottomInset, paddingTop: 24 + topInset }]}
       showsVerticalScrollIndicator={false}
       showsHorizontalScrollIndicator={false}
     >

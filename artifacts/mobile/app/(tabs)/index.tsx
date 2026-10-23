@@ -8,9 +8,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TextStyle,
   View,
   Platform,
+  type StyleProp,
+  type TextStyle,
 } from 'react-native';
 import Animated, {
   runOnJS,
@@ -26,6 +27,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useGameCenter } from '@/contexts/GameCenterContext';
 import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import SplashCards from '@/components/SplashCards';
 
@@ -43,7 +45,7 @@ function OutlinedTitle({
   glowColor,
 }: {
   text: string;
-  textStyle: TextStyle;
+  textStyle: StyleProp<TextStyle>;
   mainColor: string;
   glowColor: string;
 }) {
@@ -190,7 +192,19 @@ export default function LobbyScreen() {
     setEditingName(false);
   };
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const duo = useDuoWindow();
+  const verticalBook = duo.hinge === 'vertical';
+  const split = duo.mode !== 'compact';
+  const shortFold = duo.mode === 'compact' && duo.height < 700;
+  const paneWidth = verticalBook
+    ? (duo.width - duo.creaseBand) / 2 - 20
+    : duo.width - insets.left - insets.right - 32;
+  const titleSize = shortFold
+    ? Math.min(34, Math.max(26, Math.floor(paneWidth / 10)))
+    : Math.min(64, Math.max(32, Math.floor(paneWidth / 6.8)));
+  const royaleSize = Math.round(titleSize * 0.82);
+  const titleSpacing = Math.min(8, titleSize * 0.08);
 
   const displayCoins = profile?.coins ?? null;
   const displayElo = profile?.elo ?? null;
@@ -204,33 +218,48 @@ export default function LobbyScreen() {
 
       <SplashCards />
 
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 20, paddingBottom: insets.bottom + 74 }]}>
+      <View style={[styles.inner, {
+        paddingTop: insets.top + webTopPad + (shortFold ? 4 : split ? 8 : 12),
+        paddingBottom: insets.bottom + (shortFold ? 8 : 16),
+        paddingLeft: insets.left + 16,
+        paddingRight: insets.right + 16,
+        flexDirection: verticalBook ? 'row' : 'column',
+        alignItems: verticalBook ? 'stretch' : 'center',
+        minHeight: 0,
+      }]}>
 
-        <View style={styles.topGroup}>
-          <Animated.View style={[styles.logoSection, logoStyle]}>
-            <Text style={styles.logoCrown}>♛</Text>
-            <Text style={styles.logoThe}>THE</Text>
+        <View style={[styles.topGroup, split && { justifyContent: 'center', paddingBottom: 0 }, shortFold && { flex: 0, paddingBottom: 0, justifyContent: 'center' }]}>
+          <Animated.View style={[styles.logoSection, shortFold && { marginTop: 0 }, logoStyle]}>
+            <Text style={[styles.logoCrown, shortFold && { fontSize: 20, marginBottom: 0 }]}>♛</Text>
+            <Text style={[styles.logoThe, shortFold && { fontSize: 14, letterSpacing: 4 }]}>THE</Text>
             <OutlinedTitle
               text="CASTLE"
-              textStyle={styles.logoTitle}
+              textStyle={[styles.logoTitle, { fontSize: titleSize, lineHeight: titleSize + 4, letterSpacing: titleSpacing }]}
               mainColor="#ffd700"
               glowColor="#c8960a"
             />
             <OutlinedTitle
               text="ROYALE"
-              textStyle={styles.logoRoyale}
+              textStyle={[styles.logoRoyale, { fontSize: royaleSize, lineHeight: royaleSize + 4, letterSpacing: titleSpacing }]}
               mainColor="#a855f7"
               glowColor="#a855f7"
             />
-            <Text style={[styles.logoTagline, { color: colors.mutedForeground }]}>RISK IT ALL · WIN IT ALL</Text>
+            <Text style={[styles.logoTagline, { color: colors.mutedForeground }, shortFold && { marginTop: 2, fontSize: 10 }]}>RISK IT ALL · WIN IT ALL</Text>
           </Animated.View>
 
         </View>
 
-        <View style={styles.bottomGroup}>
-          <View style={styles.nameSection}>
+        {split ? (
+          <View
+            pointerEvents="none"
+            style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }}
+          />
+        ) : null}
+
+        <View style={[styles.bottomGroup, split && { justifyContent: 'center' }, shortFold && { gap: 6 }]}>
+          <View style={[styles.nameSection, shortFold && { marginTop: 0 }]}>
             {avatarPortrait && (
-              <View style={styles.lobbyAvatar}>
+              <View style={[styles.lobbyAvatar, shortFold && { width: 48, height: 48, borderRadius: 24, marginBottom: -6 }]}>
                 <Image
                   source={avatarPortrait}
                   style={StyleSheet.absoluteFill}
@@ -285,7 +314,7 @@ export default function LobbyScreen() {
                     ? ['#f5e070', '#d4a820', '#f5e070']
                     : ['#3a3020', '#1e1a0a', '#3a3020']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={styles.goldPill}
+                  style={[styles.goldPill, shortFold && { height: 46 }]}
                 >
                   <Text style={[styles.goldPillText, connectionStatus !== 'connected' && { color: '#5a5030' }]}>
                     {connectionStatus === 'connected' ? 'TAP TO PLAY' : 'CONNECTING...'}
@@ -294,7 +323,7 @@ export default function LobbyScreen() {
               </Pressable>
             </Animated.View>
 
-            <View style={[styles.goldPillOuter, styles.goldPillSmall, styles.morphPillOuter]}>
+            <View style={[styles.goldPillOuter, styles.goldPillSmall, styles.morphPillOuter, shortFold && { height: 40 }]}>
               <Pressable
                 onPress={() => router.push('/how-to-play')}
                 style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.88 }]}
@@ -312,6 +341,15 @@ export default function LobbyScreen() {
               </Pressable>
             </View>
 
+          </View>
+
+          <View style={styles.storeRow}>
+            <Pressable onPress={() => router.push('/store')} style={styles.storeBtn}>
+              <Text style={styles.storeBtnText}>Store</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/settings')} style={styles.storeBtn}>
+              <Text style={styles.storeBtnText}>Settings</Text>
+            </Pressable>
           </View>
 
           <View style={styles.statsRow}>
@@ -418,16 +456,29 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 24,
   },
+  storeRow: { flexDirection: 'row', gap: 10, width: '100%' },
+  storeBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#d4a820',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(6,40,31,0.55)',
+  },
+  storeBtnText: { color: '#f0d78c', fontSize: 15, fontWeight: '800' },
   topGroup: {
     flex: 1,
+    minHeight: 0,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 56,
   },
   bottomGroup: {
     flex: 1,
+    minHeight: 0,
     alignItems: 'center',
     justifyContent: 'flex-start',
     gap: 14,

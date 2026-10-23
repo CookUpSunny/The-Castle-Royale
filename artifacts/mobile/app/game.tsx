@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   Platform,
   Pressable,
   StyleSheet,
@@ -46,8 +45,7 @@ import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
-
-const { height: SCREEN_H } = Dimensions.get('window');
+import { classifyDuoWindow } from '@/lib/duoLayout';
 
 function canPlayCard(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -401,7 +399,9 @@ export default function GameScreen() {
   const endGameParamsRef = useRef<{ winner: string; myId: string; opponentName: string } | null>(null);
 
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const duo = classifyDuoWindow(width, height);
+  const tallBook = duo.mode === 'tall';
 
   useEffect(() => {
     // When landscape is active, <GameLandscape /> owns these side effects.
@@ -533,8 +533,14 @@ export default function GameScreen() {
       ) : (
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
           <SceneBackground />
-          <View style={[styles.gameLayout, { paddingTop: insets.top + webTopPad + 6, paddingBottom: insets.bottom || 12 }]}>
+          <View style={[styles.gameLayout, {
+            paddingTop: insets.top + webTopPad + 6,
+            paddingBottom: insets.bottom || 12,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          }]}>
 
+            <View style={tallBook ? { flex: 1 } : undefined}>
             <View style={styles.topNavRow}>
               <BackButton label="← EXIT" onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })} />
             </View>
@@ -550,7 +556,11 @@ export default function GameScreen() {
             >
               <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
             </View>
+            </View>
 
+            {tallBook ? <View pointerEvents="none" style={{ height: duo.creaseBand }} /> : null}
+
+            <View style={tallBook ? { flex: 1, justifyContent: 'space-between' } : undefined}>
             <Pressable style={styles.tableCenter} onPress={() => playerHandRef.current?.clearSelection()}>
               <View style={styles.pileRow}>
                 <View style={{ flex: 1 }} />
@@ -604,11 +614,12 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
-                availableWidth={Math.round(width * 0.88)}
+                availableWidth={Math.round((width - insets.left - insets.right) * (tallBook ? 0.96 : 0.88))}
               />
             </View>
 
             <EmotePicker onSend={sendEmote} />
+            </View>
           </View>
 
           {/* ── Floating HUD chips ──────────────────────────────────────────
@@ -616,7 +627,7 @@ export default function GameScreen() {
               in the flex column. Opponent anchors top-right; player bottom-left. */}
 
           {/* Opponent avatar chip — top-right corner, below the EXIT button row */}
-          <View pointerEvents="box-none" style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: 10 }]}>
+          <View pointerEvents="box-none" style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: insets.right + 10 }]}>
             <AvatarChip
               name={opponentName}
               isActive={!isMyTurn}
@@ -627,7 +638,7 @@ export default function GameScreen() {
           {/* Player avatar chip — left side, above the action buttons area.
               Hidden during the blind-flip phase so it doesn't overlap the face-down glow rings. */}
           {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
-            <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 148, left: 10 }]}>
+            <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 148, left: insets.left + 10 }]}>
               <AvatarChip
                 name={playerName}
                 isActive={isMyTurn}

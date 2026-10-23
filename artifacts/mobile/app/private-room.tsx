@@ -23,6 +23,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { PortalSpinner } from '@/components/PortalSpinner';
 import BackButton from '@/components/BackButton';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
 
 type Mode = 'menu' | 'host' | 'join';
 
@@ -154,13 +155,17 @@ export default function PrivateRoomScreen() {
     joinRoom(cleaned);
   };
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const duo = useDuoWindow();
+  const verticalBook = duo.hinge === 'vertical';
+  const split = duo.mode !== 'compact';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient colors={['#200040', '#0a0018', '#07000f']} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 28, paddingBottom: insets.bottom + 28 }]}>
+      <View style={{ flex: 1, flexDirection: verticalBook ? 'row' : 'column' }}>
+      <View style={[styles.inner, { flex: 1, paddingTop: insets.top + webTopPad + 16, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 8, paddingRight: insets.right + 8 }]}>
         <View style={styles.headerRow}>
           <BackButton label="← HOME" onPress={() => { goBackToMenu(); router.replace('/'); }} />
           <View style={{ flex: 1 }} />
@@ -313,13 +318,25 @@ export default function PrivateRoomScreen() {
           </View>
         )}
       </View>
+      {split ? (
+        <>
+          <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 28, gap: 10 }}>
+            <Text style={[styles.title, { color: colors.neonGold, fontSize: 28 }]}>Invite A Friend</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              Private rooms are free. Share a six-character code.
+            </Text>
+          </View>
+        </>
+      ) : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, alignItems: 'center', paddingHorizontal: 24 },
+  inner: { flex: 1, alignItems: 'center' },
   headerRow: { width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   title: { fontSize: 36, fontWeight: '900', letterSpacing: 8, marginTop: 8 },
   titleSub: { fontSize: 18, fontWeight: '700', letterSpacing: 6, marginTop: -4, marginBottom: 24 },
