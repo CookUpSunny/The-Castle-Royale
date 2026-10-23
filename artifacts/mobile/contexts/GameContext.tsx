@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { decideInterstitial, type MatchMode, type Settlement } from '@workspace/monetization';
+import { decideInterstitial, type MatchMode, type Settlement } from '@workspace/monetization/client';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { reportLoss } from '@/lib/adsApi';

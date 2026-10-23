@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { mergeLossCounts } from '@workspace/monetization';
+import { mergeLossCounts } from '@workspace/monetization/client';
 
 const LOSS_KEY = 'adLossCount';
 const SETTLED_KEY = 'adInterstitialSettledThrough';

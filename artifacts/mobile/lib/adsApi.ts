@@ -1,4 +1,4 @@
-import type { MatchMode, Settlement } from '@workspace/monetization';
+import type { MatchMode, Settlement } from '@workspace/monetization/client';
 import { resolveRestApiUrl } from '@/lib/apiUrl';
 
 async function parseJson<T>(res: Response): Promise<T | null> {

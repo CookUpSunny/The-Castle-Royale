@@ -40,6 +40,9 @@ artifacts/mobile/ios/
 artifacts/mobile/android/
 
 # --- vcs + large media not needed to build the app ---
+# eas-cli deletes .git only when the ignore rule matches the path ".git"
+# (a trailing slash does not). A depth-1 clone otherwise uploads every blob.
+.git
 .git/
 attached_assets/
 artifacts/api-server/

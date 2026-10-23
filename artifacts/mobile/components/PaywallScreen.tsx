@@ -14,7 +14,7 @@ import {
   paywallRole,
   paywallSortRank,
   type PaywallRole,
-} from "@workspace/monetization";
+} from "@workspace/monetization/client";
 import DuoSplit from "@/components/DuoSplit";
 import LegalCopy, { type LegalDoc } from "@/components/LegalCopy";
 import { useDuoWindow } from "@/hooks/useDuoWindow";

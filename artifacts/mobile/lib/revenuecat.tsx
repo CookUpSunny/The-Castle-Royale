@@ -3,7 +3,7 @@ import React, { createContext, useContext } from 'react';
 import { Platform } from 'react-native';
 import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { selectRevenueCatApiKey, type RevenueCatPlatform } from '@workspace/monetization';
+import { selectRevenueCatApiKey, type RevenueCatPlatform } from '@workspace/monetization/client';
 
 /**
  * RevenueCat client library — see the `revenuecat` skill for background.
