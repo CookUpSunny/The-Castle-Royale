@@ -36,6 +36,7 @@ import GlowPile from '@/components/GlowPile';
 import PlayerHand from '@/components/PlayerHand';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
+import { classifyDuoWindow } from '@/lib/duoLayout';
 
 function canPlayCard(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -281,7 +282,7 @@ export default function GameLandscape(): React.JSX.Element | null {
     [cosmetics.avatarId],
   );
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
 
   useEffect(() => {
     if (!gameView) router.replace('/');
@@ -461,6 +462,11 @@ export default function GameLandscape(): React.JSX.Element | null {
   // Left column holds only action buttons now (name plates moved to absolute corners).
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
   const drawColW = 100;
+  const duo = classifyDuoWindow(width, height);
+  const book = duo.mode === 'wide';
+  const handWidth = book
+    ? Math.max(200, Math.floor((width - duo.creaseBand - insets.left - insets.right - 16) / 2))
+    : Math.max(180, width - sideColW - drawColW - 32);
 
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -500,10 +506,16 @@ export default function GameLandscape(): React.JSX.Element | null {
       <View
         style={[
           styles.layout,
-          { paddingTop: insets.top + webTopPad + 4, paddingBottom: insets.bottom + 4, paddingHorizontal: 8 },
+          {
+            paddingTop: insets.top + webTopPad + 4,
+            paddingBottom: insets.bottom + 4,
+            paddingLeft: Math.max(8, insets.left),
+            paddingRight: Math.max(8, insets.right),
+          },
         ]}
       >
-        {/* LEFT COLUMN — action buttons only (name plates are now corner overlays) */}
+        {/* Phone landscape keeps actions on the left. Unfolded Duo moves them off the crease. */}
+        {!book && (
         <View style={[styles.leftColumn, { width: sideColW }]}>
           <View style={styles.actionStackInline}>
             {/* Action buttons hide during STARTER mode — tap a hand card directly. */}
@@ -518,9 +530,10 @@ export default function GameLandscape(): React.JSX.Element | null {
             )}
           </View>
         </View>
+        )}
 
         {/* CENTER COLUMN — opponent (top) → pile (mid) → player hand (bottom) */}
-        <View style={styles.centerColumn}>
+        <View style={[styles.centerColumn, book ? { width: handWidth, flex: 0 } : null]}>
           <View
             ref={opponentZoneRefLs}
             style={styles.opponentTopRow}
@@ -576,12 +589,24 @@ export default function GameLandscape(): React.JSX.Element | null {
               onDragStart={handleDragStart}
               onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
+              availableWidth={handWidth}
             />
           </View>
         </View>
 
-        {/* RIGHT COLUMN — draw pile (no hero art) */}
-        <View style={[styles.drawPileColumn, { width: drawColW }]}>
+        {book ? <View pointerEvents="none" style={{ width: duo.creaseBand }} /> : null}
+
+        {/* RIGHT COLUMN — draw pile. On Duo this pane also holds the action buttons. */}
+        <View style={[styles.drawPileColumn, book ? { flex: 1, justifyContent: 'space-evenly' } : { width: drawColW }]}>
+          {book && !gameView.mustPlayStarter && (
+            <ActionButtons
+              canPickup={discardPile.length > 0}
+              hasBurn={hasBurn}
+              isMyTurn={isMyTurn}
+              onPickup={doPickup}
+              onPlayBurn={handlePlayBurn}
+            />
+          )}
           <DrawPileStack ref={drawPileRef} count={deckCount} />
         </View>
       </View>

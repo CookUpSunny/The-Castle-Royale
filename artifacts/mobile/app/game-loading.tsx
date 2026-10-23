@@ -14,6 +14,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
+import { useDuoWindow } from '@/hooks/useDuoWindow';
 
 const LOADING_MS = 2500;
 const MAX_WAIT_MS = 8000;
@@ -149,15 +150,23 @@ export default function GameLoadingScreen() {
   }, [animationDone, gameView]);
 
   const captionStyle = useAnimatedStyle(() => ({ opacity: captionOpacity.value }));
+  const duo = useDuoWindow();
+  const split = duo.mode !== 'compact';
+  const verticalBook = duo.hinge === 'vertical';
+  const caption = (
+    <Animated.Text style={[styles.caption, { color: colors.neonGold }, captionStyle]}>
+      ENTERING THE ARENA...
+    </Animated.Text>
+  );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, flexDirection: verticalBook ? 'row' : 'column' }]}>
       <LinearGradient
         colors={['#200040', '#0a0018', '#07000f']}
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.cardField}>
+      <View style={[styles.cardField, { flex: split ? 1 : undefined, width: split ? undefined : '100%' }]}>
         <FloatingCard
           glyph={SUITS[0].glyph}
           color={SUITS[0].color}
@@ -205,9 +214,10 @@ export default function GameLoadingScreen() {
         />
       </View>
 
-      <Animated.Text style={[styles.caption, { color: colors.neonGold }, captionStyle]}>
-        ENTERING THE ARENA...
-      </Animated.Text>
+      {split ? (
+        <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+      ) : null}
+      {split ? <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>{caption}</View> : caption}
     </View>
   );
 }

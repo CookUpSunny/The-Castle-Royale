@@ -52,6 +52,10 @@ export {
   UNASSIGNED_NON_CONSUMABLE_PRODUCT_IDS,
   isPremiumSubscriptionProduct,
   isUnassignedNonConsumable,
+  membershipPriceLine,
+  paywallRole,
+  paywallSortRank,
   premiumPaywallRank,
   storeProductId,
 } from "./storeProducts";
+export type { PaywallRole } from "./storeProducts";

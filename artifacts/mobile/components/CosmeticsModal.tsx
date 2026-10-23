@@ -17,6 +17,8 @@ import {
 } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
 import { useSubscription } from '@/lib/revenuecat';
+import { membershipPriceLine, paywallRole } from '@workspace/monetization';
+import DuoSplit from '@/components/DuoSplit';
 
 
 interface CosmeticsModalProps {
@@ -33,7 +35,13 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { cardSkin, arena, setCardSkin, setArena } = useCosmetics();
-  const { isSubscribed } = useSubscription();
+  const { isSubscribed, offerings } = useSubscription();
+  const priceNote = membershipPriceLine(
+    (offerings?.current?.availablePackages ?? []).map((pkg) => ({
+      role: paywallRole(pkg.product.identifier),
+      priceString: pkg.product.priceString,
+    })),
+  );
   const [tab, setTab] = useState<'arenas' | 'cards'>('arenas');
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [paywallFeature, setPaywallFeature] = useState<string | undefined>(undefined);
@@ -63,7 +71,7 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="overFullScreen" transparent>
-      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]}>
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <ArenaBackground arenaOverride="cosmic" />
         </View>
@@ -83,7 +91,9 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
           <TabButton label="CARDS" active={tab === 'cards'} onPress={() => setTab('cards')} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
+        <DuoSplit
+          primary={
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
           {tab === 'arenas' &&
             ARENAS.map((a: Arena) => (
               <CosmeticRow
@@ -112,10 +122,14 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
               />
             ))}
 
-          <Text style={[styles.footnote, { color: colors.mutedForeground }]}>
-            👑 Premium arenas and card skins unlock with Castle Royale Premium — $4.99/month.
-          </Text>
         </ScrollView>
+          }
+          secondary={
+            <View style={styles.pricePane}>
+              <Text style={[styles.footnote, { color: colors.foreground }]}>{priceNote}</Text>
+            </View>
+          }
+        />
       </View>
 
       <PaywallModal
@@ -386,6 +400,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: 'italic',
   },
+  pricePane: { flex: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   footnote: {
     fontSize: 10,
     fontStyle: 'italic',

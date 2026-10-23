@@ -6,6 +6,11 @@ import {
   decideInterstitial,
   mergeLossCounts,
   reconcileLossCount,
+  isPremiumSubscriptionProduct,
+  isUnassignedNonConsumable,
+  membershipPriceLine,
+  paywallRole,
+  paywallSortRank,
   selectRevenueCatApiKey,
   shouldShowInterstitial,
 } from "./index";
@@ -471,4 +476,23 @@ test("the non-SSV fallback grants one tournament offer and stops once SSV is on"
   );
   assert.equal(refused.reason, "expired");
   assert.equal(refused.settlement?.secondChance.granted, false);
+});
+
+test("paywall shows memberships and Beginner's Luck without inventing a price", () => {
+  assert.equal(paywallRole("vip_year"), "vip_year");
+  assert.equal(paywallRole("monthly_high_roller"), "high_roller");
+  assert.equal(paywallRole("beginner_luck"), "beginner_luck");
+  assert.equal(paywallRole("004"), "hidden");
+  assert.equal(paywallSortRank("vip_year") < paywallSortRank("high_roller"), true);
+  assert.equal(isPremiumSubscriptionProduct("beginner_luck"), false);
+  assert.equal(isUnassignedNonConsumable("beginner_luck"), true);
+  const priced = membershipPriceLine([
+    { role: "high_roller", priceString: "USD 6.99" },
+    { role: "vip_year", priceString: "USD 59.99" },
+  ]);
+  assert.match(priced, /USD 6\.99/);
+  assert.match(priced, /USD 59\.99/);
+  const empty = membershipPriceLine([]);
+  assert.match(empty, /App Store/);
+  assert.equal(/\d/.test(empty), false);
 });

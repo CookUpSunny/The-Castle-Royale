@@ -2,7 +2,7 @@ const appJson = require("./app.json");
 
 /**
  * Live AdMob iOS app (publisher pub-2426597243989008), linked to App Store ID 6772010192.
- * This App ID is public. Ad units do not exist yet, so those stay on Google's test IDs.
+ * This App ID is public. Ad unit selection lives in lib/adUnitIds.ts.
  */
 const ADMOB_IOS_APP_ID = "ca-app-pub-2426597243989008~4741781660";
 const GOOGLE_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import CardComponent, { CardBack } from './Card';
+import { classifyDuoWindow } from '@/lib/duoLayout';
 
 const FAN_R = 200;
 const FAN_HALF_DEG = 40;
@@ -130,10 +131,15 @@ export default function SetupScreen() {
     confirmSetup();
   };
 
-  const { width: screenWidth } = useWindowDimensions();
-  const containerWidth = screenWidth - 32;
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const duo = classifyDuoWindow(screenWidth, screenHeight);
+  const split = duo.mode !== 'compact';
+  const verticalBook = duo.hinge === 'vertical';
+  const paneWidth = verticalBook ? (screenWidth - duo.creaseBand) / 2 : screenWidth;
+  const containerWidth = Math.max(220, paneWidth - insets.left - insets.right - 32);
+  const fanR = Math.min(FAN_R, containerWidth / 2 - 40);
 
-  const webTopPad = Platform.OS === 'web' ? 67 : 0;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -142,7 +148,8 @@ export default function SetupScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={[styles.inner, { paddingTop: insets.top + webTopPad + 24, paddingBottom: insets.bottom + 24 }]}>
+      <View style={{ flex: 1, flexDirection: verticalBook ? 'row' : 'column' }}>
+      <View style={[styles.inner, { flex: 1, paddingTop: insets.top + webTopPad + 12, paddingBottom: insets.bottom + 12, paddingLeft: insets.left + 8, paddingRight: insets.right + 8 }]}>
 
         <View style={[styles.opponentBanner, { borderColor: colors.border, backgroundColor: '#1a0535' }]}>
           <View style={[styles.statusDot, { backgroundColor: opponentReady ? '#22c55e' : colors.neonPurple }]} />
@@ -182,8 +189,8 @@ export default function SetupScreen() {
             const n = allDealt.length;
             const angleDeg = n <= 1 ? 0 : -FAN_HALF_DEG + (2 * FAN_HALF_DEG / (n - 1)) * i;
             const angleRad = (angleDeg * Math.PI) / 180;
-            const left = containerWidth / 2 + FAN_R * Math.sin(angleRad) - SLOT_W / 2;
-            const top = FAN_H / 2 + FAN_R * (1 - Math.cos(angleRad)) - SLOT_H / 2;
+            const left = containerWidth / 2 + fanR * Math.sin(angleRad) - SLOT_W / 2;
+            const top = FAN_H / 2 + fanR * (1 - Math.cos(angleRad)) - SLOT_H / 2;
             return (
               <View
                 key={card.id}
@@ -232,6 +239,18 @@ export default function SetupScreen() {
             </Pressable>
           )}
         </View>
+      </View>
+      {split ? (
+        <>
+          <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24, gap: 8 }}>
+            <Text style={[styles.title, { color: colors.neonGold, fontSize: 26 }]}>Three Face-Up Cards</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              Every player uses the same rules.
+            </Text>
+          </View>
+        </>
+      ) : null}
       </View>
     </View>
   );
