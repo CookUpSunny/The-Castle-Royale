@@ -17,7 +17,7 @@ import {
 } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
 import { useSubscription } from '@/lib/revenuecat';
-import { membershipPriceLine, paywallRole } from '@workspace/monetization';
+import { membershipPriceLine, paywallRole } from '@workspace/monetization/client';
 import DuoSplit from '@/components/DuoSplit';
 
 
