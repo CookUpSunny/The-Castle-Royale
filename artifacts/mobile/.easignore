@@ -1,5 +1,6 @@
-# EAS project-level ignore file — must live next to eas.json (artifacts/mobile/).
-# EAS reads THIS file, not the workspace-root .easignore, when deciding what to upload.
+# Project-directory ignore. eas-cli archives from the git root and applies the
+# root .easignore (see eas-cli GitClient.getRootPathAsync). This file still
+# excludes a native project if a tool copies only artifacts/mobile.
 
 # Locally-generated native projects.
 # ios/ and android/ are created by `expo prebuild` on the developer's machine and
