@@ -254,6 +254,9 @@ importers:
       thread-stream:
         specifier: 3.1.0
         version: 3.1.0
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   artifacts/mobile:
     dependencies:
@@ -429,6 +432,9 @@ importers:
       react-native-worklets:
         specifier: 0.7.4
         version: 0.7.4(@babel/core@7.29.0)(react-native@0.83.10(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
       typescript:
         specifier: ~5.9.2
         version: 5.9.3
@@ -2503,6 +2509,8 @@ packages:
   '@react-native/babel-preset@0.83.10':
     resolution: {integrity: sha512-wTZWvs5cUQqr2qBAoJNKUy6IBH7wqPAJdxTC834S/7vBqtXypYHxDAFzYXkIh8pRTC86IBYxyc2IrBYHnB8O2g==}
     engines: {node: '>= 20.19.4'}
+    peerDependencies:
+      '@babel/core': '*'
 
   '@react-native/babel-preset@0.83.6':
     resolution: {integrity: sha512-4/fXFDUvGOObETZq4+SUFkafld6OGgQWut5cQiqVghlhCB5z/p2lVhPgEUr/aTxTzeS3AmN+ztC+GpYPQ7tsTw==}
@@ -9899,7 +9907,7 @@ snapshots:
       - '@babel/core'
       - supports-color
 
-  '@react-native/babel-preset@0.83.10':
+  '@react-native/babel-preset@0.83.10(@babel/core@7.29.0)':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-proposal-export-default-from': 7.27.1(@babel/core@7.29.0)
@@ -10847,7 +10855,7 @@ snapshots:
       '@babel/plugin-transform-runtime': 7.29.0(@babel/core@7.29.0)
       '@babel/preset-react': 7.28.5(@babel/core@7.29.0)
       '@babel/preset-typescript': 7.28.5(@babel/core@7.29.0)
-      '@react-native/babel-preset': 0.83.10
+      '@react-native/babel-preset': 0.83.10(@babel/core@7.29.0)
       babel-plugin-react-compiler: 1.0.0
       babel-plugin-react-native-web: 0.21.2
       babel-plugin-syntax-hermes-parser: 0.32.1
