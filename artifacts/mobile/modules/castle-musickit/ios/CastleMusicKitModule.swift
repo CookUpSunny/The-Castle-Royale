@@ -90,6 +90,25 @@ final class CatalogPlayer {
     }
   }
 
+  /// Next queue entry. A one-song loop restarts that song when skip has nowhere to go.
+  func skip() async -> Bool {
+    guard shouldKeepPlaying || userPaused else { return false }
+    userPaused = false
+    let player = ApplicationMusicPlayer.shared
+    do {
+      try await player.skipToNextEntry()
+      return true
+    } catch {
+      player.playbackTime = 0
+      do {
+        try await player.play()
+        return true
+      } catch {
+        return false
+      }
+    }
+  }
+
   func stop() {
     generation += 1
     shouldKeepPlaying = false
@@ -207,6 +226,13 @@ public class CastleMusicKitModule: Module {
     AsyncFunction("resume") { (promise: Promise) in
       Task { @MainActor in
         let ok = await CatalogPlayer.shared.resume()
+        promise.resolve(ok)
+      }
+    }
+
+    AsyncFunction("skip") { (promise: Promise) in
+      Task { @MainActor in
+        let ok = await CatalogPlayer.shared.skip()
         promise.resolve(ok)
       }
     }

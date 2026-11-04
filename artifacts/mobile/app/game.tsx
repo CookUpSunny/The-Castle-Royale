@@ -37,6 +37,7 @@ import EmoteBubble from '@/components/EmoteBubble';
 import EmotePicker from '@/components/EmotePicker';
 import FaceDownReveal from '@/components/FaceDownReveal';
 import GameLandscape from '@/components/GameLandscape';
+import MusicTransport from '@/components/MusicTransport';
 import GlowPile from '@/components/GlowPile';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import CardCurtain from '@/components/CardCurtain';
@@ -728,6 +729,7 @@ export default function GameScreen() {
                     {isMuted ? 'SOUND OFF' : 'SOUND ON'}
                   </Text>
                 </Pressable>
+                <MusicTransport />
                 <Pressable
                   onPress={() => {
                     setPlayerMenuOpen(false);

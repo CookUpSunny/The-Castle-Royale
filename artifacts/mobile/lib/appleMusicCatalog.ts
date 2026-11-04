@@ -179,6 +179,19 @@ export interface CatalogDecision {
  * device can actually stream it. Any gap falls back to the bundled player.
  * Mute stays on the bundled player so silence does not open a stream.
  */
+/**
+ * The system Apple Music dialog is offered once, on the home screen, after the
+ * intro splash has finished. Playback itself never asks.
+ */
+export function shouldAskAppleMusicOnHome(input: {
+  platform: string;
+  splashDone: boolean;
+  alreadyAsked: boolean;
+  moduleAvailable: boolean;
+}): boolean {
+  return input.splashDone && input.platform === 'ios' && input.moduleAvailable && !input.alreadyAsked;
+}
+
 export function resolveCatalogPlayback(input: CatalogDecisionInput, loopOne: boolean): CatalogDecision {
   const songIds: string[] = [];
   for (const id of input.songIds) {

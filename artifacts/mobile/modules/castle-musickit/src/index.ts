@@ -25,6 +25,7 @@ type NativeCastleMusicKit = {
   playQueue(songIds: string[]): Promise<boolean>;
   pause(): Promise<void>;
   resume(): Promise<boolean>;
+  skip(): Promise<boolean>;
   stop(): Promise<void>;
   setVolume(volume: number): Promise<boolean>;
 };
@@ -167,6 +168,16 @@ export async function resumeAppleMusic(): Promise<boolean> {
   if (!mod || !catalogEngaged) return false;
   try {
     return (await mod.resume()) === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function skipAppleMusic(): Promise<boolean> {
+  const mod = loadNative();
+  if (!mod || !catalogEngaged) return false;
+  try {
+    return (await mod.skip()) === true;
   } catch {
     return false;
   }
