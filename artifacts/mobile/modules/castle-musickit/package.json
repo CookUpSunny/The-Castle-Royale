@@ -1,0 +1,16 @@
+{
+  "name": "castle-musickit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Expo module that plays Apple Music catalog songs through MusicKit.",
+  "license": "MIT",
+  "author": "Castle Royale",
+  "homepage": "https://github.com/CookUpSunny/The-Castle-Royale",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}
