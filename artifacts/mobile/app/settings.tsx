@@ -1,25 +1,51 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import BackButton from "@/components/BackButton";
 import DuoSplit from "@/components/DuoSplit";
 import { useMusicPlayer } from "@/contexts/MusicContext";
 import { useDuoWindow } from "@/hooks/useDuoWindow";
 import { topContentInset } from "@/lib/duoLayout";
 import { useSubscription } from "@/lib/revenuecat";
-import { Platform } from "react-native";
 
 export default function SettingsScreen() {
   const duo = useDuoWindow();
-  const { isMuted, toggleMute } = useMusicPlayer();
+  const { isMuted, toggleMute, appleMusicEnabled, setAppleMusicEnabled } = useMusicPlayer();
   const { restore, isRestoring } = useSubscription();
   const [notice, setNotice] = useState<string | null>(null);
+  const [offerAppleMusicSettings, setOfferAppleMusicSettings] = useState(false);
   const version = Constants.expoConfig?.version ?? "1.0.3";
   const top = topContentInset(duo.insets.top, Platform.OS);
 
+  const onAppleMusic = async () => {
+    setNotice(null);
+    setOfferAppleMusicSettings(false);
+    const next = !appleMusicEnabled;
+    const result = await setAppleMusicEnabled(next);
+    if (!next) {
+      setNotice("Built-in music will play.");
+      return;
+    }
+    if (result.status === "authorized" && result.canPlayCatalog) {
+      setNotice("Apple Music will stream arena songs. The iPhone volume buttons set how loud it is.");
+      return;
+    }
+    if (result.status === "authorized") {
+      setNotice("Apple Music is allowed, but this Apple ID can't stream the catalog. Built-in music will play.");
+      return;
+    }
+    if (result.status === "denied" || result.status === "restricted") {
+      setOfferAppleMusicSettings(true);
+      setNotice("Apple Music access is off. Built-in music will play. You can allow it in iOS Settings.");
+      return;
+    }
+    setNotice("Apple Music needs an installed iOS build with the MusicKit capability. Built-in music will play.");
+  };
+
   const onRestore = async () => {
     setNotice(null);
+    setOfferAppleMusicSettings(false);
     try {
       const info = await restore();
       const active = info.entitlements.active?.premium !== undefined;
@@ -37,6 +63,17 @@ export default function SettingsScreen() {
         <Text style={styles.rowLabel}>Sound</Text>
         <Text style={styles.rowValue}>{isMuted ? "Off" : "On"}</Text>
       </Pressable>
+      {Platform.OS === "ios" ? (
+        <Pressable onPress={() => void onAppleMusic()} style={styles.row}>
+          <Text style={styles.rowLabel}>Apple Music</Text>
+          <Text style={styles.rowValue}>{appleMusicEnabled ? "On" : "Off"}</Text>
+        </Pressable>
+      ) : null}
+      {Platform.OS === "ios" && offerAppleMusicSettings ? (
+        <Pressable onPress={() => void Linking.openSettings()} style={styles.link}>
+          <Text style={styles.linkText}>Open iOS Settings</Text>
+        </Pressable>
+      ) : null}
       <Pressable onPress={() => router.push("/store")} style={styles.row}>
         <Text style={styles.rowLabel}>Store</Text>
         <Text style={styles.rowValue}>Open</Text>

@@ -17,7 +17,11 @@
       "bundleIdentifier": "app.replit.thecastleroyale",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "UIRequiresFullScreen": false
+        "UIRequiresFullScreen": false,
+        "NSAppleMusicUsageDescription": "Castle Royale streams arena songs from Apple Music so the artist is paid for the play. Apple Music is optional. Built-in music plays if you decline or cannot stream."
+      },
+      "entitlements": {
+        "com.apple.developer.musickit": true
       }
     },
     "android": {
