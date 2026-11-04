@@ -12,6 +12,7 @@ import {
   UNRESOLVED_CATALOG_SONGS,
   catalogSelectionForArena,
   resolveCatalogPlayback,
+  shouldAskAppleMusicOnHome,
 } from './appleMusicCatalog';
 
 const eligible = {
@@ -80,4 +81,13 @@ test('catalog playback requires iOS, permission, a subscription, and an id', () 
   }
 
   assert.equal(resolveCatalogPlayback({ ...eligible, songIds: [null] }, true).backend, 'bundled');
+});
+
+test('Apple Music permission is asked once on the home screen after splash', () => {
+  const ready = { platform: 'ios', splashDone: true, alreadyAsked: false, moduleAvailable: true };
+  assert.equal(shouldAskAppleMusicOnHome(ready), true);
+  assert.equal(shouldAskAppleMusicOnHome({ ...ready, splashDone: false }), false);
+  assert.equal(shouldAskAppleMusicOnHome({ ...ready, alreadyAsked: true }), false);
+  assert.equal(shouldAskAppleMusicOnHome({ ...ready, platform: 'android' }), false);
+  assert.equal(shouldAskAppleMusicOnHome({ ...ready, moduleAvailable: false }), false);
 });

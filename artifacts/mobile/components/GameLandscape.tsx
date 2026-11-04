@@ -21,6 +21,7 @@ import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useMusicPlayer } from '@/contexts/MusicContext';
 import { useColors } from '@/hooks/useColors';
 import ActionButtons from '@/components/ActionButtons';
+import MusicTransport from '@/components/MusicTransport';
 import BackButton from '@/components/BackButton';
 import CardComponent, { CardBack } from '@/components/Card';
 import CardCurtain from '@/components/CardCurtain';
@@ -753,6 +754,7 @@ export default function GameLandscape(): React.JSX.Element | null {
                 <Text style={{ fontSize: 15 }}>{isMuted ? '🔇' : '🔊'}</Text>
               </Pressable>
             </View>
+            <MusicTransport />
             <Pressable
               onPress={() => {
                 setPlayerMenuOpen(false);

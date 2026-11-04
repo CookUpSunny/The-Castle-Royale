@@ -8,7 +8,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -23,7 +23,7 @@ import SplashStudio from '@/components/SplashStudio';
 import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
-import { MusicProvider } from '@/contexts/MusicContext';
+import { MusicProvider, useMusicPlayer } from '@/contexts/MusicContext';
 import { initializeAds } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
 import {
@@ -96,6 +96,27 @@ function RootLayoutNav() {
   );
 }
 
+/** One Apple Music dialog after the intro is gone and home is on screen. */
+function AppleMusicHomePrompt({ splashDone }: { splashDone: boolean }) {
+  const { promptAppleMusicOnce } = useMusicPlayer();
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (!splashDone || started.current) return;
+    started.current = true;
+    const timer = setTimeout(() => {
+      try {
+        promptAppleMusicOnce();
+      } catch {
+        // The prompt function is responsible for its own failures.
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [splashDone, promptAppleMusicOnce]);
+
+  return null;
+}
+
 function RootLayoutBody() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -138,6 +159,7 @@ function RootLayoutBody() {
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#07000f' }}>
           <KeyboardProvider>
             <MusicProvider>
+              <AppleMusicHomePrompt splashDone={splashPhase === 'done'} />
               <SubscriptionProvider>
                 <CosmeticsProvider>
                   <GameCenterProvider>

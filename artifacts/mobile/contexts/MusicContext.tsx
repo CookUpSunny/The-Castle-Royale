@@ -35,6 +35,7 @@ import {
   SPLASH_CATALOG_ID,
   catalogSelectionForArena,
   resolveCatalogPlayback,
+  shouldAskAppleMusicOnHome,
 } from '../lib/appleMusicCatalog';
 import {
   canPlayAppleMusicCatalog,
@@ -46,6 +47,7 @@ import {
   requestAppleMusicAuthorization,
   resumeAppleMusic,
   setAppleMusicVolume,
+  skipAppleMusic,
   stopAppleMusic,
   type AppleMusicAuthStatus,
 } from '../modules/castle-musickit/src';
@@ -66,6 +68,7 @@ try {
 const MUTED_KEY           = '@castleroyale_music_muted';
 const VOLUME_KEY          = '@castleroyale_volume';
 const APPLE_MUSIC_KEY     = '@castleroyale_apple_music';
+const APPLE_MUSIC_ASKED_KEY = '@castleroyale_apple_music_asked';
 const AUTH_WAIT_MS        = 45000;
 const SPLASH_FADE_STEPS   = 60;   // 60 × 100 ms = 6 000 ms (loop fade-out + stop fade-out)
 const SPLASH_FADE_IN_STEPS = 40;  // 40 × 100 ms = 4 000 ms (opening fade-in only)
@@ -164,11 +167,21 @@ interface MusicContextValue {
   toggleMute: () => void;
   setVolumeLevel: (v: VolumeLevel) => void;
   /**
-   * Turn catalog streaming on or off. Turning it on asks for Apple Music
-   * permission. That call is the settings path. Match start asks on its own.
-   * Launch does not.
+   * Settings switch. Defaults on. Turning it on re-checks Apple Music
+   * authorization. A denial leaves the switch off and reports that status.
    */
   setAppleMusicEnabled: (enabled: boolean) => Promise<AppleMusicPreference>;
+  /**
+   * One system prompt, after the intro splash has finished and home is visible.
+   * A stored "asked" flag means this returns without showing the dialog again.
+   */
+  promptAppleMusicOnce: () => void;
+  /** Resume the current arena or lobby song. */
+  playMusic: () => void;
+  /** Pause the current song without muting sound effects. */
+  pauseMusic: () => void;
+  /** Next song, or the same song again when the arena only has one. */
+  skipMusic: () => void;
   /** Start the looping splash-screen track (Sparks Fly). No-op if already playing. */
   playSplashTrack: () => void;
   /**
@@ -190,6 +203,10 @@ const MusicContext = createContext<MusicContextValue>({
   toggleMute: () => {},
   setVolumeLevel: () => {},
   setAppleMusicEnabled: async () => ({ status: 'unavailable', canPlayCatalog: false }),
+  promptAppleMusicOnce: () => {},
+  playMusic: () => {},
+  pauseMusic: () => {},
+  skipMusic: () => {},
   playSplashTrack: () => {},
   startMusic: () => {},
   stopMusic: () => {},
@@ -233,6 +250,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   // Non-null in arena-loop mode: didJustFinish replays this track index.
   const arenaLoopIdxRef = useRef<number | null>(null);
+  const musicPausedRef = useRef(false);
+  const askOnceRef = useRef(false);
 
   // ─── Load persisted preferences ───────────────────────────────────────────
 
@@ -258,7 +277,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         volumeLevelRef.current = parsed as VolumeLevel;
         setVolumeLevelState(parsed as VolumeLevel);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      prefLoadedRef.current = true;
+    });
     return () => { mountedRef.current = false; };
   }, []);
 
@@ -326,15 +347,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const decideCatalog = useCallback(async (
     songIds: readonly (string | null)[],
     loopOne: boolean,
-    prompt: boolean,
   ) => {
     let status: AppleMusicAuthStatus = 'unavailable';
     try {
       status = await getAppleMusicAuthorizationStatus();
-      if (prompt && appleMusicPrefRef.current && status === 'notDetermined' && isAppleMusicKitAvailable()) {
-        // First match (or the settings toggle) is the permission moment. Not launch.
-        status = await settleWithin(requestAppleMusicAuthorization(), AUTH_WAIT_MS, 'unavailable');
-      }
     } catch {
       status = 'unavailable';
     }
@@ -393,7 +409,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     // Lobby focus does not prompt. Catalog plays only after a match or the
     // settings toggle has already been allowed.
     try {
-      const decision = await decideCatalog([SPLASH_CATALOG_ID], true, false);
+      const decision = await decideCatalog([SPLASH_CATALOG_ID], true);
       if (gen !== playGen.current || modeRef.current !== 'splash') return;
       if (decision.backend === 'musickit') {
         const started = await beginCatalog(decision.songIds, true, gen, 'splash');
@@ -434,7 +450,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Loop: restart with fresh fade-in
-        if (status.didJustFinish && splashActiveRef.current) {
+        if (status.didJustFinish && splashActiveRef.current && !musicPausedRef.current) {
           void playSplashTrackAsync();
         }
       });
@@ -482,7 +498,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         // Shuffle queue — advance to next track on finish
         player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
           if (!status.isLoaded) return;
-          if (status.didJustFinish) {
+          if (status.didJustFinish && !musicPausedRef.current) {
             queuePos.current++;
             if (queuePos.current >= queueRef.current.length) {
               queueRef.current = shuffleIndices(PLAYLIST_SIZE);
@@ -532,8 +548,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     // never runs against a null soundRef (race condition that caused silence).
     const doStart = async () => {
       try {
-        // prompt: true — the first match is when Apple Music permission appears.
-        const decision = await decideCatalog(selection.songIds, selection.loopOne, true);
+        const decision = await decideCatalog(selection.songIds, selection.loopOne);
         if (gen !== playGen.current || modeRef.current !== 'match') return;
         if (decision.backend === 'musickit') {
           const started = await beginCatalog(decision.songIds, decision.loopOne, gen, 'match');
@@ -552,6 +567,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   const stopMusic = useCallback(() => {
     playGen.current += 1;
+    musicPausedRef.current = false;
     modeRef.current = 'idle';
     splashActiveRef.current = false;
     arenaLoopIdxRef.current = null;
@@ -599,6 +615,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
    */
   const stopMusicFast = useCallback(() => {
     playGen.current += 1;
+    musicPausedRef.current = false;
     modeRef.current = 'idle';
     splashActiveRef.current = false;
     arenaLoopIdxRef.current = null;
@@ -646,7 +663,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       ? { loopOne: true, songIds: [SPLASH_CATALOG_ID] }
       : catalogSelectionForArena(arenaRef.current);
     try {
-      const decision = await decideCatalog(selection.songIds, selection.loopOne, false);
+      const decision = await decideCatalog(selection.songIds, selection.loopOne);
       if (decision.backend !== 'musickit') return;
       if (gen !== playGen.current || modeRef.current !== mode || isMutedRef.current) return;
       if (soundRef.current) soundRef.current.volume = 0;
@@ -663,14 +680,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   onMuteChangedRef.current = (muted, becameAudible) => {
     if (backendRef.current === 'musickit') {
-      if (muted) void pauseAppleMusic();
+      if (muted || musicPausedRef.current) void pauseAppleMusic();
       else void resumeAppleMusic();
       return;
     }
     if (soundRef.current) {
       soundRef.current.volume = muted ? 0 : volumeLevelRef.current;
+      if (!muted && !musicPausedRef.current) soundRef.current.play();
     }
-    if (becameAudible) void upgradeToCatalog();
+    if (becameAudible && !musicPausedRef.current) void upgradeToCatalog();
   };
 
   const toggleMute = useCallback(() => {
@@ -692,13 +710,125 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const rememberAppleMusicAsked = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(APPLE_MUSIC_ASKED_KEY, 'true');
+    } catch {
+      // A failed write can ask again next launch. It must not throw.
+    }
+  }, []);
+
+  const applyAuthorizationToToggle = useCallback(async (status: AppleMusicAuthStatus) => {
+    if (status !== 'denied' && status !== 'restricted') return;
+    appleMusicPrefRef.current = false;
+    setAppleMusicEnabledState(false);
+    AsyncStorage.setItem(APPLE_MUSIC_KEY, 'off').catch(() => {});
+  }, []);
+
+  const promptAppleMusicOnce = useCallback(() => {
+    if (askOnceRef.current) return;
+    askOnceRef.current = true;
+    void (async () => {
+      try {
+        const started = Date.now();
+        while (!prefLoadedRef.current && Date.now() - started < 1500) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        if (!shouldAskAppleMusicOnHome({
+          platform: Platform.OS,
+          splashDone: true,
+          alreadyAsked: false,
+          moduleAvailable: isAppleMusicKitAvailable(),
+        })) {
+          return;
+        }
+        const asked = await AsyncStorage.getItem(APPLE_MUSIC_ASKED_KEY);
+        if (asked === 'true') {
+          const status = await getAppleMusicAuthorizationStatus();
+          await applyAuthorizationToToggle(status);
+          return;
+        }
+        const status = await settleWithin(requestAppleMusicAuthorization(), AUTH_WAIT_MS, 'unavailable' as const);
+        if (status === 'unavailable' || status === 'notDetermined') return;
+        await rememberAppleMusicAsked();
+        await applyAuthorizationToToggle(status);
+        if (status === 'authorized' && appleMusicPrefRef.current && !isMutedRef.current && !musicPausedRef.current) {
+          await upgradeToCatalog();
+        }
+      } catch {
+        // Home is already on screen. A MusicKit failure stays on the bundled tracks.
+      }
+    })();
+  }, [applyAuthorizationToToggle, rememberAppleMusicAsked, upgradeToCatalog]);
+
+  const pauseMusic = useCallback(() => {
+    musicPausedRef.current = true;
+    clearFade();
+    if (backendRef.current === 'musickit') void pauseAppleMusic();
+    else {
+      try { soundRef.current?.pause(); } catch { /* already stopped */ }
+    }
+    if (mountedRef.current) setIsPlaying(false);
+  }, [clearFade]);
+
+  const playMusic = useCallback(() => {
+    musicPausedRef.current = false;
+    if (isMutedRef.current) {
+      setIsMuted(false);
+    }
+    if (backendRef.current === 'musickit') {
+      void resumeAppleMusic().then((ok) => {
+        if (ok && mountedRef.current) setIsPlaying(true);
+      });
+      return;
+    }
+    const sound = soundRef.current;
+    if (!sound) return;
+    try {
+      sound.volume = isMutedRef.current ? 0 : volumeLevelRef.current;
+      sound.play();
+      if (mountedRef.current) setIsPlaying(true);
+    } catch {
+      // Play is best-effort.
+    }
+  }, []);
+
+  const skipMusic = useCallback(() => {
+    musicPausedRef.current = false;
+    if (backendRef.current === 'musickit') {
+      void skipAppleMusic().then((ok) => {
+        if (ok && mountedRef.current) setIsPlaying(true);
+      });
+      return;
+    }
+    const loopIndex = arenaLoopIdxRef.current;
+    if (loopIndex !== null || modeRef.current === 'splash') {
+      const sound = soundRef.current;
+      if (!sound) return;
+      void sound.seekTo(0).then(() => {
+        if (musicPausedRef.current) return;
+        sound.volume = isMutedRef.current ? 0 : volumeLevelRef.current;
+        sound.play();
+        if (mountedRef.current) setIsPlaying(true);
+      }).catch(() => {});
+      return;
+    }
+    queuePos.current++;
+    if (queuePos.current >= queueRef.current.length) {
+      queueRef.current = shuffleIndices(PLAYLIST_SIZE);
+      queuePos.current = 0;
+    }
+    const next = queueRef.current[queuePos.current];
+    void playTrack(next, isMutedRef.current ? 0 : volumeLevelRef.current);
+  }, [playTrack]);
+
   const setAppleMusicEnabled = useCallback(async (enabled: boolean): Promise<AppleMusicPreference> => {
     applePrefTouchedRef.current = true;
-    appleMusicPrefRef.current = enabled;
-    setAppleMusicEnabledState(enabled);
-    AsyncStorage.setItem(APPLE_MUSIC_KEY, enabled ? 'on' : 'off').catch(() => {});
 
     if (!enabled) {
+      appleMusicPrefRef.current = false;
+      setAppleMusicEnabledState(false);
+      AsyncStorage.setItem(APPLE_MUSIC_KEY, 'off').catch(() => {});
       if (backendRef.current === 'musickit') {
         const mode = modeRef.current;
         const arena = arenaRef.current;
@@ -726,22 +856,38 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     } catch {
       status = 'unavailable';
     }
-    let canPlayCatalog = false;
-    if (status === 'authorized') {
-      try {
-        canPlayCatalog = await canPlayAppleMusicCatalog();
-      } catch {
-        canPlayCatalog = false;
-      }
+    if (status === 'authorized' || status === 'denied' || status === 'restricted') {
+      await rememberAppleMusicAsked();
     }
-    if (canPlayCatalog && !isMutedRef.current) await upgradeToCatalog();
+    if (status === 'denied' || status === 'restricted') {
+      appleMusicPrefRef.current = false;
+      setAppleMusicEnabledState(false);
+      AsyncStorage.setItem(APPLE_MUSIC_KEY, 'off').catch(() => {});
+      return { status, canPlayCatalog: false };
+    }
+    if (status !== 'authorized') {
+      return { status, canPlayCatalog: false };
+    }
+
+    appleMusicPrefRef.current = true;
+    setAppleMusicEnabledState(true);
+    AsyncStorage.setItem(APPLE_MUSIC_KEY, 'on').catch(() => {});
+    let canPlayCatalog = false;
+    try {
+      canPlayCatalog = await canPlayAppleMusicCatalog();
+    } catch {
+      canPlayCatalog = false;
+    }
+    if (canPlayCatalog && !isMutedRef.current && !musicPausedRef.current) await upgradeToCatalog();
     return { status, canPlayCatalog };
-  }, [playSplashTrack, startMusic, upgradeToCatalog]);
+  }, [playSplashTrack, startMusic, upgradeToCatalog, rememberAppleMusicAsked]);
 
   return (
     <MusicContext.Provider value={{
       isMuted, isPlaying, volumeLevel: volumeLevelState, appleMusicEnabled,
-      toggleMute, setVolumeLevel, setAppleMusicEnabled, playSplashTrack, startMusic, stopMusic, stopMusicFast,
+      toggleMute, setVolumeLevel, setAppleMusicEnabled, promptAppleMusicOnce,
+      playMusic, pauseMusic, skipMusic,
+      playSplashTrack, startMusic, stopMusic, stopMusicFast,
     }}>
       {children}
     </MusicContext.Provider>
