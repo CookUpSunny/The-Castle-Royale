@@ -20,19 +20,28 @@ export default function SplashIntro({ onDone }: SplashIntroProps) {
   const imageOpacity = useRef(new Animated.Value(0)).current;
   const blackOpacity = useRef(new Animated.Value(0)).current;
 
-  const doneCalledRef = useRef(false);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+  const settledRef = useRef(false);
 
   const finish = useCallback(() => {
-    if (doneCalledRef.current) return;
-    doneCalledRef.current = true;
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onDoneRef.current();
+  }, []);
 
+  const playOut = useCallback(() => {
+    if (settledRef.current) return;
     Animated.timing(blackOpacity, {
       toValue: 1,
       duration: 400,
       easing: Easing.in(Easing.quad),
       useNativeDriver: true,
-    }).start(() => onDone());
-  }, [onDone, blackOpacity]);
+    }).start(() => finish());
+    // Native completion callbacks can be dropped on device. Don't wait on them.
+    const backup = setTimeout(finish, 900);
+    return () => clearTimeout(backup);
+  }, [blackOpacity, finish]);
 
   useEffect(() => {
     Animated.timing(imageOpacity, {
@@ -42,10 +51,16 @@ export default function SplashIntro({ onDone }: SplashIntroProps) {
       useNativeDriver: true,
     }).start();
 
-    const exitTimer = setTimeout(finish, 4000);
+    let clearBackup = () => {};
+    const exitTimer = setTimeout(() => {
+      clearBackup = playOut() ?? (() => {});
+    }, 4000);
 
-    return () => clearTimeout(exitTimer);
-  }, [finish, imageOpacity]);
+    return () => {
+      clearTimeout(exitTimer);
+      clearBackup();
+    };
+  }, [playOut, imageOpacity]);
 
   const imageWidth = Math.round((941 / 1672) * height);
 
@@ -53,7 +68,8 @@ export default function SplashIntro({ onDone }: SplashIntroProps) {
     <Pressable
       onPress={finish}
       style={[styles.container, { width, height }]}
-      accessible={false}
+      accessibilityRole="button"
+      accessibilityLabel="Skip intro"
     >
       <View style={[StyleSheet.absoluteFill, styles.darkBg]} />
 

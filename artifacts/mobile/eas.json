@@ -12,7 +12,8 @@
       },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "46d2f16f-79ef-476b-8020-6a434a0566d4-00-h3i4qo6pgtve.riker.replit.dev",
-        "EXPO_PUBLIC_ADMOB_USE_TEST_UNITS": "true"
+        "EXPO_PUBLIC_ADMOB_USE_TEST_UNITS": "true",
+        "EXPO_PUBLIC_SHOW_STARTUP_ERRORS": "1"
       }
     },
     "preview": {
@@ -22,7 +23,8 @@
       },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "46d2f16f-79ef-476b-8020-6a434a0566d4-00-h3i4qo6pgtve.riker.replit.dev",
-        "EXPO_PUBLIC_ADMOB_USE_TEST_UNITS": "true"
+        "EXPO_PUBLIC_ADMOB_USE_TEST_UNITS": "true",
+        "EXPO_PUBLIC_SHOW_STARTUP_ERRORS": "1"
       }
     },
     "production": {

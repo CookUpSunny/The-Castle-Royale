@@ -39,6 +39,12 @@ static-build/
 artifacts/mobile/ios/
 artifacts/mobile/android/
 
+# Stray native project at the repo root (bundle com.krazi.workspace).
+# eas-cli archives from the git root and reads THIS file. Anchored patterns
+# keep that project out of the upload so prebuild cannot treat it as the app.
+/ios
+/android
+
 # --- vcs + large media not needed to build the app ---
 # eas-cli deletes .git only when the ignore rule matches the path ".git"
 # (a trailing slash does not). A depth-1 clone otherwise uploads every blob.
