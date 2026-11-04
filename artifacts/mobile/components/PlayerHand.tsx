@@ -601,6 +601,7 @@ const faceUpStyles = StyleSheet.create({
     height: 102,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'visible',
   },
   glowAura: {
     position: 'absolute',
@@ -618,6 +619,7 @@ const styles = StyleSheet.create({
   container: {
     paddingBottom: 0,
     alignItems: 'center',
+    overflow: 'visible',
   },
   anchorSlot: {
     width: '100%',
@@ -638,7 +640,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingTop: 22,
+    paddingBottom: 6,
+    overflow: 'visible',
   },
   multiRow: {
     flexDirection: 'row',

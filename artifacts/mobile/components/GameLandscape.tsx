@@ -40,14 +40,6 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
-function canPlayCard(card: CardType, pile: CardType[]): boolean {
-  if (pile.length === 0) return true;
-  const top = pile[pile.length - 1]!;
-  if (card.value === 2 || card.value === 10) return true;
-  if (top.value === 2) return true;
-  return card.value >= top.value;
-}
-
 function hashName(name: string): number {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
@@ -445,11 +437,6 @@ export default function GameLandscape(): React.JSX.Element | null {
   // Opponent gets a deterministic avatar from the AVATARS list based on their name
   const opponentAvatarPortrait = AVATARS[hashName(opponentName) % AVATARS.length]?.portrait ?? null;
 
-  const activeZone = myHand.length > 0 ? myHand : myFaceUp;
-  const burnIds = activeZone.filter((c) => c.value === 10 && canPlayCard(c, discardPile)).map((c) => c.id);
-  const hasBurn = burnIds.length > 0;
-  const handlePlayBurn = () => { if (burnIds.length > 0) playCards(burnIds); };
-
   // Left column holds only action buttons now (name plates moved to absolute corners).
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
   const drawColW = 100;
@@ -513,10 +500,8 @@ export default function GameLandscape(): React.JSX.Element | null {
             {!gameView.mustPlayStarter && (
               <ActionButtons
                 canPickup={discardPile.length > 0}
-                hasBurn={hasBurn}
                 isMyTurn={isMyTurn}
                 onPickup={doPickup}
-                onPlayBurn={handlePlayBurn}
               />
             )}
           </View>
@@ -592,13 +577,15 @@ export default function GameLandscape(): React.JSX.Element | null {
           {book && !gameView.mustPlayStarter && (
             <ActionButtons
               canPickup={discardPile.length > 0}
-              hasBurn={hasBurn}
               isMyTurn={isMyTurn}
               onPickup={doPickup}
-              onPlayBurn={handlePlayBurn}
             />
           )}
-          <DrawPileStack ref={drawPileRef} count={deckCount} />
+          {/* 16pt lead centers with the deck and drops the deck 8pt. */}
+          <View style={styles.drawPileNudgeWrap}>
+            <View style={styles.drawPileNudge} />
+            <DrawPileStack ref={drawPileRef} count={deckCount} />
+          </View>
         </View>
       </View>
 
@@ -886,6 +873,13 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  drawPileNudgeWrap: {
+    alignItems: 'center',
+  },
+  drawPileNudge: {
+    height: 16,
+    width: 1,
   },
 
   centerColumn: { flex: 1, justifyContent: 'space-between', paddingVertical: 4 },
