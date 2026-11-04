@@ -156,7 +156,7 @@ export default function ModeSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, alignItems: 'center' },
+  inner: { flex: 1, alignItems: 'center', justifyContent: 'space-between' },
   pane: { flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' },
   compactBody: {
     flex: 1,
@@ -166,10 +166,10 @@ const styles = StyleSheet.create({
     gap: 28,
   },
   headerRow: { width: '100%', flexDirection: 'row', alignItems: 'center' },
-  titleBlock: { alignItems: 'center' },
+  titleBlock: { alignItems: 'center', marginTop: 12 },
   crown: { fontSize: 32, marginBottom: 4, textShadowColor: '#c8960a', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
-  title: { fontSize: 38, fontWeight: '900', letterSpacing: 8, paddingLeft: 8 },
-  titleSub: { fontSize: 16, fontWeight: '700', letterSpacing: 5, marginTop: -2, paddingLeft: 5 },
+  title: { fontSize: 38, fontWeight: '900', letterSpacing: 8 },
+  titleSub: { fontSize: 16, fontWeight: '700', letterSpacing: 5, marginTop: -2 },
   battleGroup: { width: '100%', alignItems: 'center', gap: 18 },
   buttonsBlock: { width: '100%', gap: 18 },
   bigBtnOuter: {
