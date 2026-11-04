@@ -38,6 +38,7 @@ import PlayerHand from '@/components/PlayerHand';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
+import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function canPlayCard(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -248,9 +249,9 @@ export default function GameLandscape(): React.JSX.Element | null {
   const [opponentZoneRectLs, setOpponentZoneRectLs] = useState<LayoutRect | null>(null);
   const selfHandRefLs = useRef<View>(null);
   const opponentZoneRefLs = useRef<View>(null);
-  // End-game curtain
-  const [endCurtainActive, setEndCurtainActive] = useState(false);
-  const endGameParamsRef = useRef<{ winner: string; myId: string; opponentName: string } | null>(null);
+  // End-game curtain. Waits for the winning card to finish, and stays dark
+  // until the winner's hand, face-up, face-down, and the draw deck are clear.
+  const { active: endCurtainActive, paramsRef: endGameParamsRef } = useEndCurtain(gameView, true);
 
   // Stable initial key so CinematicPlay does not replay the last event when
   // the landscape branch mounts (e.g. after rotating from portrait).
@@ -288,17 +289,6 @@ export default function GameLandscape(): React.JSX.Element | null {
   useEffect(() => {
     if (!gameView) router.replace('/');
   }, [gameView]);
-
-  useEffect(() => {
-    if (gameView?.phase === 'finished' && !endCurtainActive) {
-      endGameParamsRef.current = {
-        winner: gameView.winner ?? '',
-        myId: gameView.myPlayerId ?? '',
-        opponentName: gameView.opponentName ?? '',
-      };
-      setEndCurtainActive(true);
-    }
-  }, [gameView?.phase, endCurtainActive]);
 
   const handleEndReady = useCallback(() => {
     const p = endGameParamsRef.current;

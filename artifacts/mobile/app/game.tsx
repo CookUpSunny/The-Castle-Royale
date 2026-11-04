@@ -47,6 +47,7 @@ import SetupScreen from '@/components/SetupScreen';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
+import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function canPlayCard(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -396,8 +397,12 @@ export default function GameScreen() {
   const opponentZoneRef = useRef<View>(null);
   const playerHandRef = useRef<PlayerHandRef>(null);
   // End-game curtain — covers the game board, then navigates to victory behind it.
-  const [endCurtainActive, setEndCurtainActive] = useState(false);
-  const endGameParamsRef = useRef<{ winner: string; myId: string; opponentName: string } | null>(null);
+  // Portrait only; landscape owns its own curtain. The hook waits out the
+  // winning card's animation and ignores a finished flag that arrives early.
+  const { active: endCurtainActive, paramsRef: endGameParamsRef } = useEndCurtain(
+    gameView,
+    !committedLandscape,
+  );
 
 
   const webTopPad = Platform.OS === 'web' ? 8 : 0;
@@ -416,21 +421,8 @@ export default function GameScreen() {
     }
   }, [gameView, committedLandscape]);
 
-  // When the game ends, immediately rain cards over the game board.
   // Navigation to victory happens inside the curtain's onContentReady callback,
   // hidden behind the covered screen, so the player never sees the route jump.
-  useEffect(() => {
-    if (committedLandscape) return;
-    if (gameView?.phase === 'finished' && !endCurtainActive) {
-      endGameParamsRef.current = {
-        winner: gameView.winner ?? '',
-        myId: gameView.myPlayerId ?? '',
-        opponentName: gameView.opponentName ?? '',
-      };
-      setEndCurtainActive(true);
-    }
-  }, [gameView?.phase, committedLandscape, endCurtainActive]);
-
   const handleEndReady = useCallback(() => {
     const p = endGameParamsRef.current;
     if (!p) return;
@@ -541,7 +533,7 @@ export default function GameScreen() {
             paddingRight: insets.right,
           }]}>
 
-            <View style={tallBook ? { flex: 1 } : undefined}>
+            <View style={tallBook ? styles.duoPane : undefined}>
             <View style={styles.topNavRow}>
               <BackButton label="← EXIT" onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })} />
             </View>
@@ -561,8 +553,11 @@ export default function GameScreen() {
 
             {tallBook ? <View pointerEvents="none" style={{ height: duo.creaseBand }} /> : null}
 
-            <View style={tallBook ? { flex: 1, justifyContent: 'space-between' } : undefined}>
+            {/* Hand stays pinned to the bottom of this column. The pile takes
+                the space above it, so shrinking the hand cannot drag it up. */}
+            <View style={styles.playColumn}>
             <Pressable style={styles.tableCenter} onPress={() => playerHandRef.current?.clearSelection()}>
+              <View style={styles.pileCluster}>
               <View style={styles.pileRow}>
                 <View style={{ flex: 1 }} />
                 <View
@@ -582,7 +577,9 @@ export default function GameScreen() {
               </View>
 
               {/* Action buttons are hidden during STARTER mode — the player must
-                  tap a hand card directly; pickup/burn/reset don't apply. */}
+                  tap a hand card directly; pickup/burn/reset don't apply.
+                  They sit on the pile cluster, not the whole column, so they
+                  stay beside the pile when the hand anchors to the bottom. */}
               {!gameView.mustPlayStarter && (
                 <ActionButtons
                   canPickup={discardPile.length > 0}
@@ -592,11 +589,12 @@ export default function GameScreen() {
                   onPlayBurn={handlePlayBurn}
                 />
               )}
+              </View>
             </Pressable>
 
             <View
               ref={selfHandRef}
-              style={[styles.playerSection, { width: '88%', alignSelf: 'flex-end', marginRight: '2%' }]}
+              style={styles.playerSection}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -615,7 +613,7 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
-                availableWidth={Math.round((width - insets.left - insets.right) * (tallBook ? 0.96 : 0.88))}
+                availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
               />
             </View>
 
@@ -636,10 +634,10 @@ export default function GameScreen() {
             />
           </View>
 
-          {/* Player avatar chip — left side, above the action buttons area.
+          {/* Player avatar chip — bottom-left, beside the hand.
               Hidden during the blind-flip phase so it doesn't overlap the face-down glow rings. */}
           {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
-            <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 148, left: insets.left + 10 }]}>
+            <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 18, left: insets.left + 10 }]}>
               <AvatarChip
                 name={playerName}
                 isActive={isMyTurn}
@@ -677,7 +675,7 @@ export default function GameScreen() {
                 onPress={() => setPlayerMenuOpen(false)}
                 style={StyleSheet.absoluteFill}
               />
-              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 148 + 68, left: 16 }]}>
+              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 18 + 72, left: 16 }]}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput
@@ -823,6 +821,8 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   gameLayout: { flex: 1 },
+  duoPane: { flex: 1, minHeight: 0 },
+  playColumn: { flex: 1, minHeight: 0 },
   topNavRow: { paddingHorizontal: 14, paddingBottom: 2 },
   hudChip: {
     position: 'absolute',
@@ -929,11 +929,16 @@ const styles = StyleSheet.create({
 
   tableCenter: {
     flex: 1,
-    justifyContent: 'flex-start',
+    minHeight: 0,
+    justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
     paddingTop: 6,
-    gap: 8,
+  },
+  pileCluster: {
+    width: '100%',
+    position: 'relative',
+    justifyContent: 'center',
   },
   pileRow: {
     flexDirection: 'row',
@@ -1003,8 +1008,11 @@ const styles = StyleSheet.create({
   },
 
   playerSection: {
+    width: '100%',
+    alignItems: 'center',
     paddingHorizontal: 4,
     paddingBottom: 2,
+    flexShrink: 0,
   },
 
   chatRow: {
