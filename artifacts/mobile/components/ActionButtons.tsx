@@ -7,14 +7,10 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useColors } from '@/hooks/useColors';
-
 interface ActionButtonsProps {
   canPickup: boolean;
-  hasBurn: boolean;
   isMyTurn: boolean;
   onPickup: () => void;
-  onPlayBurn: () => void;
 }
 
 interface ActionButtonProps {
@@ -108,20 +104,11 @@ function ActionButton({
 
 export default function ActionButtons({
   canPickup,
-  hasBurn,
   isMyTurn,
   onPickup,
-  onPlayBurn,
 }: ActionButtonsProps) {
   return (
     <View style={styles.container}>
-      <ActionButton
-        icon="🔥"
-        label="BURN"
-        accentColor="#ff7f00"
-        onPress={onPlayBurn}
-        enabled={isMyTurn && hasBurn}
-      />
       <ActionButton
         icon="↓"
         iconFontSize={15}
