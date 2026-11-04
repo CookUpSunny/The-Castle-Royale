@@ -634,11 +634,11 @@ const styles = StyleSheet.create({
   faceUpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     flexWrap: 'wrap',
     gap: 10,
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingVertical: 6,
   },
   multiRow: {
     flexDirection: 'row',
