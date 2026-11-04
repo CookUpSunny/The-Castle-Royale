@@ -48,14 +48,6 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
-function canPlayCard(card: CardType, pile: CardType[]): boolean {
-  if (pile.length === 0) return true;
-  const top = pile[pile.length - 1]!;
-  if (card.value === 2 || card.value === 10) return true;
-  if (top.value === 2) return true;
-  return card.value >= top.value;
-}
-
 function hashName(name: string): number {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
@@ -503,15 +495,6 @@ export default function GameScreen() {
     opponentName, discardPile, deckCount, isMyTurn,
   } = gameView;
 
-  // For BURN button we collect ALL 10s from the active zone so a single tap fires the multi-play.
-  const activeZone = myHand.length > 0 ? myHand : myFaceUp;
-  const burnIds = activeZone.filter((c) => c.value === 10 && canPlayCard(c, discardPile)).map((c) => c.id);
-  const hasBurn = burnIds.length > 0;
-
-  const handlePlayBurn = () => {
-    if (burnIds.length > 0) playCards(burnIds);
-  };
-
   // ── Unified single-root return ───────────────────────────────────────────
   // Both landscape and portrait branches live inside the same root View so
   // the OrientationCurtain is always at tree position [1] regardless of which
@@ -556,6 +539,8 @@ export default function GameScreen() {
                 the space above it, so shrinking the hand cannot drag it up. */}
             <View style={styles.playColumn}>
             <Pressable style={styles.tableCenter} onPress={() => playerHandRef.current?.clearSelection()}>
+              {/* 16pt spacer centers as a group with the pile, dropping the pile 8pt. */}
+              <View style={styles.pileNudge} />
               <View style={styles.pileCluster}>
               <View style={styles.pileRow}>
                 <View style={{ flex: 1 }} />
@@ -576,16 +561,14 @@ export default function GameScreen() {
               </View>
 
               {/* Action buttons are hidden during STARTER mode — the player must
-                  tap a hand card directly; pickup/burn/reset don't apply.
-                  They sit on the pile cluster, not the whole column, so they
-                  stay beside the pile when the hand anchors to the bottom. */}
+                  tap a hand card directly. TAKE PILE sits on the pile cluster,
+                  not the whole column, so it stays beside the pile when the
+                  hand anchors to the bottom. */}
               {!gameView.mustPlayStarter && (
                 <ActionButtons
                   canPickup={discardPile.length > 0}
-                  hasBurn={hasBurn}
                   isMyTurn={isMyTurn}
                   onPickup={doPickup}
-                  onPlayBurn={handlePlayBurn}
                 />
               )}
               </View>
@@ -932,6 +915,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     paddingTop: 6,
+  },
+  pileNudge: {
+    height: 16,
+    width: 1,
   },
   pileCluster: {
     width: '100%',

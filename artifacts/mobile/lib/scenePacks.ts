@@ -78,13 +78,13 @@ export const SCENE_PACKS: Record<SceneId, ScenePack> = {
   cosmicSanctum: {
     layers: {
       portrait: {
-        L0_far:   null,
+        L0_far:   require('../assets/scenes/cosmicSanctum/portrait/L0_far.png'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,
       },
       landscape: {
-        L0_far:   null,
+        L0_far:   require('../assets/scenes/cosmicSanctum/landscape/L0_far.png'),
         L1_mid:   null,
         L2_table: null,
         L3_fx:    null,

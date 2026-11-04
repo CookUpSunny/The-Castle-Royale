@@ -45,125 +45,6 @@ function sceneBaseGradient(sceneId: SceneId): readonly [string, string, string] 
   return ['#120010', '#22002a', '#07000f'];
 }
 
-// ── Cosmic Sanctum blackhole HTML — adapted from the design brief ─────────────
-const COSMIC_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<style>
-html, body{
-  margin:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:#020008;
-}
-body{
-  background:
-    radial-gradient(circle at center,
-      rgba(180,60,255,.18) 0%,
-      rgba(70,0,120,.25) 20%,
-      rgba(10,0,30,1) 65%),
-    radial-gradient(circle at 30% 20%, rgba(255,255,255,.2) 0 1px, transparent 2px),
-    radial-gradient(circle at 80% 40%, rgba(255,255,255,.15) 0 1px, transparent 2px),
-    radial-gradient(circle at 60% 70%, rgba(255,255,255,.2) 0 1px, transparent 2px),
-    #030008;
-  background-size: cover;
-}
-.blackhole{
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:300px;
-  height:300px;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  background:
-    radial-gradient(circle,
-      #000 10%,
-      rgba(255,255,255,.95) 13%,
-      rgba(200,100,255,.9) 18%,
-      rgba(120,0,255,.45) 28%,
-      transparent 55%);
-  filter:blur(1px);
-  animation: pulse 4s ease-in-out infinite;
-  z-index:5;
-}
-.spiral{
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:120vmax;
-  height:120vmax;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      rgba(255,120,255,.2) 30deg,
-      transparent 60deg,
-      rgba(120,80,255,.22) 120deg,
-      transparent 180deg,
-      rgba(255,255,255,.08) 240deg,
-      transparent 360deg
-    );
-  mix-blend-mode:screen;
-  filter:blur(25px);
-  animation: spin 18s linear infinite;
-  z-index:2;
-}
-.grid{
-  position:absolute;
-  inset:-50%;
-  background-image:
-    linear-gradient(rgba(180,100,255,.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(180,100,255,.12) 1px, transparent 1px);
-  background-size:80px 80px;
-  animation: vortex 10s linear infinite;
-  opacity:.4;
-  z-index:1;
-}
-.star{
-  position:absolute;
-  width:2px;
-  height:2px;
-  background:white;
-  border-radius:50%;
-  box-shadow: 0 0 6px white, 0 0 12px #bb66ff;
-  animation: fall linear infinite;
-}
-@keyframes spin{
-  from{ transform:translate(-50%,-50%) rotate(0deg) scale(1); }
-  to{   transform:translate(-50%,-50%) rotate(360deg) scale(1.15); }
-}
-@keyframes vortex{
-  from{ transform:scale(1.2) rotate(0deg); }
-  to{   transform:scale(.7) rotate(360deg); }
-}
-@keyframes pulse{
-  0%,100%{ transform:translate(-50%,-50%) scale(1);    opacity:.8; }
-  50%{     transform:translate(-50%,-50%) scale(1.15); opacity:1; }
-}
-@keyframes fall{
-  from{ transform:translate(var(--x), var(--y)) scale(1); opacity:1; }
-  to{   transform:translate(50vw,50vh) scale(.1); opacity:0; }
-}
-</style>
-</head>
-<body>
-<div class="grid"></div>
-<div class="spiral"></div>
-<div class="blackhole"></div>
-<div class="star" style="--x:10vw;--y:10vh;left:10vw;top:10vh;animation-duration:4s;"></div>
-<div class="star" style="--x:90vw;--y:15vh;left:90vw;top:15vh;animation-duration:6s;"></div>
-<div class="star" style="--x:20vw;--y:80vh;left:20vw;top:80vh;animation-duration:5s;"></div>
-<div class="star" style="--x:80vw;--y:75vh;left:80vw;top:75vh;animation-duration:7s;"></div>
-<div class="star" style="--x:50vw;--y:0vh;left:50vw;top:0vh;animation-duration:3s;"></div>
-</body>
-</html>`;
-
 // ── Matrix rain HTML — embedded verbatim from the design brief ────────────────
 const MATRIX_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -300,7 +181,6 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
       {sceneId === 'casinoGreen' ? <FlamingoAmbience /> : null}
       {sceneId === 'waterfallCavern' ? <WaterfallAmbience /> : null}
       {sceneId === 'olympusThrone' ? <OlympusAmbience /> : null}
-      {sceneId === 'cosmicSanctum' ? <CosmicAmbience /> : null}
       {sceneId === 'flamingoFloor' ? <FlamingoFloorAmbience /> : null}
 
       {sceneId === 'rainbowRoad' ? (
@@ -479,23 +359,6 @@ function FlamingoFloorAmbience() {
         start={{ x: 0.15, y: 0 }}
         end={{ x: 0.85, y: 1 }}
         style={StyleSheet.absoluteFill}
-      />
-    </View>
-  );
-}
-
-function CosmicAmbience() {
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <WebView
-        source={{ html: COSMIC_HTML }}
-        style={StyleSheet.absoluteFill}
-        scrollEnabled={false}
-        bounces={false}
-        overScrollMode="never"
-        pointerEvents="none"
-        javaScriptEnabled
-        originWhitelist={['*']}
       />
     </View>
   );

@@ -447,14 +447,14 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
             <Text style={styles.specialText}>B</Text>
           </View>
         )}
-        {multiplicity && multiplicity > 1 ? (
-          <View style={styles.multiplicityWrap} pointerEvents="none">
-            <Animated.View style={[styles.multiplicityBadge, { backgroundColor: colors.neonGold, borderColor: '#0d001a' }, multiBadgeStyle]}>
-              <Text style={styles.multiplicityText}>x{multiplicity}</Text>
-            </Animated.View>
-          </View>
-        ) : null}
       </Pressable>
+      {multiplicity && multiplicity > 1 ? (
+        <View style={styles.multiplicityWrap} pointerEvents="none">
+          <Animated.View style={[styles.multiplicityBadge, { backgroundColor: colors.neonGold, borderColor: '#0d001a' }, multiBadgeStyle]}>
+            <Text style={styles.multiplicityText}>x{multiplicity}</Text>
+          </Animated.View>
+        </View>
+      ) : null}
     </Animated.View>
     </View>
   );
@@ -515,10 +515,11 @@ const styles = StyleSheet.create({
   },
   multiplicityWrap: {
     position: 'absolute',
-    bottom: -9,
+    top: -20,
     left: 0,
     right: 0,
     alignItems: 'center',
+    zIndex: 40,
   },
   multiplicityBadge: {
     minWidth: 24,
