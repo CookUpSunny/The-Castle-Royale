@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
   Easing,
+  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -31,6 +32,16 @@ export default function SplashStudio({ onDone }: SplashStudioProps) {
   const scale = useRef(WORDS.map(() => new Animated.Value(0.91))).current;
   const lineWidth = useRef(WORDS.map(() => new Animated.Value(0))).current;
 
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+  const settledRef = useRef(false);
+
+  const finish = useCallback(() => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onDoneRef.current();
+  }, []);
+
   useEffect(() => {
     const sequences = WORDS.map((_, i) => {
       const startDelay = INITIAL_DELAY + i * (WORD_TOTAL + WORD_GAP);
@@ -55,12 +66,6 @@ export default function SplashStudio({ onDone }: SplashStudioProps) {
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
-          Animated.timing(lineWidth[i], {
-            toValue: LINE_WIDTH,
-            duration: LINE_DRAW_DUR,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: false,
-          }),
         ]),
         Animated.delay(HOLD_DUR),
         Animated.parallel([
@@ -80,13 +85,42 @@ export default function SplashStudio({ onDone }: SplashStudioProps) {
       ]);
     });
 
-    Animated.parallel(sequences).start(() => {
-      setTimeout(onDone, 160);
+    // Width cannot use the native driver. Mixing it into the parallel above
+    // drops the completion callback on device, which left this splash up forever.
+    const lines = WORDS.map((_, i) => {
+      const startDelay = INITIAL_DELAY + i * (WORD_TOTAL + WORD_GAP);
+      return Animated.sequence([
+        Animated.delay(startDelay),
+        Animated.timing(lineWidth[i], {
+          toValue: LINE_WIDTH,
+          duration: LINE_DRAW_DUR,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: false,
+        }),
+      ]);
     });
-  }, []);
+
+    let tail: ReturnType<typeof setTimeout> | null = null;
+    Animated.parallel(sequences).start(() => {
+      tail = setTimeout(finish, 160);
+    });
+    Animated.parallel(lines).start();
+
+    // Full wordmark is ~4.2s. Leave if the native callback never arrives.
+    const backup = setTimeout(finish, 5000);
+    return () => {
+      if (tail) clearTimeout(tail);
+      clearTimeout(backup);
+    };
+  }, [finish, lineWidth, opacity, scale, translateY]);
 
   return (
-    <View style={[styles.container, { width, height }]}>
+    <Pressable
+      onPress={finish}
+      accessibilityRole="button"
+      accessibilityLabel="Skip intro"
+      style={[styles.container, { width, height }]}
+    >
       {WORDS.map((word, i) => (
         <Animated.View
           key={word}
@@ -109,7 +143,7 @@ export default function SplashStudio({ onDone }: SplashStudioProps) {
           </View>
         </Animated.View>
       ))}
-    </View>
+    </Pressable>
   );
 }
 

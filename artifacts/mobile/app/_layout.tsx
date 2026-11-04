@@ -8,7 +8,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -26,8 +26,22 @@ import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext'
 import { MusicProvider } from '@/contexts/MusicContext';
 import { initializeAds } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
+import {
+  advanceSplashPhase,
+  FONT_GATE_TIMEOUT_MS,
+  SPLASH_CHAIN_TIMEOUT_MS,
+  type SplashPhase,
+} from '@/lib/splashPhase';
+import {
+  installStartupErrorHandler,
+  shouldShowStartupErrors,
+  StartupErrorScreen,
+  useStartupError,
+} from '@/lib/startupError';
 
-SplashScreen.preventAutoHideAsync();
+installStartupErrorHandler();
+
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 try {
   initializeRevenueCat();
@@ -82,56 +96,78 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayoutBody() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  const [splashPhase, setSplashPhase] = useState<'intro' | 'gravity' | 'studio' | 'done'>(
-    skipIntro() ? 'done' : 'intro',
-  );
+  const [fontWaitExpired, setFontWaitExpired] = useState(false);
+  const [splashPhase, setSplashPhase] = useState<SplashPhase>(skipIntro() ? 'done' : 'intro');
+
+  const advance = useCallback((next: SplashPhase) => {
+    setSplashPhase((current) => advanceSplashPhase(current, next));
+  }, []);
+  const showGravity = useCallback(() => advance('gravity'), [advance]);
+  const showStudio = useCallback(() => advance('studio'), [advance]);
+  const finishSplash = useCallback(() => advance('done'), [advance]);
 
   // Hide native splash immediately — our dark-grey JS intro takes over from here.
   // Do NOT wait for font loading; the intro overlay covers the screen during that time.
   useEffect(() => {
-    void SplashScreen.hideAsync();
+    void SplashScreen.hideAsync().catch(() => {});
   }, []);
 
-  const appReady = fontsLoaded || fontError;
+  useEffect(() => {
+    const timer = setTimeout(() => setFontWaitExpired(true), FONT_GATE_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (skipIntro()) return;
+    const timer = setTimeout(() => advance('done'), SPLASH_CHAIN_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [advance]);
+
+  const appReady = Boolean(fontsLoaded || fontError || fontWaitExpired || splashPhase === 'done');
 
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <MusicProvider>
-                <SubscriptionProvider>
-                  <CosmeticsProvider>
-                    <GameCenterProvider>
-                      <GameProviderBridge>
-                        {/* Render navigator only once fonts are ready; intro overlay covers during load */}
-                        {appReady && <RootLayoutNav />}
-                        {splashPhase === 'intro' && (
-                          <SplashIntro onDone={() => setSplashPhase('gravity')} />
-                        )}
-                        {splashPhase === 'gravity' && (
-                          <SplashGravity onDone={() => setSplashPhase('studio')} />
-                        )}
-                        {splashPhase === 'studio' && (
-                          <SplashStudio onDone={() => setSplashPhase('done')} />
-                        )}
-                      </GameProviderBridge>
-                    </GameCenterProvider>
-                  </CosmeticsProvider>
-                </SubscriptionProvider>
-              </MusicProvider>
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </QueryClientProvider>
-      </ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#07000f' }}>
+          <KeyboardProvider>
+            <MusicProvider>
+              <SubscriptionProvider>
+                <CosmeticsProvider>
+                  <GameCenterProvider>
+                    <GameProviderBridge>
+                      {/* Fonts normally load under the intro. A hung font load must not hide the home screen. */}
+                      {appReady && <RootLayoutNav />}
+                      {splashPhase === 'intro' && <SplashIntro onDone={showGravity} />}
+                      {splashPhase === 'gravity' && <SplashGravity onDone={showStudio} />}
+                      {splashPhase === 'studio' && <SplashStudio onDone={finishSplash} />}
+                    </GameProviderBridge>
+                  </GameCenterProvider>
+                </CosmeticsProvider>
+              </SubscriptionProvider>
+            </MusicProvider>
+          </KeyboardProvider>
+        </GestureHandlerRootView>
+      </QueryClientProvider>
     </SafeAreaProvider>
+  );
+}
+
+export default function RootLayout() {
+  const startupError = useStartupError();
+  if (startupError && shouldShowStartupErrors()) {
+    return <StartupErrorScreen error={startupError} />;
+  }
+
+  return (
+    <ErrorBoundary FallbackComponent={StartupErrorScreen}>
+      <RootLayoutBody />
+    </ErrorBoundary>
   );
 }

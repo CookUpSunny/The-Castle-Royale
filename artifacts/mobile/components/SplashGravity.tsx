@@ -215,26 +215,40 @@ export default function SplashGravity({ onDone }: SplashGravityProps) {
 
   const blackOpacity = useRef(new Animated.Value(0)).current;
   const sceneOpacity = useRef(new Animated.Value(1)).current;
-  const doneCalledRef = useRef(false);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+  const settledRef = useRef(false);
 
   const particles = useRef(buildParticles(cx, cy)).current;
 
   const finish = useCallback(() => {
-    if (doneCalledRef.current) return;
-    doneCalledRef.current = true;
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onDoneRef.current();
+  }, []);
 
+  const playOut = useCallback(() => {
+    if (settledRef.current) return;
     Animated.timing(blackOpacity, {
       toValue: 1,
       duration: FADE_OUT_DURATION,
       easing: Easing.in(Easing.quad),
       useNativeDriver: true,
-    }).start(() => onDone());
-  }, [onDone, blackOpacity]);
+    }).start(() => finish());
+    const backup = setTimeout(finish, FADE_OUT_DURATION + 500);
+    return () => clearTimeout(backup);
+  }, [blackOpacity, finish]);
 
   useEffect(() => {
-    const timer = setTimeout(finish, TOTAL_DURATION);
-    return () => clearTimeout(timer);
-  }, [finish]);
+    let clearBackup = () => {};
+    const timer = setTimeout(() => {
+      clearBackup = playOut() ?? (() => {});
+    }, TOTAL_DURATION);
+    return () => {
+      clearTimeout(timer);
+      clearBackup();
+    };
+  }, [playOut]);
 
   const CORE_SIZE = 44;
   const GLOW_SIZE = 120;
@@ -243,7 +257,8 @@ export default function SplashGravity({ onDone }: SplashGravityProps) {
     <Pressable
       onPress={finish}
       style={[styles.container, { width, height }]}
-      accessible={false}
+      accessibilityRole="button"
+      accessibilityLabel="Skip intro"
     >
       <View style={[StyleSheet.absoluteFill, styles.bg]} />
 
