@@ -293,8 +293,24 @@ function drawCards(state: GameState, playerId: string): void {
   }
 }
 
-function isPlayerEmpty(player: PlayerState): boolean {
-  return player.hand.length === 0 && player.faceUp.length === 0 && player.faceDown.length === 0;
+/**
+ * The acting player is out only when they hold nothing and the shared draw
+ * deck cannot put another card in their hand.
+ *
+ * Hand, face-up, and face-down all count. The deck is drawn first so a
+ * non-empty deck can never be skipped: emptying the hand while face-up,
+ * face-down, or the deck still have cards is not a win.
+ */
+export function playerIsOut(state: GameState, playerId: string): boolean {
+  drawCards(state, playerId);
+  const player = state.players[playerId];
+  if (!player) return false;
+  return (
+    state.deck.length === 0 &&
+    player.hand.length === 0 &&
+    player.faceUp.length === 0 &&
+    player.faceDown.length === 0
+  );
 }
 
 /**
@@ -353,9 +369,8 @@ export function playCards(
     };
     const newStarterPlayer = newState.players[playerId]!;
     for (const c of starterCards) removeCardFromPlayer(newStarterPlayer, c.id);
-    drawCards(newState, playerId);
 
-    const gameOver = isPlayerEmpty(newStarterPlayer);
+    const gameOver = playerIsOut(newState, playerId);
     let nextPlayerId = playerId;
     if (gameOver) {
       newState.phase = 'finished';
@@ -474,9 +489,7 @@ export function playCards(
     effect = 'set_complete';
   }
 
-  drawCards(newState, playerId);
-
-  const gameOver = isPlayerEmpty(newPlayer);
+  const gameOver = playerIsOut(newState, playerId);
   let nextPlayerId = playerId;
 
   if (gameOver) {

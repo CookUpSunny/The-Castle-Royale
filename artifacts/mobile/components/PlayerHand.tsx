@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import { CARD_WIDTH, FAN_CONTAINER_H, computeFanPositions } from '@/lib/fanLayout';
 import CardComponent from './Card';
 import FaceDownStage from './FaceDownStage';
 
@@ -45,49 +46,6 @@ interface PlayerHandProps {
   onDragEnd?: (x: number, y: number) => void;
   /** Override the available width used for fan arc math (defaults to full screen width). Pass when the container is narrower than the screen. */
   availableWidth?: number;
-}
-
-// ─── Fan arc constants ────────────────────────────────────────────────────────
-const CARD_WIDTH = 66;
-const CARD_HEIGHT = 100;
-/** Visible height of the fan container. Cards arc within this space. */
-const FAN_CONTAINER_H = 160;
-/** Radius of the imaginary circle whose arc the card bottoms follow. */
-const FAN_PIVOT_R = 190;
-/** Maximum half-spread in degrees (each side from center). */
-const MAX_HALF_SPREAD = 40;
-
-/**
- * Compute the absolute position and rotation for card [index] of [total]
- * in the pinched-accordion fan layout.
- */
-function computeFanPosition(
-  index: number,
-  total: number,
-  containerWidth: number,
-): { left: number; top: number; rotationDeg: number } {
-  const center = (total - 1) / 2;
-  // Total spread grows with hand size, capped at ±MAX_HALF_SPREAD each side.
-  const totalSpreadDeg = total <= 1 ? 0 : Math.min(total * 7, MAX_HALF_SPREAD * 2);
-  const perCardDeg = total > 1 ? totalSpreadDeg / (total - 1) : 0;
-  const rotationDeg = (index - center) * perCardDeg;
-  const rotationRad = (rotationDeg * Math.PI) / 180;
-
-  // Pivot sits below the container so the arc curves nicely upward.
-  // pivotY is measured from the container top; setting it to
-  // (FAN_CONTAINER_H + FAN_PIVOT_R - 10) places the center card bottom
-  // 10 px above the container's bottom edge.
-  const pivotX = containerWidth / 2;
-  const pivotY = FAN_CONTAINER_H + FAN_PIVOT_R - 10;
-
-  const cardBottomX = pivotX + FAN_PIVOT_R * Math.sin(rotationRad);
-  const cardBottomY = pivotY - FAN_PIVOT_R * Math.cos(rotationRad);
-
-  return {
-    left: cardBottomX - CARD_WIDTH / 2,
-    top: cardBottomY - CARD_HEIGHT,
-    rotationDeg,
-  };
 }
 
 // ─── HandCard ─────────────────────────────────────────────────────────────────
@@ -332,16 +290,18 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   // ── Drag hover tracking ────────────────────────────────────────────────────
   const hoveredIndex = useSharedValue(-1);
 
+  // One layout for the whole hand so every card shares the bottom anchor.
+  const fanPositions = useMemo(
+    () => (showHand ? computeFanPositions(totalCards, containerWidth) : []),
+    [showHand, totalCards, containerWidth],
+  );
+
   // Pre-compute each card's horizontal centre so the pan worklet can find the
   // closest card without calling back to JS.
-  const cardCenters = useMemo(() =>
-    showHand
-      ? activeCards.map((_, i) => {
-          const { left } = computeFanPosition(i, totalCards, containerWidth);
-          return left + CARD_WIDTH / 2;
-        })
-      : [],
-  [showHand, totalCards, containerWidth]);
+  const cardCenters = useMemo(
+    () => fanPositions.map((placement) => placement.left + CARD_WIDTH / 2),
+    [fanPositions],
+  );
 
   const hoverPan = useMemo(() =>
     Gesture.Pan()
@@ -431,7 +391,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   // Must be AFTER all hooks (Rules of Hooks — see comment in original code).
   if (showFaceDown) {
     return (
-      <View style={{ paddingLeft: 50 }}>
+      <View style={styles.faceDownAnchor}>
         <FaceDownStage
           faceDownIds={faceDownIds.length > 0 ? faceDownIds : Array.from({ length: faceDownCount }).map((_, i) => `fd_${i}`)}
           isMyTurn={isMyTurn}
@@ -483,8 +443,9 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
         </View>
       )}
 
+      <View style={[styles.anchorSlot, { width: containerWidth }]}>
       {showFaceUp ? (
-        /* Face-up final phase — stationary centered cards (single-tap play) */
+        /* Face-up final phase — same bottom anchor as the fan, single-tap play. */
         <View style={styles.faceUpRow}>
           {activeCards.map((card, i) => {
             const isPlayable = canPlayCardFn(card, discardPile);
@@ -510,9 +471,11 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
         <GestureDetector gesture={draggable ? Gesture.Manual() : hoverPan}>
           <View style={[styles.fanContainer, { width: containerWidth }]}>
             {activeCards.map((card, i) => {
+              const placement = fanPositions[i];
+              if (!placement) return null;
               const isPlayable = mustPlayStarter ? true : canPlayCardFn(card, discardPile);
               const multiplicity = valueCounts.get(card.value) ?? 1;
-              const { left, top, rotationDeg } = computeFanPosition(i, totalCards, containerWidth);
+              const { left, top, rotationDeg } = placement;
               // Selection state and hover raise are portrait-only
               const isThisSelected = !draggable && selectedCardId === card.id;
               const isDimmed = !draggable && selectedCardId !== null && !isThisSelected && isPlayable;
@@ -552,6 +515,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
           </View>
         </GestureDetector>
       )}
+      </View>
     </Pressable>
   );
 });
@@ -653,15 +617,28 @@ const faceUpStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 0,
+    alignItems: 'center',
+  },
+  anchorSlot: {
+    width: '100%',
+    height: FAN_CONTAINER_H,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    overflow: 'visible',
+  },
+  faceDownAnchor: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   faceUpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     flexWrap: 'wrap',
     gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingBottom: 8,
   },
   multiRow: {
     flexDirection: 'row',

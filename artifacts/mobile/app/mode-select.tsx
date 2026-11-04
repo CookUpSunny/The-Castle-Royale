@@ -35,39 +35,16 @@ export default function ModeSelectScreen() {
   const shortFold = duo.mode === 'compact' && duo.height < 700;
   const isConnected = connectionStatus === 'connected';
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={['#200040', '#0a0018', '#07000f']}
-        style={StyleSheet.absoluteFill}
-      />
+  const titleBlock = (
+    <View style={styles.titleBlock}>
+      <Text style={[styles.crown, { color: colors.neonGold }, shortFold && { fontSize: 22, marginBottom: 0 }]}>♛</Text>
+      <Text style={[styles.title, { color: colors.foreground }, shortFold && { fontSize: 28, letterSpacing: 5 }]}>SELECT</Text>
+      <Text style={[styles.titleSub, { color: colors.neonGold }, shortFold && { fontSize: 13, letterSpacing: 3 }]}>YOUR BATTLE</Text>
+    </View>
+  );
 
-      <View style={[styles.inner, {
-        paddingTop: insets.top + webTopPad + 12,
-        paddingBottom: insets.bottom + 20,
-        paddingLeft: insets.left + 16,
-        paddingRight: insets.right + 16,
-        flexDirection: verticalBook ? 'row' : 'column',
-        alignItems: verticalBook ? 'stretch' : 'center',
-      }]}>
-        <View style={[styles.pane, shortFold && { flex: 0, justifyContent: 'flex-start' }]}>
-          <View style={styles.headerRow}>
-            <BackButton label="← BACK" onPress={() => router.back()} />
-            <View style={{ flex: 1 }} />
-          </View>
-
-          <View style={styles.titleBlock}>
-            <Text style={[styles.crown, { color: colors.neonGold }, shortFold && { fontSize: 22, marginBottom: 0 }]}>♛</Text>
-            <Text style={[styles.title, { color: colors.foreground }, shortFold && { fontSize: 28, letterSpacing: 5 }]}>SELECT</Text>
-            <Text style={[styles.titleSub, { color: colors.neonGold }, shortFold && { fontSize: 13, letterSpacing: 3 }]}>YOUR BATTLE</Text>
-          </View>
-        </View>
-
-        {split ? (
-          <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
-        ) : null}
-
-        <View style={styles.pane}>
+  const buttons = (
+    <View style={styles.battleGroup}>
         <View style={[styles.buttonsBlock, shortFold && { gap: 8 }]}>
           <Pressable
             onPress={goBot}
@@ -129,7 +106,49 @@ export default function ModeSelectScreen() {
             {isConnected ? 'ONLINE' : connectionStatus.toUpperCase()}
           </Text>
         </View>
-        </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient
+        colors={['#200040', '#0a0018', '#07000f']}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <View style={[styles.inner, {
+        paddingTop: insets.top + webTopPad + 12,
+        paddingBottom: insets.bottom + 20,
+        paddingLeft: insets.left + 16,
+        paddingRight: insets.right + 16,
+        flexDirection: verticalBook ? 'row' : 'column',
+        alignItems: verticalBook ? 'stretch' : 'center',
+      }]}>
+        {split ? (
+          <>
+            <View style={styles.pane}>
+              <View style={styles.headerRow}>
+                <BackButton label="← BACK" onPress={() => router.back()} />
+                <View style={{ flex: 1 }} />
+              </View>
+              {titleBlock}
+            </View>
+            <View pointerEvents="none" style={verticalBook ? { width: duo.creaseBand } : { height: duo.creaseBand }} />
+            <View style={styles.pane}>
+              {buttons}
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.headerRow}>
+              <BackButton label="← BACK" onPress={() => router.back()} />
+            </View>
+            <View style={styles.compactBody}>
+              {titleBlock}
+              {buttons}
+            </View>
+          </>
+        )}
       </View>
     </View>
   );
@@ -137,13 +156,21 @@ export default function ModeSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, alignItems: 'center', justifyContent: 'space-between' },
+  inner: { flex: 1, alignItems: 'center' },
   pane: { flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' },
+  compactBody: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 28,
+  },
   headerRow: { width: '100%', flexDirection: 'row', alignItems: 'center' },
-  titleBlock: { alignItems: 'center', marginTop: 12 },
+  titleBlock: { alignItems: 'center' },
   crown: { fontSize: 32, marginBottom: 4, textShadowColor: '#c8960a', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
-  title: { fontSize: 38, fontWeight: '900', letterSpacing: 8 },
-  titleSub: { fontSize: 16, fontWeight: '700', letterSpacing: 5, marginTop: -2 },
+  title: { fontSize: 38, fontWeight: '900', letterSpacing: 8, paddingLeft: 8 },
+  titleSub: { fontSize: 16, fontWeight: '700', letterSpacing: 5, marginTop: -2, paddingLeft: 5 },
+  battleGroup: { width: '100%', alignItems: 'center', gap: 18 },
   buttonsBlock: { width: '100%', gap: 18 },
   bigBtnOuter: {
     width: '100%',

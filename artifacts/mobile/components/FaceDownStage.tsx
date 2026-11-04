@@ -159,7 +159,9 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
   return (
     <View style={styles.container}>
       <Animated.Text style={[styles.headline, { color: colors.neonGold }, labelStyle]}>
-        ✦ FINAL {faceDownIds.length} ✦ TAP TO REVEAL
+        {faceDownIds.length === 1
+          ? '✦ LAST CARD ✦ TAP TO REVEAL'
+          : `✦ BLIND ${faceDownIds.length} ✦ TAP TO REVEAL`}
       </Animated.Text>
       <Text style={[styles.subhead, { color: colors.mutedForeground }]}>
         Blind play — if it can&apos;t land on the pile, you take the pile
@@ -188,8 +190,8 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 12,
-    paddingBottom: 70,
+    paddingTop: 4,
+    paddingBottom: 0,
     alignItems: 'center',
   },
   headline: {
