@@ -53,14 +53,17 @@ export function CardBack({
   size = 'md',
   style,
   skinOverride,
+  scale = 1,
 }: {
   size?: 'sm' | 'md' | 'lg';
   style?: object;
   skinOverride?: CardSkinId;
+  /** Uniform scale of the back art. 1 keeps every existing card the same size. */
+  scale?: number;
 }) {
   const cosmetics = useCosmetics();
   const skin = skinOverride ?? cosmetics.cardSkin ?? 'royal-gold';
-  return <SkinnedCardBack skin={skin} size={size} style={style} />;
+  return <SkinnedCardBack skin={skin} size={size} style={style} scale={scale} />;
 }
 
 interface SkinnedCardBackProps {
@@ -100,8 +103,16 @@ const SKIN_THEMES: Record<CardSkinId, SkinTheme> = {
   'vintage-casino':  { bg: '#3a2a18', innerBg: '#5c4528', border: '#a16207', innerBorder: '#78350f', glow: '#92400e', symbol: '♠', symbolColor: '#fcd34d' },
 };
 
-function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
-  const dims = SIZES[size];
+function SkinnedCardBack({ skin, size, style, scale = 1 }: SkinnedCardBackProps & { scale?: number }) {
+  const base = SIZES[size];
+  const dims = {
+    width: base.width * scale,
+    height: base.height * scale,
+    fontSize: base.fontSize * scale,
+    suitSize: base.suitSize * scale,
+    lineHeight: base.lineHeight * scale,
+    suitLineHeight: base.suitLineHeight * scale,
+  };
   const theme = SKIN_THEMES[skin];
   const { arena } = useCosmetics();
   const feltShadowColor = ARENA_FELT_SHADOW[arena] ?? '#0a0a0a';
@@ -141,11 +152,11 @@ function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
     <View
       style={[
         {
-          borderRadius: 6,
+          borderRadius: 6 * scale,
           shadowColor: feltShadowColor,
-          shadowOffset: { width: 0, height: 4 },
+          shadowOffset: { width: 0, height: 4 * scale },
           shadowOpacity: 0.55,
-          shadowRadius: 6,
+          shadowRadius: 6 * scale,
           elevation: 6,
         },
         style,
@@ -159,10 +170,10 @@ function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
           height: dims.height,
           backgroundColor: theme.bg,
           borderColor: theme.border,
-          borderWidth: 1.5,
-          borderRadius: 6,
+          borderWidth: 1.5 * scale,
+          borderRadius: 6 * scale,
           shadowColor: theme.glow,
-          shadowRadius: 8,
+          shadowRadius: 8 * scale,
           shadowOffset: { width: 0, height: 0 },
           elevation: 8,
         },
@@ -190,13 +201,19 @@ function SkinnedCardBack({ skin, size, style }: SkinnedCardBackProps) {
       <View
         style={[
           styles.cardBackInner,
-          { borderColor: theme.innerBorder, backgroundColor: theme.innerBg },
+          {
+            borderColor: theme.innerBorder,
+            backgroundColor: theme.innerBg,
+            margin: 4 * scale,
+            borderRadius: 4 * scale,
+            borderWidth: 1 * scale,
+          },
         ]}
       >
         <Text
           style={[
             styles.cardBackSymbol,
-            { color: theme.symbolColor, fontSize: dims.suitSize + 4, opacity: 0.85 },
+            { color: theme.symbolColor, fontSize: (base.suitSize + 4) * scale, opacity: 0.85 },
           ]}
         >
           {theme.symbol}

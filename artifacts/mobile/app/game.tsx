@@ -201,30 +201,30 @@ const avatarChipStyles = StyleSheet.create({
   },
 });
 
+/** Portrait draw-deck face was 60×84. The stack, including the peek, is 30% larger. */
+const DRAW_DECK_SCALE = 1.3;
+const DRAW_DECK_CARD_W = 60 * DRAW_DECK_SCALE;
+const DRAW_DECK_CARD_H = 84 * DRAW_DECK_SCALE;
+const DRAW_DECK_PEEK = 2 * DRAW_DECK_SCALE;
+const DRAW_DECK_BACK_SCALE = DRAW_DECK_CARD_W / 40;
+
 function DeckBadge({ count }: { count: number }) {
   const colors = useColors();
   return (
     <View style={styles.deckBadgeWrap}>
       <View style={styles.deckStack}>
-        {[2, 1, 0].map((offset) => (
+        {[2, 1, 0].map((layer) => (
           <View
-            key={offset}
-            style={[
-              styles.deckCard,
-              {
-                top: -offset * 2,
-                left: -offset * 2,
-                borderColor: colors.neonGold,
-                backgroundColor: '#1a0535',
-              },
-            ]}
-          />
+            key={layer}
+            style={{
+              position: 'absolute',
+              top: (2 - layer) * DRAW_DECK_PEEK,
+              left: (2 - layer) * DRAW_DECK_PEEK,
+            }}
+          >
+            <CardBack size="sm" scale={DRAW_DECK_BACK_SCALE} />
+          </View>
         ))}
-        <View style={styles.deckLogo}>
-          <Text style={[styles.deckLogoText, { color: colors.neonGold }]}>✦</Text>
-          <Text style={[styles.deckLogoSub, { color: colors.neonGold }]}>CASTLE</Text>
-          <Text style={[styles.deckLogoSub, { color: colors.neonGold }]}>ROYALE</Text>
-        </View>
       </View>
       <View style={[styles.deckTagPill, { borderColor: '#3a1a5e' }]}>
         <Text style={[styles.deckTagTitle, { color: colors.neonGold }]}>DRAW DECK</Text>
@@ -543,7 +543,7 @@ export default function GameScreen() {
               <View style={styles.pileNudge} />
               <View style={styles.pileCluster}>
               <View style={styles.pileRow}>
-                <View style={{ flex: 1 }} />
+                <View style={styles.pileSide} />
                 <View
                   ref={pileViewRef}
                   onLayout={() => {
@@ -931,10 +931,15 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 8,
   },
+  pileSide: {
+    flex: 1,
+    minWidth: 0,
+  },
   deckSlot: {
     flex: 1,
+    minWidth: 0,
     alignItems: 'flex-end',
-    paddingRight: 6,
+    paddingRight: 2,
   },
 
   deckBadgeWrap: {
@@ -942,37 +947,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   deckStack: {
-    width: 60,
-    height: 84,
+    width: DRAW_DECK_CARD_W + 2 * DRAW_DECK_PEEK,
+    height: DRAW_DECK_CARD_H + 2 * DRAW_DECK_PEEK,
     position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deckCard: {
-    position: 'absolute',
-    width: 60,
-    height: 84,
-    borderRadius: 6,
-    borderWidth: 1.2,
-  },
-  deckLogo: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deckLogoText: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  deckLogoSub: {
-    fontSize: 7,
-    fontWeight: '900',
-    letterSpacing: 1,
-    lineHeight: 9,
   },
   deckTagPill: {
     paddingHorizontal: 10,
