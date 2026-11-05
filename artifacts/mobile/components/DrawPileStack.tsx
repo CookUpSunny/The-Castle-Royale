@@ -7,6 +7,9 @@ export interface DrawPileHandle {
   getPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
 }
 
+/** Match the portrait draw deck: the card stack, including the peek, is 30% larger. */
+const DRAW_STACK_SCALE = 1.3;
+
 const DrawPileStack = forwardRef<DrawPileHandle, { count: number }>(({ count }, ref) => {
   const colors = useColors();
   const viewRef = useRef<View>(null);
@@ -27,7 +30,7 @@ const DrawPileStack = forwardRef<DrawPileHandle, { count: number }>(({ count }, 
   if (count === 0) {
     return (
       <View ref={viewRef} style={styles.wrap}>
-        <View style={[styles.emptyCard, { borderColor: colors.border }]}>
+        <View style={[styles.emptyCard, { borderColor: colors.border, width: 40 * DRAW_STACK_SCALE, height: 56 * DRAW_STACK_SCALE }]}>
           <Text style={[styles.emptyGlyph, { color: colors.mutedForeground }]}>✦</Text>
         </View>
         <Text style={[styles.label, { color: colors.mutedForeground }]}>DRAW</Text>
@@ -40,13 +43,13 @@ const DrawPileStack = forwardRef<DrawPileHandle, { count: number }>(({ count }, 
     <View ref={viewRef} style={styles.wrap}>
       <View style={styles.stack}>
         <View style={styles.card2}>
-          <CardBack size="sm" />
+          <CardBack size="sm" scale={DRAW_STACK_SCALE} />
         </View>
         <View style={styles.card1}>
-          <CardBack size="sm" />
+          <CardBack size="sm" scale={DRAW_STACK_SCALE} />
         </View>
         <View style={styles.card0}>
-          <CardBack size="sm" />
+          <CardBack size="sm" scale={DRAW_STACK_SCALE} />
         </View>
       </View>
       <Text style={[styles.label, { color: colors.neonGold }]}>DRAW</Text>
@@ -71,19 +74,19 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   stack: {
-    width: 44,
-    height: 62,
+    width: 44 * DRAW_STACK_SCALE,
+    height: 62 * DRAW_STACK_SCALE,
     position: 'relative',
     marginBottom: 2,
   },
   card2: {
     position: 'absolute',
-    transform: [{ translateX: 4 }, { translateY: 4 }, { rotate: '4deg' }],
+    transform: [{ translateX: 4 * DRAW_STACK_SCALE }, { translateY: 4 * DRAW_STACK_SCALE }, { rotate: '4deg' }],
     opacity: 0.45,
   },
   card1: {
     position: 'absolute',
-    transform: [{ translateX: 2 }, { translateY: 2 }, { rotate: '2deg' }],
+    transform: [{ translateX: 2 * DRAW_STACK_SCALE }, { translateY: 2 * DRAW_STACK_SCALE }, { rotate: '2deg' }],
     opacity: 0.7,
   },
   card0: {
