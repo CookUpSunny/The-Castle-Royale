@@ -1,18 +1,27 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { SceneId } from '@/lib/scenePacks';
 
 import {
   CARD_SKINS,
   canEquipCardSkin,
-  resolveStoredCardSkin,
   type CardSkin,
   type CardSkinId,
 } from '@/lib/cardSkins';
+import type { AvatarId } from '@/lib/avatarPortrait';
+import { noteEquippedAvatar } from '@/lib/equippedAvatar';
+import {
+  arenaAfterHydration,
+  avatarAfterHydration,
+  cardAfterHydration,
+  type ArenaId,
+} from '@/lib/loadoutSelection';
 import { warmGameVisualCache } from '@/lib/preloadGameAssets';
 
 export type { CardSkin, CardSkinId };
 export { CARD_SKINS };
+export type { AvatarId } from '@/lib/avatarPortrait';
+export type { ArenaId } from '@/lib/loadoutSelection';
 
 /**
  * Cosmetics layer — purely visual customizations the player can swap in/out
@@ -26,17 +35,15 @@ export { CARD_SKINS };
  * requires an active subscription.
  */
 
-export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning' | 'matrix' | 'rainbowRoad';
-
 /**
  * ─── ADDING A NEW CHARACTER AVATAR ───────────────────────────────────────────
  * 1. Drop the portrait PNG into  artifacts/mobile/assets/avatars/<id>.png
- * 2. Add the new ID to the union below  (e.g.  | 'ninja')
+ * 2. Add the id to AVATAR_IDS in lib/avatarPortrait.ts and the api-server
+ *    allow-list in artifacts/api-server/src/lib/avatarId.ts
  * 3. Add an entry to the AVATARS array  (id, name, quote, color, portrait require())
  * That's it — the rest of the app picks it up automatically.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export type AvatarId = 'eagles' | 'frog' | 'troll' | 'gigi' | 'rockner' | 'sunami';
 
 export interface AvatarOption {
   id: AvatarId;
@@ -155,6 +162,8 @@ interface CosmeticsContextType {
   arena: ArenaId;
   scene: SceneId;
   avatarId: AvatarId;
+  /** True once AsyncStorage has been read (or the read failed). Defaults are not saved before this. */
+  hydrated: boolean;
   /** Pass `isSubscribed` so premium skins can be equipped by active subscribers. */
   setCardSkin: (id: CardSkinId, isSubscribed?: boolean) => void;
   setArena: (id: ArenaId) => void;
@@ -169,17 +178,16 @@ const STORAGE_CARD_KEY = 'cosmetics.cardSkin';
 const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
-const isArenaId = (v: string | null): v is ArenaId =>
-  v === 'greenTable' || v === 'classic' || v === 'cosmic' || v === 'royal' || v === 'lightning' || v === 'matrix' || v === 'rainbowRoad';
-
-const AVATAR_ID_SET = new Set<string>(AVATARS.map((a) => a.id));
-const isAvatarId = (v: string | null): v is AvatarId =>
-  v !== null && AVATAR_ID_SET.has(v);
-
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const [cardSkin, setCardSkinState] = useState<CardSkinId>('royal-gold');
   const [arena, setArenaState] = useState<ArenaId>('greenTable');
   const [avatarId, setAvatarState] = useState<AvatarId>('eagles');
+  const [hydrated, setHydrated] = useState(false);
+  // Set when the player confirms a choice before storage has loaded, so the
+  // late read cannot put the previous character back.
+  const avatarDirtyRef = useRef(false);
+  const arenaDirtyRef = useRef(false);
+  const cardDirtyRef = useRef(false);
 
   // Derive the scene from the arena so the background imagery matches the
   // arena the player selected. Each arena now has its own scene.
@@ -193,6 +201,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     'casinoGreen';
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const [storedCard, storedArena, storedAvatar] = await Promise.all([
@@ -200,24 +209,40 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.getItem(STORAGE_ARENA_KEY),
           AsyncStorage.getItem(STORAGE_AVATAR_KEY),
         ]);
-        if (storedCard) {
-          // Migrate legacy IDs (classic/cosmic/royal) → new IDs.
-          // Locked and unknown ids stay on the default and are not written back.
-          const resolved = resolveStoredCardSkin(storedCard);
-          if (resolved.migrate) {
-            setCardSkinState(resolved.skin);
-            AsyncStorage.setItem(STORAGE_CARD_KEY, resolved.skin).catch(() => {});
-          } else if (resolved.skin !== 'royal-gold' || storedCard === 'royal-gold') {
-            setCardSkinState(resolved.skin);
-          }
-        }
-        if (isArenaId(storedArena)) setArenaState(storedArena);
-        if (isAvatarId(storedAvatar)) setAvatarState(storedAvatar);
+        if (cancelled) return;
+        setCardSkinState((current) => {
+          const next = cardAfterHydration({
+            dirty: cardDirtyRef.current,
+            current,
+            stored: storedCard,
+          });
+          if (next.migrate) AsyncStorage.setItem(STORAGE_CARD_KEY, next.skin).catch(() => {});
+          return next.skin;
+        });
+        setArenaState((current) => {
+          const next = arenaAfterHydration({ dirty: arenaDirtyRef.current, current, stored: storedArena });
+          return next;
+        });
+        setAvatarState((current) => avatarAfterHydration({
+          dirty: avatarDirtyRef.current,
+          current,
+          stored: storedAvatar,
+        }));
       } catch {
-        // Persistence is best-effort.
+        // Persistence is best-effort. Hydration still finishes so play can start.
+      } finally {
+        if (!cancelled) setHydrated(true);
       }
     })();
+    return () => { cancelled = true; };
   }, []);
+
+  // Keep the seat payload in sync with the equipped character, including the
+  // value hydration just restored. setAvatar also updates this synchronously
+  // so a confirm in the same turn does not emit the previous character.
+  useEffect(() => {
+    noteEquippedAvatar(avatarId);
+  }, [avatarId]);
 
   // Decode hero backdrop/table PNGs, arena photo, and all avatar sprites ahead
   // of `/game` so the match doesn't hitch on first paint.
@@ -227,16 +252,20 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
 
   const setCardSkin = useCallback((id: CardSkinId, isSubscribed = false) => {
     if (!canEquipCardSkin(id, isSubscribed)) return; // Refuse to equip premium skins without an active subscription.
+    cardDirtyRef.current = true;
     setCardSkinState(id);
     AsyncStorage.setItem(STORAGE_CARD_KEY, id).catch(() => {});
   }, []);
 
   const setArena = useCallback((id: ArenaId) => {
+    arenaDirtyRef.current = true;
     setArenaState(id);
     AsyncStorage.setItem(STORAGE_ARENA_KEY, id).catch(() => {});
   }, []);
 
   const setAvatar = useCallback((id: AvatarId) => {
+    avatarDirtyRef.current = true;
+    noteEquippedAvatar(id);
     setAvatarState(id);
     AsyncStorage.setItem(STORAGE_AVATAR_KEY, id).catch(() => {});
   }, []);
@@ -247,7 +276,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <CosmeticsContext.Provider value={{ cardSkin, arena, scene, avatarId, setCardSkin, setArena, setAvatar, isSkinUnlocked }}>
+    <CosmeticsContext.Provider value={{ cardSkin, arena, scene, avatarId, hydrated, setCardSkin, setArena, setAvatar, isSkinUnlocked }}>
       {children}
     </CosmeticsContext.Provider>
   );

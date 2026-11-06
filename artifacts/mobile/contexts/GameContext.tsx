@@ -6,6 +6,8 @@ import { reportLoss } from '@/lib/adsApi';
 import { readInterstitialGate, writeInterstitialShown, writeLocalLossCount, writeSettledLossCount } from '@/lib/adLossStorage';
 import { resolveApiBaseUrl } from '@/lib/apiUrl';
 import { showInterstitialAd } from '@/lib/mobileAds';
+import { useCosmetics } from '@/contexts/CosmeticsContext';
+import { currentEquippedAvatar } from '@/lib/equippedAvatar';
 import { clientPremiumRef } from '@/lib/revenuecat';
 
 export interface Card {
@@ -33,6 +35,11 @@ export interface GameView {
   myPlayerId: string;
   opponentPlayerId: string;
   opponentName: string;
+  /**
+   * Opponent's seated character. Null when the server or the other client
+   * did not send one (older build, or a bot). Never copied onto the local player.
+   */
+  opponentAvatarId?: string | null;
   myHand: Card[];
   myFaceUp: Card[];
   myFaceDownCount: number;
@@ -168,10 +175,13 @@ export function GameProvider({
   const myEmoteBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opponentEmoteBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const gameViewRef = useRef<GameView | null>(null);
+  const { avatarId: equippedAvatarId } = useCosmetics();
   const queueTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Keep a ref to the latest gameCenterId so join callbacks always have fresh value
   const gameCenterIdRef = useRef<string | null | undefined>(gameCenterId);
   useEffect(() => { gameCenterIdRef.current = gameCenterId; }, [gameCenterId]);
+  gameViewRef.current = gameView;
 
   const clearEmoteBubbleTimers = useCallback(() => {
     if (myEmoteBubbleTimerRef.current) {
@@ -236,7 +246,11 @@ export function GameProvider({
       // Re-identify ourselves on every (re)connect so the server can route
       // private-room joins and game updates to our current socket.id even if
       // we briefly lost connectivity (app backgrounded, network blip, etc).
-      socket.emit('register', { playerId, gameCenterId: gameCenterIdRef.current ?? undefined });
+      socket.emit('register', {
+        playerId,
+        gameCenterId: gameCenterIdRef.current ?? undefined,
+        avatarId: currentEquippedAvatar(),
+      });
     });
 
     socket.on('disconnect', () => {
@@ -361,9 +375,25 @@ export function GameProvider({
   useEffect(() => {
     if (!playerId || !gameCenterId || !socketRef.current) return;
     if (socketRef.current.connected) {
-      socketRef.current.emit('register', { playerId, gameCenterId });
+      socketRef.current.emit('register', {
+        playerId,
+        gameCenterId,
+        avatarId: currentEquippedAvatar(),
+      });
     }
   }, [playerId, gameCenterId]);
+
+  // Tell the server when the equipped character changes, but not during a
+  // match — a re-register there restores the board and must not swap characters.
+  useEffect(() => {
+    if (!playerId || !socketRef.current?.connected) return;
+    if (gameViewRef.current) return;
+    socketRef.current.emit('register', {
+      playerId,
+      gameCenterId: gameCenterIdRef.current ?? undefined,
+      avatarId: equippedAvatarId,
+    });
+  }, [playerId, equippedAvatarId]);
 
   const setPlayerName = useCallback(async (name: string) => {
     setPlayerNameState(name);
@@ -433,6 +463,7 @@ export function GameProvider({
       playerId,
       playerName,
       gameCenterId: gameCenterIdRef.current ?? undefined,
+      avatarId: currentEquippedAvatar(),
     });
   }, [playerId, playerName, connectionStatus]);
 
@@ -443,6 +474,7 @@ export function GameProvider({
       playerId,
       playerName,
       gameCenterId: gameCenterIdRef.current ?? undefined,
+      avatarId: currentEquippedAvatar(),
     });
   }, [playerId, playerName, connectionStatus]);
 
@@ -461,6 +493,7 @@ export function GameProvider({
       playerId,
       playerName,
       gameCenterId: gameCenterIdRef.current ?? undefined,
+      avatarId: currentEquippedAvatar(),
     });
   }, [playerId, playerName, connectionStatus]);
 
@@ -478,6 +511,7 @@ export function GameProvider({
       playerName,
       code: cleaned,
       gameCenterId: gameCenterIdRef.current ?? undefined,
+      avatarId: currentEquippedAvatar(),
     });
   }, [playerId, playerName, connectionStatus]);
 

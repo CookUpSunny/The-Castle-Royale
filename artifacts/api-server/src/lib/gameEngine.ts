@@ -1,3 +1,5 @@
+import { sanitizeAvatarId, type AvatarId } from './avatarId.js';
+
 export type Suit = 'H' | 'D' | 'C' | 'S';
 
 export interface Card {
@@ -12,6 +14,8 @@ export interface PlayerState {
   hand: Card[];
   faceUp: Card[];
   faceDown: Card[];
+  /** Character this player seated. Omitted for bots and older clients. */
+  avatarId?: AvatarId;
 }
 
 export interface GameState {
@@ -582,6 +586,9 @@ export function getGameView(state: GameState, playerId: string): Record<string, 
     myPlayerId: playerId,
     opponentPlayerId: opponentId,
     opponentName: opponent.name,
+    // The other seat's character only. Never echo this player's own avatar —
+    // the client keeps that in local cosmetics.
+    opponentAvatarId: sanitizeAvatarId(opponent.avatarId) ?? null,
     myHand: myPlayer.hand,
     myFaceUp: myPlayer.faceUp,
     myFaceDownCount: myPlayer.faceDown.length,

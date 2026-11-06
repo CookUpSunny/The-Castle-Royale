@@ -47,13 +47,8 @@ import SetupScreen from '@/components/SetupScreen';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
+import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
-
-function hashName(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -477,10 +472,10 @@ export default function GameScreen() {
   }, [gameView?.lastEvent, committedLandscape]);
 
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
-  const opponentAvatarPortrait = useMemo(
-    () => AVATARS[hashName(gameView?.opponentName ?? '') % AVATARS.length]?.portrait ?? null,
-    [gameView?.opponentName],
-  );
+  const opponentAvatarPortrait = useMemo(() => {
+    const id = resolveOpponentAvatarId(gameView?.opponentAvatarId, gameView?.opponentName ?? '');
+    return AVATARS.find((a) => a.id === id)?.portrait ?? null;
+  }, [gameView?.opponentAvatarId, gameView?.opponentName]);
 
   if (!gameView) return null;
 
