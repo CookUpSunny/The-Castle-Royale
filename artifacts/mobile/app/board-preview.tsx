@@ -1,7 +1,9 @@
-import { Redirect } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CardBack } from "@/components/Card";
+import CardBackMatchFixture from "@/components/CardBackMatchFixture";
+import CosmeticsModal from "@/components/CosmeticsModal";
 import DuoSplit from "@/components/DuoSplit";
 import SceneBackground from "@/components/SceneBackground";
 import { useDuoWindow } from "@/hooks/useDuoWindow";
@@ -9,11 +11,20 @@ import { topContentInset } from "@/lib/duoLayout";
 import { Platform } from "react-native";
 
 /**
- * Static match frame used to check Duo sizes. The live board in GameLandscape
- * uses the same hinge split. This route does not start a match.
+ * Dev-only board tools. The default frame checks Duo sizes and does not start
+ * a match. `?match=1&skin=atlas-red` equips that skin in a Cosmic Sanctum
+ * match. `?match=1&gallery=1` renders one of each image back. `?panel=cards`
+ * opens the existing cosmetics card list.
  */
 export default function BoardPreviewScreen() {
+  const params = useLocalSearchParams<{ skin?: string; match?: string; gallery?: string; panel?: string }>();
   if (!__DEV__) return <Redirect href="/" />;
+  if (params.panel === "cards") {
+    return <CosmeticsModal visible onClose={() => {}} initialTab="cards" />;
+  }
+  if (params.match === "1" || params.gallery === "1") {
+    return <CardBackMatchFixture skin={params.skin} gallery={params.gallery === "1"} />;
+  }
   return <BoardFrame />;
 }
 

@@ -24,6 +24,8 @@ import DuoSplit from '@/components/DuoSplit';
 interface CosmeticsModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Debug previews can open on CARDS. The store still opens on ARENAS. */
+  initialTab?: 'arenas' | 'cards';
 }
 
 /**
@@ -31,7 +33,7 @@ interface CosmeticsModalProps {
  * Premium arenas and premium card skins are gated behind an active
  * RevenueCat subscription — tapping one while unsubscribed opens the paywall.
  */
-export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps) {
+export default function CosmeticsModal({ visible, onClose, initialTab = 'arenas' }: CosmeticsModalProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { cardSkin, arena, setCardSkin, setArena } = useCosmetics();
@@ -42,7 +44,7 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
       priceString: pkg.product.priceString,
     })),
   );
-  const [tab, setTab] = useState<'arenas' | 'cards'>('arenas');
+  const [tab, setTab] = useState<'arenas' | 'cards'>(initialTab);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [paywallFeature, setPaywallFeature] = useState<string | undefined>(undefined);
 
@@ -93,7 +95,7 @@ export default function CosmeticsModal({ visible, onClose }: CosmeticsModalProps
 
         <DuoSplit
           primary={
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
+        <ScrollView testID="card-skin-list" style={{ flex: 1 }} contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
           {tab === 'arenas' &&
             ARENAS.map((a: Arena) => (
               <CosmeticRow
