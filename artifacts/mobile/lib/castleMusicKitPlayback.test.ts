@@ -7,11 +7,13 @@ import { fileURLToPath } from 'node:url';
 /**
  * Source check for the MusicKit queue watchdog.
  *
- * EAS SDK 55 compiles this module with Xcode 26.2. Apple's
- * MusicPlayer.PlaybackStatus has no `seeking` case. Scrubbing is
+ * EAS SDK 55 compiles this module with Xcode 26.2. Unqualified `MusicPlayer`
+ * is ambiguous for type lookup there. Repeat mode and playback status are the
+ * nested types on `MusicKit.MusicPlayer` (the class `ApplicationMusicPlayer`
+ * inherits). `PlaybackStatus` has no `seeking` case. Scrubbing is
  * `seekingForward` or `seekingBackward` (iOS 15+). This file cannot be
- * typechecked by swiftc here; the assertions lock the switch the compiler
- * accepts and the pause/stop behavior around it.
+ * typechecked by swiftc here; the assertions lock the qualified types, the
+ * switch the compiler accepts, and the pause/stop behavior around it.
  */
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const swiftPath = path.join(projectRoot, 'modules/castle-musickit/ios/CastleMusicKitModule.swift');
@@ -45,6 +47,48 @@ function functionBody(source: string, name: string): string {
   }
   assert.fail(`${name} body did not close`);
 }
+
+test('MusicPlayer nested types are qualified as MusicKit.MusicPlayer', () => {
+  const code = stripSwiftComments(fs.readFileSync(swiftPath, 'utf8'));
+  const unqualified = code.replace(/MusicKit\.MusicPlayer/g, '');
+
+  assert.equal(
+    /\bMusicPlayer\b/.test(unqualified),
+    false,
+    'a bare MusicPlayer type lookup is ambiguous under Xcode 26.2',
+  );
+  assert.match(code, /MusicKit\.MusicPlayer\.RepeatMode\.one\b/);
+  assert.match(code, /MusicKit\.MusicPlayer\.RepeatMode\.all\b/);
+  assert.match(code, /MusicKit\.MusicPlayer\.RepeatMode\.none\b/);
+  assert.match(
+    code,
+    /func transportInProgress\(_ status: MusicKit\.MusicPlayer\.PlaybackStatus\)/,
+  );
+
+  assert.match(code, /import MusicKit/);
+  assert.equal(code.includes('import MediaPlayer'), false);
+  assert.equal(code.includes('SystemMusicPlayer'), false);
+  assert.equal(code.includes('MPMusicPlayer'), false);
+  assert.equal(code.includes('com.apple.developer.musickit'), false);
+
+  const play = functionBody(code, 'play');
+  assert.match(
+    play,
+    /player\.state\.repeatMode = repeatOne \? MusicKit\.MusicPlayer\.RepeatMode\.one : MusicKit\.MusicPlayer\.RepeatMode\.all/,
+  );
+  assert.match(play, /ApplicationMusicPlayer\.Queue\(for: ordered\)/);
+  assert.match(play, /try await player\.play\(\)/);
+
+  const silence = functionBody(code, 'silence');
+  assert.match(silence, /player\.pause\(\)/);
+  assert.match(silence, /player\.queue\.entries = \[\]/);
+  assert.match(silence, /player\.state\.repeatMode = MusicKit\.MusicPlayer\.RepeatMode\.none/);
+
+  const skip = functionBody(code, 'skip');
+  assert.match(skip, /try await player\.skipToNextEntry\(\)/);
+  assert.match(skip, /player\.playbackTime = 0/);
+  assert.match(skip, /try await player\.play\(\)/);
+});
 
 test('PlaybackStatus switch uses the documented cases and does not invent seeking', () => {
   const raw = fs.readFileSync(swiftPath, 'utf8');

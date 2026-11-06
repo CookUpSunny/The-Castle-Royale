@@ -59,7 +59,7 @@ final class CatalogPlayer {
 
       let player = ApplicationMusicPlayer.shared
       let repeatOne = loopOne || ordered.count == 1
-      player.state.repeatMode = repeatOne ? MusicPlayer.RepeatMode.one : MusicPlayer.RepeatMode.all
+      player.state.repeatMode = repeatOne ? MusicKit.MusicPlayer.RepeatMode.one : MusicKit.MusicPlayer.RepeatMode.all
       player.queue = ApplicationMusicPlayer.Queue(for: ordered)
       try await player.play()
       guard token == generation else {
@@ -129,7 +129,7 @@ final class CatalogPlayer {
     player.pause()
     // Clearing a queue that was never set is a no-op. Ignore a player that refuses it.
     player.queue.entries = []
-    player.state.repeatMode = MusicPlayer.RepeatMode.none
+    player.state.repeatMode = MusicKit.MusicPlayer.RepeatMode.none
   }
 
   /// Restarts playback if repeat mode lets the queue stop. A user pause does not restart.
@@ -162,11 +162,15 @@ final class CatalogPlayer {
 
   /// Playing or scrubbing. Pause, stop, and interruption are not in progress.
   ///
-  /// `MusicPlayer.PlaybackStatus` (iOS 15+) is `playing`, `paused`, `stopped`,
-  /// `interrupted`, `seekingForward`, and `seekingBackward`. It has no `seeking`
-  /// member. A scrub stays in progress so this loop does not call `play()` over
-  /// it. An unknown future case is left alone instead of being treated as a seek.
-  private func transportInProgress(_ status: MusicPlayer.PlaybackStatus) -> Bool {
+  /// Unqualified `MusicPlayer` is ambiguous for type lookup in the Xcode 26.2
+  /// compile of this module. `ApplicationMusicPlayer` inherits
+  /// `MusicKit.MusicPlayer`, and that class owns `RepeatMode` and
+  /// `PlaybackStatus`. `PlaybackStatus` (iOS 15+) is `playing`, `paused`,
+  /// `stopped`, `interrupted`, `seekingForward`, and `seekingBackward`. It has
+  /// no `seeking` member. A scrub stays in progress so this loop does not call
+  /// `play()` over it. An unknown future case is left alone instead of being
+  /// treated as a seek.
+  private func transportInProgress(_ status: MusicKit.MusicPlayer.PlaybackStatus) -> Bool {
     switch status {
     case .playing, .seekingForward, .seekingBackward:
       return true
