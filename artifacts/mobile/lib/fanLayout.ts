@@ -20,9 +20,14 @@ export interface FanPlacement {
  * cards droop further down, so a bigger hand used to hang lower than a
  * smaller one.
  */
-function rawFanPosition(index: number, total: number, containerWidth: number): FanPlacement {
+function rawFanPosition(
+  index: number,
+  total: number,
+  containerWidth: number,
+  maxHalfSpread = MAX_HALF_SPREAD,
+): FanPlacement {
   const center = (total - 1) / 2;
-  const totalSpreadDeg = total <= 1 ? 0 : Math.min(total * 7, MAX_HALF_SPREAD * 2);
+  const totalSpreadDeg = total <= 1 ? 0 : Math.min(total * 7, maxHalfSpread * 2);
   const perCardDeg = total > 1 ? totalSpreadDeg / (total - 1) : 0;
   const rotationDeg = (index - center) * perCardDeg;
   const rotationRad = (rotationDeg * Math.PI) / 180;
@@ -64,15 +69,24 @@ export function cardVisualBottom(placement: FanPlacement): number {
  * Fan placements whose lowest painted edge sits on one fixed baseline, so a
  * 1-card hand and a full hand occupy the same spot in front of the player.
  */
-export function computeFanPositions(total: number, containerWidth: number): FanPlacement[] {
+export function computeFanPositions(
+  total: number,
+  containerWidth: number,
+  maxHalfSpread = MAX_HALF_SPREAD,
+): FanPlacement[] {
   if (total <= 0) return [];
-  const raw = Array.from({ length: total }, (_, index) => rawFanPosition(index, total, containerWidth));
+  const raw = Array.from({ length: total }, (_, index) => rawFanPosition(index, total, containerWidth, maxHalfSpread));
   const lowest = Math.max(...raw.map(cardVisualBottom));
   const shift = FAN_CONTAINER_H - BASELINE_INSET - lowest;
   return raw.map((placement) => ({ ...placement, top: placement.top + shift }));
 }
 
-export function computeFanPosition(index: number, total: number, containerWidth: number): FanPlacement {
-  const placed = computeFanPositions(total, containerWidth);
-  return placed[index] ?? rawFanPosition(index, total, containerWidth);
+export function computeFanPosition(
+  index: number,
+  total: number,
+  containerWidth: number,
+  maxHalfSpread = MAX_HALF_SPREAD,
+): FanPlacement {
+  const placed = computeFanPositions(total, containerWidth, maxHalfSpread);
+  return placed[index] ?? rawFanPosition(index, total, containerWidth, maxHalfSpread);
 }
