@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ActionButtons from '@/components/ActionButtons';
 import BackButton from '@/components/BackButton';
@@ -10,6 +10,7 @@ import SceneBackground from '@/components/SceneBackground';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { type Card as CardType } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import DrawPileStack from '@/components/DrawPileStack';
 import { IMAGE_CARD_BACKS, isCardSkinId, type CardSkinId } from '@/lib/cardSkins';
 
 /** Same portrait draw-deck scale as the live match in game.tsx. */
@@ -54,6 +55,8 @@ export default function CardBackMatchFixture({
   const { cardSkin, arena, setCardSkin, setArena } = useCosmetics();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const wide = width > height;
   const ready = arena === 'cosmic' && cardSkin === requested;
 
   useEffect(() => {
@@ -84,6 +87,40 @@ export default function CardBackMatchFixture({
             <BackButton label="← EXIT" onPress={() => {}} />
           </View>
 
+          {wide ? (
+            <View style={styles.wideRow}>
+              <View style={styles.wideActions}><ActionButtons canPickup isMyTurn onPickup={() => {}} /></View>
+              <View style={styles.wideCenter}>
+                <View style={[styles.opponent, styles.opponentWide]}>
+                  <View style={styles.backRow}>
+                    {opponentBacks.slice(0, 4).map((id, i) => (
+                      <View key={`${id}-${i}`} style={{ marginLeft: i === 0 ? 0 : -18 }}>
+                        <CardBack size="sm" skinOverride={gallery ? id : undefined} />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <GlowPile pile={DISCARD} />
+                <View style={styles.hand}>
+                  <PlayerHand
+                    hand={HAND}
+                    faceUp={FACE_UP}
+                    faceDownCount={0}
+                    faceDownIds={[]}
+                    discardPile={DISCARD}
+                    isMyTurn
+                    onPlayCard={() => {}}
+                    onPlayCards={() => {}}
+                    availableWidth={Math.max(280, width - 240)}
+                  />
+                </View>
+              </View>
+              <View style={styles.wideDeck}>
+                <DrawPileStack count={24} />
+              </View>
+            </View>
+          ) : (
+            <>
           <View style={styles.opponent}>
             <View style={[styles.backRow, gallery && styles.galleryRow]}>
               {opponentBacks.map((id, i) => (
@@ -133,6 +170,8 @@ export default function CardBackMatchFixture({
               onPlayCards={() => {}}
             />
           </View>
+            </>
+          )}
         </View>
       ) : null}
     </View>
@@ -211,6 +250,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 6,
+  },
+  tableWide: {
+    paddingTop: 0,
+    width: '100%',
+  },
+  wideRow: {
+    flex: 1,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  wideActions: {
+    width: 118,
+    alignSelf: 'stretch',
+  },
+  wideCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  opponentWide: {
+    marginTop: 0,
+    marginHorizontal: 0,
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+  wideDeck: {
+    width: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pileNudge: { height: 16, width: 1 },
   pileRow: {
