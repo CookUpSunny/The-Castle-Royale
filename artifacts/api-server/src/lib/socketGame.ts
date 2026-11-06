@@ -18,12 +18,15 @@ import { eq } from 'drizzle-orm';
 import { submitLeaderboardScore } from './gamecenter.js';
 import { recordLoss, type MatchMode } from '@workspace/monetization';
 import { drizzleAdStore } from './adStore.js';
+import { applyPlayerAvatars, resolveSeatAvatar, type AvatarId } from './avatarId.js';
 
 interface QueueEntry {
   socketId: string;
   playerId: string;
   playerName: string;
   gameCenterId?: string;
+  /** Sanitized character id captured when this player sat down. */
+  avatarId?: AvatarId;
 }
 
 interface PrivateRoom {
@@ -48,6 +51,8 @@ const socketToPlayer = new Map<string, string>();
 const playerToCurrentSocketId = new Map<string, string>();
 /** Maps anonymous playerId → Game Center player ID (set on register/join events). */
 const playerToGameCenterId = new Map<string, string>();
+/** Last sanitized character id announced by a player. Used when a seat payload omits one. */
+const playerToAvatarId = new Map<string, AvatarId>();
 /** Stores the game center IDs for both participants of a finished game so stats can be updated. */
 const gameParticipants = new Map<string, { playerId: string; gameCenterId?: string }[]>();
 // Allow-list of emotes the client can send.
@@ -407,6 +412,20 @@ function removeFromQueue(playerId: string): void {
   if (idx >= 0) queue.splice(idx, 1);
 }
 
+/** Remember a sanitized character and return the id to freeze onto this seat. */
+function snapshotAvatar(playerId: string, raw: unknown): AvatarId | undefined {
+  const next = resolveSeatAvatar(playerToAvatarId.get(playerId), raw);
+  if (next.preference) playerToAvatarId.set(playerId, next.preference);
+  return next.seated;
+}
+
+function seatAvatars(state: GameState, entries: QueueEntry[]): void {
+  applyPlayerAvatars(
+    state.players,
+    entries.map((entry) => ({ playerId: entry.playerId, avatarId: entry.avatarId })),
+  );
+}
+
 function emitGameView(
   io: Server,
   state: GameState,
@@ -580,8 +599,9 @@ export function initSocketGame(httpServer: HttpServer): void {
     logger.info({ sid: socket.id }, 'Socket connected');
     io.emit('online_count', io.engine.clientsCount);
 
-    socket.on('join_queue', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
+    socket.on('join_queue', (data: { playerId: string; playerName: string; gameCenterId?: string; avatarId?: unknown }) => {
       const { playerId, playerName, gameCenterId } = data;
+      const avatarId = snapshotAvatar(playerId, data.avatarId);
       socketToPlayer.set(socket.id, playerId);
       playerToCurrentSocketId.set(playerId, socket.id);
       if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
@@ -596,7 +616,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       const existing = queue.findIndex((e) => e.playerId === playerId);
       if (existing >= 0) queue.splice(existing, 1);
 
-      queue.push({ socketId: socket.id, playerId, playerName, gameCenterId });
+      queue.push({ socketId: socket.id, playerId, playerName, gameCenterId, avatarId });
       socket.emit('queue_joined');
       logger.info({ playerId, queueLen: queue.length }, 'Joined queue');
 
@@ -609,6 +629,7 @@ export function initSocketGame(httpServer: HttpServer): void {
         clearQueueTimeout(p2.playerId);
 
         const state = dealGame([p1.playerId, p2.playerId], [p1.playerName, p2.playerName]);
+        seatAvatars(state, [p1, p2]);
 
         games.set(state.gameId, state);
         gameModes.set(state.gameId, 'online');
@@ -637,6 +658,7 @@ export function initSocketGame(httpServer: HttpServer): void {
           const botId = newBotId();
           const botName = randomBotName();
           const state = dealGame([entry.playerId, botId], [entry.playerName, botName]);
+          seatAvatars(state, [entry, { socketId: '', playerId: botId, playerName: botName }]);
 
           games.set(state.gameId, state);
           gameModes.set(state.gameId, 'bot');
@@ -660,8 +682,9 @@ export function initSocketGame(httpServer: HttpServer): void {
       }
     });
 
-    socket.on('start_bot_game', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
+    socket.on('start_bot_game', (data: { playerId: string; playerName: string; gameCenterId?: string; avatarId?: unknown }) => {
       const { playerId, playerName, gameCenterId } = data;
+      const avatarId = snapshotAvatar(playerId, data.avatarId);
       socketToPlayer.set(socket.id, playerId);
       playerToCurrentSocketId.set(playerId, socket.id);
       if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
@@ -684,8 +707,8 @@ export function initSocketGame(httpServer: HttpServer): void {
       const botName = randomBotName();
 
       const state = dealGame([playerId, botId], [playerName, botName]);
-
-      const humanEntry = { socketId: socket.id, playerId, playerName, gameCenterId };
+      const humanEntry = { socketId: socket.id, playerId, playerName, gameCenterId, avatarId };
+      seatAvatars(state, [humanEntry, { socketId: '', playerId: botId, playerName: botName }]);
       games.set(state.gameId, state);
       gameModes.set(state.gameId, 'bot');
       playerToGame.set(playerId, state.gameId);
@@ -714,8 +737,9 @@ export function initSocketGame(httpServer: HttpServer): void {
       socket.emit('queue_cancelled');
     });
 
-    socket.on('create_room', (data: { playerId: string; playerName: string; gameCenterId?: string }) => {
+    socket.on('create_room', (data: { playerId: string; playerName: string; gameCenterId?: string; avatarId?: unknown }) => {
       const { playerId, playerName, gameCenterId } = data;
+      const avatarId = snapshotAvatar(playerId, data.avatarId);
       socketToPlayer.set(socket.id, playerId);
       playerToCurrentSocketId.set(playerId, socket.id);
       if (gameCenterId) playerToGameCenterId.set(playerId, gameCenterId);
@@ -730,7 +754,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       const code = generateRoomCode();
       const room: PrivateRoom = {
         code,
-        creator: { socketId: socket.id, playerId, playerName, gameCenterId },
+        creator: { socketId: socket.id, playerId, playerName, gameCenterId, avatarId },
         createdAt: Date.now(),
       };
       rooms.set(code, room);
@@ -740,8 +764,9 @@ export function initSocketGame(httpServer: HttpServer): void {
       logger.info({ playerId, code }, 'Private room created');
     });
 
-    socket.on('join_room', (data: { playerId: string; playerName: string; code: string; gameCenterId?: string }) => {
+    socket.on('join_room', (data: { playerId: string; playerName: string; code: string; gameCenterId?: string; avatarId?: unknown }) => {
       const { playerId, playerName, gameCenterId } = data;
+      const avatarId = snapshotAvatar(playerId, data.avatarId);
       const code = (data.code ?? '').toUpperCase().trim();
       socketToPlayer.set(socket.id, playerId);
       playerToCurrentSocketId.set(playerId, socket.id);
@@ -779,7 +804,8 @@ export function initSocketGame(httpServer: HttpServer): void {
         [room.creator.playerName, playerName],
       );
 
-      const joinerEntry = { socketId: socket.id, playerId, playerName, gameCenterId };
+      const joinerEntry = { socketId: socket.id, playerId, playerName, gameCenterId, avatarId };
+      seatAvatars(state, [room.creator, joinerEntry]);
       games.set(state.gameId, state);
       gameModes.set(state.gameId, 'private');
       playerToGame.set(room.creator.playerId, state.gameId);
@@ -980,7 +1006,7 @@ export function initSocketGame(httpServer: HttpServer): void {
       }
     });
 
-    socket.on('register', async (data: { playerId: string; gameCenterId?: string }) => {
+    socket.on('register', async (data: { playerId: string; gameCenterId?: string; avatarId?: unknown }) => {
       if (!data?.playerId) return;
       const pid = data.playerId;
       const inboundGcId = data.gameCenterId;
@@ -998,6 +1024,9 @@ export function initSocketGame(httpServer: HttpServer): void {
         socketToPlayer.set(socket.id, pid);
         return;
       }
+
+      // Preference only. An in-progress match keeps the character seated at deal.
+      snapshotAvatar(pid, data.avatarId);
 
       // ── Update mappings ────────────────────────────────────────────────────
       // Remove any stale socketToPlayer entries that belong to this player

@@ -13,12 +13,19 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ARENAS, AVATARS, type ArenaId, type AvatarId, useCosmetics } from '@/contexts/CosmeticsContext';
+import { ARENAS, AVATARS, CARD_SKINS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import {
+  confirmLoadout,
+  equippableCardSkins,
+  shownLoadout,
+  type ConfirmedLoadout,
+} from '@/lib/loadoutSelection';
 import { useSubscription } from '@/lib/revenuecat';
 import ArenaBackground from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
+import { CardBack } from '@/components/Card';
 import PaywallModal from '@/components/PaywallModal';
 import { useDuoWindow } from '@/hooks/useDuoWindow';
 
@@ -53,16 +60,33 @@ function OutlinedText({ style, outlineColor = 'white', outlineWidth = 1, childre
 
 export default function ArenaPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode: string }>();
-  const { arena, setArena, avatarId, setAvatar } = useCosmetics();
+  const { arena, setArena, avatarId, setAvatar, cardSkin, setCardSkin, hydrated } = useCosmetics();
   const { quickPlayBot, joinQueue, connectionStatus, gameView, isInQueue } = useGame();
   const { isSubscribed } = useSubscription();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const [selectedArena, setSelectedArena] = useState<ArenaId>(arena);
-  const [selectedAvatar, setSelectedAvatar] = useState<AvatarId>(avatarId);
+  const [avatarOverride, setAvatarOverride] = useState<typeof avatarId | null>(null);
+  const [arenaOverride, setArenaOverride] = useState<typeof arena | null>(null);
+  const [cardOverride, setCardOverride] = useState<typeof cardSkin | null>(null);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [paywallFeature, setPaywallFeature] = useState<string | undefined>(undefined);
+  const pendingEnterRef = useRef(false);
+
+  const loadoutInput = {
+    hydrated,
+    storedAvatar: avatarId,
+    storedArena: arena,
+    storedCard: cardSkin,
+    avatarOverride,
+    arenaOverride,
+    cardOverride,
+  };
+  const shown = shownLoadout(loadoutInput);
+  const selectedAvatar = shown.avatar;
+  const selectedArena = shown.arena;
+  const selectedCard = shown.card;
+  const cardChoices = CARD_SKINS.filter((skin) => equippableCardSkins(isSubscribed).includes(skin.id));
 
   const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -76,9 +100,10 @@ export default function ArenaPickerScreen() {
     if (isInQueue) router.replace('/matchmaking');
   }, [isInQueue]);
 
-  const doEnterArena = () => {
-    setArena(selectedArena);
-    setAvatar(selectedAvatar);
+  const doEnterArena = (confirmed: ConfirmedLoadout) => {
+    setArena(confirmed.arena);
+    setAvatar(confirmed.avatar);
+    setCardSkin(confirmed.card, isSubscribed);
     if (mode === 'bot') {
       quickPlayBot();
       router.replace('/game-loading?mode=bot');
@@ -89,24 +114,42 @@ export default function ArenaPickerScreen() {
     }
   };
 
-  const handleConfirm = () => {
-    if (connectionStatus !== 'connected') return;
-    const avatarName = selectedAvatarData?.name ?? 'Your character';
+  const promptAndEnter = (confirmed: ConfirmedLoadout) => {
+    const avatarName = AVATARS.find((a) => a.id === confirmed.avatar)?.name ?? 'Your character';
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(`${avatarName} enters the arena. Ready?`)) {
-        doEnterArena();
+        doEnterArena(confirmed);
       }
-    } else {
-      Alert.alert(
-        'Ready to Battle?',
-        `${avatarName} will enter the arena. You can't change your loadout mid-match.`,
-        [
-          { text: 'Not yet', style: 'cancel' },
-          { text: 'ENTER THE ARENA', onPress: doEnterArena },
-        ],
-      );
+      return;
     }
+    Alert.alert(
+      'Ready to Battle?',
+      `${avatarName} will enter the arena. You can't change your loadout mid-match.`,
+      [
+        { text: 'Not yet', style: 'cancel' },
+        { text: 'ENTER THE ARENA', onPress: () => doEnterArena(confirmed) },
+      ],
+    );
   };
+
+  const handleConfirm = () => {
+    if (connectionStatus !== 'connected') return;
+    const confirmed = confirmLoadout(loadoutInput);
+    if (!confirmed) {
+      pendingEnterRef.current = true;
+      return;
+    }
+    pendingEnterRef.current = false;
+    promptAndEnter(confirmed);
+  };
+
+  useEffect(() => {
+    if (!pendingEnterRef.current || connectionStatus !== 'connected') return;
+    const confirmed = confirmLoadout(loadoutInput);
+    if (!confirmed) return;
+    pendingEnterRef.current = false;
+    promptAndEnter(confirmed);
+  }, [hydrated, avatarId, arena, cardSkin, avatarOverride, arenaOverride, cardOverride, connectionStatus, isSubscribed, mode]);
 
   const duo = useDuoWindow();
   const book = duo.mode === 'wide';
@@ -171,7 +214,7 @@ export default function ArenaPickerScreen() {
               return (
                 <Pressable
                   key={av.id}
-                  onPress={() => setSelectedAvatar(av.id)}
+                  onPress={() => setAvatarOverride(av.id)}
                   style={({ pressed }) => [
                     styles.avatarCard,
                     {
@@ -235,6 +278,44 @@ export default function ArenaPickerScreen() {
           ))}
         </View>
 
+        {/* ── CARD BACK — after character, before the match ───────────── */}
+        <View style={[styles.section, { width: maxContentWidth }]}>
+          <Text style={[styles.sectionLabel, { color: colors.neonGold }]}>
+            ✦  PICK YOUR CARD BACK
+          </Text>
+        </View>
+        <View style={{ width: paneWidth }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.cardBackRow}
+          >
+            {cardChoices.map((skin) => {
+              const isSelected = selectedCard === skin.id;
+              return (
+                <Pressable
+                  key={skin.id}
+                  onPress={() => setCardOverride(skin.id)}
+                  style={({ pressed }) => [
+                    styles.cardBackTile,
+                    {
+                      borderColor: isSelected ? '#ffd700' : 'rgba(255,255,255,0.10)',
+                      borderWidth: isSelected ? 2.5 : 1,
+                      opacity: pressed ? 0.88 : 1,
+                    },
+                  ]}
+                >
+                  <CardBack size="md" skinOverride={skin.id} />
+                  <Text style={[styles.cardBackName, { color: isSelected ? '#ffd700' : '#f4efe4' }]} numberOfLines={2}>
+                    {skin.name}
+                  </Text>
+                  {isSelected ? <Text style={styles.selectedBadgeText}>✓  SELECTED</Text> : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* ── ARENA SELECTION ─────────────────────────────────────────── */}
         <View style={[styles.section, { width: maxContentWidth }]}>
           <Text style={[styles.sectionLabel, { color: colors.neonGold }]}>
@@ -255,7 +336,7 @@ export default function ArenaPickerScreen() {
                   setPaywallVisible(true);
                   return;
                 }
-                setSelectedArena(arenaItem.id);
+                setArenaOverride(arenaItem.id);
               }}
               style={({ pressed }) => [
                 styles.arenaCard,
@@ -400,6 +481,26 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  cardBackRow: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  cardBackTile: {
+    width: 124,
+    borderRadius: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  cardBackName: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textAlign: 'center',
   },
   dotsRow: {
     flexDirection: 'row',

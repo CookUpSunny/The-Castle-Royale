@@ -38,13 +38,8 @@ import PlayerHand from '@/components/PlayerHand';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
+import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
-
-function hashName(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -434,8 +429,8 @@ export default function GameLandscape(): React.JSX.Element | null {
     opponentName, discardPile, deckCount, isMyTurn,
   } = gameView;
 
-  // Opponent gets a deterministic avatar from the AVATARS list based on their name
-  const opponentAvatarPortrait = AVATARS[hashName(opponentName) % AVATARS.length]?.portrait ?? null;
+  const opponentAvatarId = resolveOpponentAvatarId(gameView.opponentAvatarId, opponentName);
+  const opponentAvatarPortrait = AVATARS.find((a) => a.id === opponentAvatarId)?.portrait ?? null;
 
   // Left column holds only action buttons now (name plates moved to absolute corners).
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
