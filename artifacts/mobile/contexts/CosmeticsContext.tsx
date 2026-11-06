@@ -2,29 +2,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { SceneId } from '@/lib/scenePacks';
 
+import {
+  CARD_SKINS,
+  canEquipCardSkin,
+  resolveStoredCardSkin,
+  type CardSkin,
+  type CardSkinId,
+} from '@/lib/cardSkins';
 import { warmGameVisualCache } from '@/lib/preloadGameAssets';
+
+export type { CardSkin, CardSkinId };
+export { CARD_SKINS };
 
 /**
  * Cosmetics layer — purely visual customizations the player can swap in/out
  * without affecting gameplay. Persisted to AsyncStorage so the choice
  * survives app restarts.
  *
- * Card skins follow the 10-deck "Card Style Visual Kit" — the first 5 are
- * unlocked today; the remaining 5 carry a 🔒 COMING SOON badge and cannot
- * be equipped until the future paid tier ships.
+ * Procedural skins follow the 10-deck Card Style Visual Kit: the first 5
+ * are free, and the other 5 stay subscription-gated. Eight image backs are
+ * registered separately with unlocked preview so they can be rendered before
+ * purchase ownership exists. Equipping a locked procedural skin still
+ * requires an active subscription.
  */
-
-export type CardSkinId =
-  | 'neon-glow'
-  | 'royal-gold'
-  | 'crystal-ice'
-  | 'sakura-blossom'
-  | 'inferno-flame'
-  | 'midnight-void'
-  | 'emerald-prestige'
-  | 'pearl-white'
-  | 'cyber-punk'
-  | 'vintage-casino';
 
 export type ArenaId = 'greenTable' | 'classic' | 'cosmic' | 'royal' | 'lightning' | 'matrix' | 'rainbowRoad';
 
@@ -98,33 +98,12 @@ export const AVATARS: AvatarOption[] = [
   },
 ];
 
-export interface CardSkin {
-  id: CardSkinId;
-  name: string;
-  /** True when every player can equip this skin for free. False = premium (requires an active subscription). */
-  unlocked: boolean;
-  description: string;
-}
-
 export interface Arena {
   id: ArenaId;
   name: string;
   premium: boolean;
   description: string;
 }
-
-export const CARD_SKINS: CardSkin[] = [
-  { id: 'neon-glow',       name: 'Neon Glow',        unlocked: true,  description: 'Futuristic neon lights with vibrant electric glow' },
-  { id: 'royal-gold',      name: 'Royal Gold',       unlocked: true,  description: 'Luxurious gold detailing with a royal casino feel' },
-  { id: 'crystal-ice',     name: 'Crystal Ice',      unlocked: true,  description: 'Icy crystal texture with cool blue tones' },
-  { id: 'sakura-blossom',  name: 'Sakura Blossom',   unlocked: true,  description: 'Elegant cherry blossoms with soft pink accents' },
-  { id: 'inferno-flame',   name: 'Inferno Flame',    unlocked: true,  description: 'Fiery molten edges with intense heat and power' },
-  { id: 'midnight-void',   name: 'Midnight Void',    unlocked: false, description: 'Dark cosmic theme with mystical purple energy' },
-  { id: 'emerald-prestige',name: 'Emerald Prestige', unlocked: false, description: 'Rich emerald green with gold premium accents' },
-  { id: 'pearl-white',     name: 'Pearl White',      unlocked: false, description: 'Clean pearl white with elegant minimalism' },
-  { id: 'cyber-punk',      name: 'Cyber Punk',       unlocked: false, description: 'High-tech cyber design with neon cyber accents' },
-  { id: 'vintage-casino',  name: 'Vintage Casino',   unlocked: false, description: 'Classic vintage look with aged casino charm' },
-];
 
 export const ARENAS: Arena[] = [
   {
@@ -170,16 +149,6 @@ export const ARENAS: Arena[] = [
     description: 'Neon loop-de-loop starfield — trolls ride a glittering rainbow track through deep space. Sparkling trails, loop-the-loops, and cosmic glow surround the table as the road itself becomes the arena.\n\nHold on tight. The next hand is around the bend.',
   },
 ];
-
-const VALID_SKIN_IDS = new Set<CardSkinId>(CARD_SKINS.map((s) => s.id));
-const UNLOCKED_SKIN_IDS = new Set<CardSkinId>(CARD_SKINS.filter((s) => s.unlocked).map((s) => s.id));
-
-/** One-time migration of legacy stored skin IDs from the previous cosmetics revision. */
-const LEGACY_SKIN_MAP: Record<string, CardSkinId> = {
-  classic: 'neon-glow',
-  cosmic: 'midnight-void',
-  royal: 'royal-gold',
-};
 
 interface CosmeticsContextType {
   cardSkin: CardSkinId;
@@ -233,14 +202,14 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
         ]);
         if (storedCard) {
           // Migrate legacy IDs (classic/cosmic/royal) → new IDs.
-          const migrated = LEGACY_SKIN_MAP[storedCard];
-          if (migrated && UNLOCKED_SKIN_IDS.has(migrated)) {
-            setCardSkinState(migrated);
-            AsyncStorage.setItem(STORAGE_CARD_KEY, migrated).catch(() => {});
-          } else if (VALID_SKIN_IDS.has(storedCard as CardSkinId) && UNLOCKED_SKIN_IDS.has(storedCard as CardSkinId)) {
-            setCardSkinState(storedCard as CardSkinId);
+          // Locked and unknown ids stay on the default and are not written back.
+          const resolved = resolveStoredCardSkin(storedCard);
+          if (resolved.migrate) {
+            setCardSkinState(resolved.skin);
+            AsyncStorage.setItem(STORAGE_CARD_KEY, resolved.skin).catch(() => {});
+          } else if (resolved.skin !== 'royal-gold' || storedCard === 'royal-gold') {
+            setCardSkinState(resolved.skin);
           }
-          // Otherwise stay on the default (e.g. user had a locked skin somehow).
         }
         if (isArenaId(storedArena)) setArenaState(storedArena);
         if (isAvatarId(storedAvatar)) setAvatarState(storedAvatar);
@@ -257,7 +226,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   }, [scene, arena]);
 
   const setCardSkin = useCallback((id: CardSkinId, isSubscribed = false) => {
-    if (!UNLOCKED_SKIN_IDS.has(id) && !isSubscribed) return; // Refuse to equip premium skins without an active subscription.
+    if (!canEquipCardSkin(id, isSubscribed)) return; // Refuse to equip premium skins without an active subscription.
     setCardSkinState(id);
     AsyncStorage.setItem(STORAGE_CARD_KEY, id).catch(() => {});
   }, []);
@@ -273,7 +242,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isSkinUnlocked = useCallback(
-    (id: CardSkinId, isSubscribed = false) => UNLOCKED_SKIN_IDS.has(id) || isSubscribed,
+    (id: CardSkinId, isSubscribed = false) => canEquipCardSkin(id, isSubscribed),
     [],
   );
 

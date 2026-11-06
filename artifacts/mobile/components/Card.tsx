@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -13,6 +13,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { type Card as CardType, getCardLabel, getSuitSymbol, isRedSuit } from '@/contexts/GameContext';
 import { type CardSkinId, type ArenaId, useCosmetics } from '@/contexts/CosmeticsContext';
+import { CARD_BACK_IMAGES } from '@/lib/cardBackImages';
+import { isImageCardSkinId, type ProceduralCardSkinId } from '@/lib/cardSkins';
 import { useColors } from '@/hooks/useColors';
 
 const ARENA_FELT_SHADOW: Record<ArenaId, string> = {
@@ -44,8 +46,9 @@ const SIZES = {
 };
 
 /**
- * Card back. Visual style follows the player's selected cosmetic skin from
- * the 10-deck Card Style Visual Kit. A `skinOverride` lets previews force a
+ * Card back. Procedural skins keep the 10-deck Card Style Visual Kit.
+ * Image skins paint the full owner artwork with resizeMode contain so the
+ * design is not stretched or cropped. A `skinOverride` lets previews force a
  * specific skin (e.g. the locked-but-still-previewable skins in the modal)
  * regardless of the player's saved selection.
  */
@@ -90,7 +93,7 @@ interface SkinTheme {
   hasStars?: boolean;
 }
 
-const SKIN_THEMES: Record<CardSkinId, SkinTheme> = {
+const SKIN_THEMES: Record<ProceduralCardSkinId, SkinTheme> = {
   'neon-glow':       { bg: '#1a0535', innerBg: '#2a0d4a', border: '#d946ef', innerBorder: '#a855f7', glow: '#d946ef', symbol: '♠', symbolColor: '#f0abfc', accent: '#7c3aed' },
   'royal-gold':      { bg: '#1a0a05', innerBg: '#0d0703', border: '#fbbf24', innerBorder: '#fbbf24', glow: '#fbbf24', symbol: '♛', symbolColor: '#fbbf24' },
   'crystal-ice':     { bg: '#0a1f3a', innerBg: '#082848', border: '#7dd3fc', innerBorder: '#38bdf8', glow: '#7dd3fc', symbol: '❄', symbolColor: '#bae6fd' },
@@ -104,6 +107,102 @@ const SKIN_THEMES: Record<CardSkinId, SkinTheme> = {
 };
 
 function SkinnedCardBack({ skin, size, style, scale = 1 }: SkinnedCardBackProps & { scale?: number }) {
+  if (isImageCardSkinId(skin)) {
+    return (
+      <ImageCardBack
+        source={CARD_BACK_IMAGES[skin]}
+        size={size}
+        style={style}
+        scale={scale}
+        testID={`card-back-${skin}`}
+      />
+    );
+  }
+  return (
+    <ProceduralCardBack
+      skin={skin}
+      size={size}
+      style={style}
+      scale={scale}
+      testID={`card-back-${skin}`}
+    />
+  );
+}
+
+/**
+ * Owner artwork, full front. Contain keeps the original aspect inside the
+ * same card slot the procedural backs use, so filigree is not cropped and
+ * the picture is not stretched. Procedural skins never reach this path.
+ */
+function ImageCardBack({
+  source,
+  size,
+  style,
+  scale,
+  testID,
+}: {
+  source: ImageSourcePropType;
+  size: 'sm' | 'md' | 'lg';
+  style?: object;
+  scale: number;
+  testID: string;
+}) {
+  const base = SIZES[size];
+  const width = base.width * scale;
+  const height = base.height * scale;
+  const radius = 6 * scale;
+  const { arena } = useCosmetics();
+  const feltShadowColor = ARENA_FELT_SHADOW[arena] ?? '#0a0a0a';
+
+  return (
+    <View
+      testID={testID}
+      style={[
+        {
+          borderRadius: radius,
+          shadowColor: feltShadowColor,
+          shadowOffset: { width: 0, height: 4 * scale },
+          shadowOpacity: 0.55,
+          shadowRadius: 6 * scale,
+          elevation: 6,
+        },
+        style,
+      ]}
+    >
+      <View
+        style={{
+          width,
+          height,
+          borderRadius: radius,
+          overflow: 'hidden',
+          backgroundColor: '#07000f',
+        }}
+      >
+        <Image
+          source={source}
+          resizeMode="contain"
+          fadeDuration={0}
+          style={{ width, height }}
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+    </View>
+  );
+}
+
+function ProceduralCardBack({
+  skin,
+  size,
+  style,
+  scale = 1,
+  testID,
+}: {
+  skin: ProceduralCardSkinId;
+  size: 'sm' | 'md' | 'lg';
+  style?: object;
+  scale?: number;
+  testID: string;
+}) {
   const base = SIZES[size];
   const dims = {
     width: base.width * scale,
@@ -150,6 +249,7 @@ function SkinnedCardBack({ skin, size, style, scale = 1 }: SkinnedCardBackProps 
 
   return (
     <View
+      testID={testID}
       style={[
         {
           borderRadius: 6 * scale,
