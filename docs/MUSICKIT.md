@@ -2,7 +2,7 @@
 
 Arena songs can stream from the Apple Music catalog through MusicKit so a play is an Apple Music stream. The files in `artifacts/mobile/assets/music` stay in the app and play whenever MusicKit cannot.
 
-This environment has no Mac and does not run an iOS build. The owner has to turn the capability on, then install a build on a real iPhone.
+This environment has no Mac and does not run an iOS build. Catalog streaming on a real iPhone still depends on the MusicKit App Service for the shipping App ID. This repository does not enable or save that service.
 
 ## What the app does
 
@@ -14,19 +14,30 @@ This environment has no Mac and does not run an iOS build. The owner has to turn
 - The match menu (portrait and landscape) has Play, Pause, and Skip for the current song.
 - Mute pauses a MusicKit stream. `ApplicationMusicPlayer` has no app-only volume, so the on-screen volume slider still controls bundled music and the iPhone volume buttons control Apple Music loudness. There is no fade on a catalog stream.
 
+## Signing versus the App Service
+
+MusicKit is an App Service on the App ID. It is not an iOS provisioning entitlement, and a managed profile refresh cannot add one.
+
+- Apple documents the switch on the App ID **App Services** tab: [MusicKit](https://developer.apple.com/help/account/services/musickit/) and [Enable app services](https://developer.apple.com/help/account/identifiers/enable-app-services/). Those services usually do not put an entitlement in the provisioning profile. The required role for that save is Account Holder or Admin.
+- There is no MusicKit row to add under Xcode Signing & Capabilities. The system permission dialog needs `NSAppleMusicUsageDescription` in Info.plist. Apple Developer Technical Support has said MusicKit has never used entitlements ([thread 770083](https://developer.apple.com/forums/thread/770083), [thread 815604](https://developer.apple.com/forums/thread/815604)).
+- Expo's [iOS capabilities](https://docs.expo.dev/build-reference/ios-capabilities/) table has no MusicKit entitlement. `eas build` only syncs capabilities that have a real entitlement string. MusicKit is not one of them, so this config does not ask Expo to turn the App Service on or off.
+- `com.apple.developer.musickit` and `com.apple.developer.music-kit` are not profile entitlements. Requesting either one makes fastlane archive fail with `Entitlement com.apple.developer.musickit not found and could not be included in profile`.
+
+`artifacts/mobile/plugins/withAppleMusicKit.js` writes `NSAppleMusicUsageDescription` only. `app.json` records that same usage string and does not set `ios.entitlements`. The native player stays `artifacts/mobile/modules/castle-musickit`. Bundled `.m4a` playback stays the fallback.
+
 ## Owner steps before an iOS build
 
-Do these yourself. Do not commit certificates, profiles, or API keys.
+Do these yourself. Do not commit certificates, profiles, or API keys. Nothing in this change enables or saves the Apple Developer portal.
 
 1. Sign in to [Apple Developer](https://developer.apple.com/account) → Certificates, Identifiers & Profiles → Identifiers.
-2. Open the App ID `app.replit.thecastleroyale` (team `329HG4LB2B`).
-3. Enable the **MusicKit** App Service and save.
-4. Keep EAS credentials managed. Do not switch this project to a checked-in provisioning profile. After the App Service is on, the next iOS EAS build should regenerate the profile so it includes `com.apple.developer.musickit`. If codesign says the profile does not include that entitlement, regenerate the iOS provisioning profile from `eas credentials` (still managed) and build again.
+2. Open the exact shipping App ID `app.replit.thecastleroyale` (team `329HG4LB2B`).
+3. On the **App Services** tab, the **MusicKit** checkbox is the catalog-streaming switch. Whether to save it is your decision. This repository cannot perform that save. Codesign does not wait on it. If the service is off, catalog playback is not registered for this App ID and the app uses the bundled tracks.
+4. Keep EAS credentials managed. Do not switch this project to a checked-in provisioning profile, and do not regenerate the profile in order to include a MusicKit entitlement. The profile should not contain one.
 5. Install a development or preview build on a real iPhone that has an Apple Music subscription. Expo Go does not include this module. A simulator without a subscription should fall back to the bundled files.
 6. Open the app and let the intro finish. Allow Apple Music on the home screen. Start a match and confirm Control Center shows the Sunny Systems catalog song. Decline the prompt, turn the Settings row off, or use an Apple ID that cannot stream, and the bundled track should play instead. In the match menu, Play, Pause, and Skip should move the current song.
-7. Merge when that device check is acceptable. A production build or App Store submit is a separate decision. The next iOS EAS build will fail codesign until step 3 is done and the profile includes the entitlement.
+7. Merge when that device check is acceptable. A production build or App Store submit is a separate decision.
 
-The config plugin `artifacts/mobile/plugins/withAppleMusicKit.js` writes `NSAppleMusicUsageDescription` and the MusicKit entitlement. `app.json` records the same values. The stray `ios/` and `android/` folders at the repo root are not part of this app.
+The stray `ios/` and `android/` folders at the repo root are not part of this app. `ios/workspace/workspace.entitlements` is an empty plist and is not the file EAS signs.
 
 ## Terms to approve before shipping
 
