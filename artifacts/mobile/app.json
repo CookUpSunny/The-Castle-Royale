@@ -9,7 +9,9 @@
     "scheme": "thecastleroyale",
     "userInterfaceStyle": "dark",
     "splash": {
-      "backgroundColor": "#1a1a1a"
+      "image": "./assets/images/castle-royale-splash-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": false,
@@ -50,6 +52,15 @@
           "ios": {
             "useFrameworks": "static"
           }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/castle-royale-splash-logo.png",
+          "imageWidth": 320,
+          "resizeMode": "contain"
         }
       ]
     ],

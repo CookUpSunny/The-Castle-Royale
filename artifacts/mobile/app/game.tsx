@@ -44,10 +44,12 @@ import CardCurtain from '@/components/CardCurtain';
 import OrientationCurtain from '@/components/OrientationCurtain';
 import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
+import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
+import { handLane, portraitPlayerScene } from '@/lib/characterSceneLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function fakeCoins(name: string): string {
@@ -166,7 +168,7 @@ function AvatarChip({ name, isActive, portraitArt, onPress }: {
         ]}
       >
         {portraitArt ? (
-          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="contain" />
         ) : (
           <Text style={[avatarChipStyles.initial, { color: isActive ? colors.neonGold : colors.neonPurple }]}>
             {initial}
@@ -179,9 +181,9 @@ function AvatarChip({ name, isActive, portraitArt, onPress }: {
 
 const avatarChipStyles = StyleSheet.create({
   chip: {
-    width: 54,
-    height: 54,
-    borderRadius: 12,
+    width: 84,
+    height: 56,
+    borderRadius: 8,
     borderWidth: 2,
     overflow: 'hidden',
     backgroundColor: '#0d001ad9',
@@ -298,6 +300,9 @@ export default function GameScreen() {
   // Switch to the cinematic landscape layout whenever the device is wider than tall.
   // Lobby/setup/portrait stays unchanged so existing flows are unaffected.
   const isLandscape = width > height;
+  const contentWidth = Math.max(280, width - insets.left - insets.right);
+  const playerScene = portraitPlayerScene(insets.left, insets.bottom || 0);
+  const lane = handLane(contentWidth, playerScene.width);
 
   // ── Orientation curtain state ──────────────────────────────────────────────
   // `committedLandscape` tracks which layout is actually rendered behind the
@@ -340,7 +345,7 @@ export default function GameScreen() {
   } = useGame();
   const cosmetics = useCosmetics();
   const myAvatarPortrait = useMemo(
-    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.portrait ?? null,
+    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.scene ?? null,
     [cosmetics.avatarId],
   );
   // Music is started by the game-loading screen *before* navigating here, so
@@ -474,7 +479,7 @@ export default function GameScreen() {
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
   const opponentAvatarPortrait = useMemo(() => {
     const id = resolveOpponentAvatarId(gameView?.opponentAvatarId, gameView?.opponentName ?? '');
-    return AVATARS.find((a) => a.id === id)?.portrait ?? null;
+    return AVATARS.find((a) => a.id === id)?.scene ?? null;
   }, [gameView?.opponentAvatarId, gameView?.opponentName]);
 
   if (!gameView) return null;
@@ -572,7 +577,7 @@ export default function GameScreen() {
 
             <View
               ref={selfHandRef}
-              style={styles.playerSection}
+              style={[styles.playerSection, { paddingLeft: lane.origin, paddingRight: 8 }]}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -591,7 +596,8 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
-                availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
+                availableWidth={lane.fanWidth}
+                maxHalfSpread={lane.maxHalfSpread}
               />
             </View>
 
@@ -615,11 +621,13 @@ export default function GameScreen() {
           {/* Player avatar chip — bottom-left, beside the hand.
               Hidden during the blind-flip phase so it doesn't overlap the face-down glow rings. */}
           {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
-            <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 18, left: insets.left + 10 }]}>
-              <AvatarChip
+            <View pointerEvents="box-none" style={{ position: 'absolute', left: playerScene.left, bottom: playerScene.bottom, zIndex: 30 }}>
+              <CharacterScenePlate
+                source={myAvatarPortrait}
+                width={playerScene.width}
+                height={playerScene.height}
+                opacity={playerScene.opacity}
                 name={playerName}
-                isActive={isMyTurn}
-                portraitArt={myAvatarPortrait}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setPlayerMenuOpen((o) => !o);
@@ -653,7 +661,7 @@ export default function GameScreen() {
                 onPress={() => setPlayerMenuOpen(false)}
                 style={StyleSheet.absoluteFill}
               />
-              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 18 + 72, left: 16 }]}>
+              <View style={[styles.playerMenu, { bottom: (playerScene.bottom ?? 0) + playerScene.height + 28, left: playerScene.left }]}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput

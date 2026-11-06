@@ -39,7 +39,9 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
+import { landscapePlayerScene } from '@/lib/characterSceneLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
+import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -64,7 +66,8 @@ function NamePlate({ name, isActive, align, portraitArt, onPress, showMenuDots, 
   const initial = name.charAt(0).toUpperCase();
   const Wrapper: React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }> = onPress ? (Pressable as React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }>) : View;
 
-  const avatarSize = compact ? 44 : 60;
+  const avatarW = compact ? 76 : 72;
+  const avatarH = compact ? 51 : 48;
 
   return (
     <Wrapper
@@ -88,14 +91,14 @@ function NamePlate({ name, isActive, align, portraitArt, onPress, showMenuDots, 
           {
             borderColor: isActive ? colors.neonGold : colors.neonPurple,
             overflow: 'hidden',
-            width: avatarSize,
-            height: avatarSize,
-            borderRadius: compact ? 10 : 14,
+            width: avatarW,
+            height: avatarH,
+            borderRadius: 6,
           },
         ]}
       >
         {portraitArt ? (
-          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" />
+          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="contain" contentPosition="center" />
         ) : (
           <Text style={[styles.avatarText, { color: isActive ? colors.neonGold : colors.neonPurple, fontSize: compact ? 16 : 22 }]}>{initial}</Text>
         )}
@@ -267,7 +270,7 @@ export default function GameLandscape(): React.JSX.Element | null {
   // Cosmetics — actual avatar portraits for name plates
   const cosmetics = useCosmetics();
   const myAvatarPortrait = useMemo(
-    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.portrait ?? null,
+    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.scene ?? null,
     [cosmetics.avatarId],
   );
 
@@ -430,10 +433,11 @@ export default function GameLandscape(): React.JSX.Element | null {
   } = gameView;
 
   const opponentAvatarId = resolveOpponentAvatarId(gameView.opponentAvatarId, opponentName);
-  const opponentAvatarPortrait = AVATARS.find((a) => a.id === opponentAvatarId)?.portrait ?? null;
+  const opponentAvatarPortrait = AVATARS.find((a) => a.id === opponentAvatarId)?.scene ?? null;
 
   // Left column holds only action buttons now (name plates moved to absolute corners).
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
+  const playerScene = landscapePlayerScene(insets.left, insets.bottom, sideColW);
   const drawColW = 100;
   const duo = classifyDuoWindow(width, height);
   const book = duo.mode === 'wide';
@@ -462,17 +466,17 @@ export default function GameLandscape(): React.JSX.Element | null {
       </View>
 
       {/* Player gamer tag — bottom-left, raised so it sits near the action buttons */}
-      <View style={{ position: 'absolute', bottom: insets.bottom + 72, left: insets.left + 14, zIndex: 50, maxWidth: 96 }}>
-        <NamePlate
+      <View style={{ position: 'absolute', bottom: playerScene.bottom, left: playerScene.left, zIndex: 50 }}>
+        <CharacterScenePlate
+          source={myAvatarPortrait}
+          width={playerScene.width}
+          height={playerScene.height}
+          opacity={playerScene.opacity}
           name={playerName}
-          isActive={isMyTurn}
-          align="left"
-          portraitArt={myAvatarPortrait}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setPlayerMenuOpen((o) => !o);
           }}
-          showMenuDots
         />
       </View>
 
@@ -489,7 +493,7 @@ export default function GameLandscape(): React.JSX.Element | null {
       >
         {/* Phone landscape keeps actions on the left. Unfolded Duo moves them off the crease. */}
         {!book && (
-        <View style={[styles.leftColumn, { width: sideColW }]}>
+        <View style={[styles.leftColumn, { width: sideColW, paddingBottom: playerScene.height + 8 }]}>
           <View style={styles.actionStackInline}>
             {/* Action buttons hide during STARTER mode — tap a hand card directly. */}
             {!gameView.mustPlayStarter && (

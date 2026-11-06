@@ -15,6 +15,7 @@ import {
   type CardSkinId,
   useCosmetics,
 } from '@/contexts/CosmeticsContext';
+import { isRetiredBasicSkin } from '@/lib/cardSkins';
 import { useColors } from '@/hooks/useColors';
 import { useSubscription } from '@/lib/revenuecat';
 import { membershipPriceLine, paywallRole } from '@workspace/monetization/client';
@@ -111,7 +112,7 @@ export default function CosmeticsModal({ visible, onClose, initialTab = 'arenas'
             ))}
 
           {tab === 'cards' &&
-            CARD_SKINS.map((c: CardSkin) => (
+            CARD_SKINS.filter((c) => !isRetiredBasicSkin(c.id)).map((c: CardSkin) => (
               <CosmeticRow
                 key={c.id}
                 name={c.name}

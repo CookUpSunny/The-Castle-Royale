@@ -16,9 +16,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ARENAS, AVATARS, CARD_SKINS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import { prematchIllustratedSkins } from '@/lib/cardSkins';
 import {
   confirmLoadout,
-  equippableCardSkins,
   shownLoadout,
   type ConfirmedLoadout,
 } from '@/lib/loadoutSelection';
@@ -86,7 +86,8 @@ export default function ArenaPickerScreen() {
   const selectedAvatar = shown.avatar;
   const selectedArena = shown.arena;
   const selectedCard = shown.card;
-  const cardChoices = CARD_SKINS.filter((skin) => equippableCardSkins(isSubscribed).includes(skin.id));
+  const illustratedIds = new Set<string>(prematchIllustratedSkins());
+  const cardChoices = CARD_SKINS.filter((skin) => illustratedIds.has(skin.id));
 
   const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -161,6 +162,9 @@ export default function ArenaPickerScreen() {
   const avatarSnapInterval = avatarCardWidth + 14;
   const avatarCarouselPad = Math.max(12, (paneWidth - avatarCardWidth) / 2);
   const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const cardPreviewWidth = Math.min(Math.max(200, paneWidth * 0.78), 320);
+  const cardScale = cardPreviewWidth / 56;
+  const cardSnap = cardPreviewWidth + 36;
 
   const selectedAvatarData = AVATARS.find((a) => a.id === selectedAvatar);
 
@@ -241,7 +245,7 @@ export default function ArenaPickerScreen() {
                   <Image
                     source={av.portrait}
                     style={styles.avatarImage}
-                    contentFit="cover"
+                    contentFit="contain"
                   />
                   {isSelected ? (
                     <View style={[styles.selectedBadge, { position: 'absolute', top: 10, right: 10 }]}>
@@ -288,7 +292,10 @@ export default function ArenaPickerScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.cardBackRow}
+            decelerationRate="fast"
+            snapToInterval={cardSnap}
+            snapToAlignment="center"
+            contentContainerStyle={[styles.cardBackRow, { paddingHorizontal: Math.max(16, (paneWidth - cardPreviewWidth) / 2) }]}
           >
             {cardChoices.map((skin) => {
               const isSelected = selectedCard === skin.id;
@@ -299,13 +306,14 @@ export default function ArenaPickerScreen() {
                   style={({ pressed }) => [
                     styles.cardBackTile,
                     {
+                      width: cardPreviewWidth,
                       borderColor: isSelected ? '#ffd700' : 'rgba(255,255,255,0.10)',
                       borderWidth: isSelected ? 2.5 : 1,
                       opacity: pressed ? 0.88 : 1,
                     },
                   ]}
                 >
-                  <CardBack size="md" skinOverride={skin.id} />
+                  <CardBack size="md" skinOverride={skin.id} scale={cardScale} />
                   <Text style={[styles.cardBackName, { color: isSelected ? '#ffd700' : '#f4efe4' }]} numberOfLines={2}>
                     {skin.name}
                   </Text>
@@ -487,19 +495,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardBackTile: {
-    width: 124,
-    borderRadius: 16,
-    paddingTop: 14,
-    paddingBottom: 12,
-    paddingHorizontal: 10,
+    borderRadius: 18,
+    paddingTop: 16,
+    paddingBottom: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   cardBackName: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '800',
-    letterSpacing: 0.4,
+    letterSpacing: 0.6,
     textAlign: 'center',
   },
   dotsRow: {

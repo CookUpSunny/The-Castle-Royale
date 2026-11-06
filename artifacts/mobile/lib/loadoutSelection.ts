@@ -61,8 +61,7 @@ export function equippableCardSkins(isSubscribed: boolean): CardSkinId[] {
 
 /**
  * Apply a stored card back without clobbering a choice made before hydration.
- * Locked and unknown ids stay on the current skin and are not written back.
- * A legacy id migrates only when the registry says its replacement is unlocked.
+ * Retired basic backs are rewritten to Castle Cards. A locked id is not granted.
  */
 export function cardAfterHydration(opts: {
   dirty: boolean;
@@ -74,7 +73,7 @@ export function cardAfterHydration(opts: {
   }
   const resolved = resolveStoredCardSkin(opts.stored);
   if (resolved.migrate) return resolved;
-  if (resolved.skin !== 'royal-gold' || opts.stored === 'royal-gold') return resolved;
+  if (resolved.skin === opts.stored) return resolved;
   return { skin: opts.current, migrate: false };
 }
 
@@ -99,7 +98,7 @@ export interface ConfirmedLoadout {
 /**
  * Commit the loadout the player is actually looking at.
  * Returns null when confirming now would persist the pre-hydration defaults
- * (`eagles` / `greenTable` / `royal-gold`) over a saved character, arena, or
+ * (`eagles` / `greenTable` / `castle-cards`) over a saved character, arena, or
  * card back. An explicit override may commit before hydration; any field the
  * player has not touched still waits.
  */
