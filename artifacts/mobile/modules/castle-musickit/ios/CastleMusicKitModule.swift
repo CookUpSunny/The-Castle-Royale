@@ -142,7 +142,7 @@ final class CatalogPlayer {
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         if token != self.generation || !self.shouldKeepPlaying { return }
         let status = ApplicationMusicPlayer.shared.state.playbackStatus
-        if status == .playing || status == .seeking {
+        if self.transportInProgress(status) {
           sawPlayback = true
           failedRestarts = 0
           continue
@@ -157,6 +157,23 @@ final class CatalogPlayer {
           try? await ApplicationMusicPlayer.shared.play()
         }
       }
+    }
+  }
+
+  /// Playing or scrubbing. Pause, stop, and interruption are not in progress.
+  ///
+  /// `MusicPlayer.PlaybackStatus` (iOS 15+) is `playing`, `paused`, `stopped`,
+  /// `interrupted`, `seekingForward`, and `seekingBackward`. It has no `seeking`
+  /// member. A scrub stays in progress so this loop does not call `play()` over
+  /// it. An unknown future case is left alone instead of being treated as a seek.
+  private func transportInProgress(_ status: MusicPlayer.PlaybackStatus) -> Bool {
+    switch status {
+    case .playing, .seekingForward, .seekingBackward:
+      return true
+    case .paused, .stopped, .interrupted:
+      return false
+    @unknown default:
+      return false
     }
   }
 
