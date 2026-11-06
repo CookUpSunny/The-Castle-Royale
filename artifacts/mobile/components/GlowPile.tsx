@@ -21,6 +21,12 @@ interface GlowPileProps {
   highlighted?: boolean;
 }
 
+/** Portrait draw-deck face is 60×84, then the shipped 30% scale (78×109). */
+const DISCARD_FACE_W = 60 * 1.3;
+const DISCARD_FACE_H = 84 * 1.3;
+/** `md` cards are 56×78. This scale makes the pile face match the draw deck. */
+const DISCARD_LAYOUT_SCALE = DISCARD_FACE_W / 56;
+
 const ARENA_ACCENT: Record<string, string> = {
   classic:   '#f5a623',
   cosmic:    '#a78bfa',
@@ -187,10 +193,10 @@ export default function GlowPile({ pile, lastEventType, highlighted }: GlowPileP
 
         {topCard ? (
           <View style={styles.cardWrap}>
-            <Card card={topCard} size="md" />
+            <Card card={topCard} size="md" layoutScale={DISCARD_LAYOUT_SCALE} />
           </View>
         ) : (
-          <View style={[styles.emptyPile, { borderColor: colors.border }]}>
+          <View style={[styles.emptyPile, { borderColor: colors.border, width: DISCARD_FACE_W, height: DISCARD_FACE_H }]}>
             <Text style={{ color: colors.mutedForeground, fontSize: 22 }}>✦</Text>
           </View>
         )}

@@ -37,6 +37,8 @@ interface CardProps {
   disabled?: boolean;
   multiplicity?: number;
   style?: object;
+  /** Uniform face size. 1 keeps every existing card the same size. */
+  layoutScale?: number;
 }
 
 const SIZES = {
@@ -380,10 +382,16 @@ function CardStar({ left, top, size, delay, bright }: CosmicStarSpec) {
   );
 }
 
-export default function Card({ card, faceDown, size = 'md', onPress, onLongPress, isPlayable, disabled, multiplicity, style }: CardProps) {
+export default function Card({ card, faceDown, size = 'md', onPress, onLongPress, isPlayable, disabled, multiplicity, style, layoutScale = 1 }: CardProps) {
   const colors = useColors();
   const { arena } = useCosmetics();
   const dims = SIZES[size];
+  const faceW = dims.width * layoutScale;
+  const faceH = dims.height * layoutScale;
+  const fontSize = dims.fontSize * layoutScale;
+  const suitSize = dims.suitSize * layoutScale;
+  const lineHeight = dims.lineHeight * layoutScale;
+  const suitLineHeight = dims.suitLineHeight * layoutScale;
 
   // ── ALL hooks must be called unconditionally before any early return ──────
   const scale = useSharedValue(1);
@@ -497,11 +505,11 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
     <View
       style={[
         {
-          borderRadius: 6,
+          borderRadius: 6 * layoutScale,
           shadowColor: feltShadowColor,
-          shadowOffset: { width: 0, height: 4 },
+          shadowOffset: { width: 0, height: 4 * layoutScale },
           shadowOpacity: 0.5,
-          shadowRadius: 6,
+          shadowRadius: 6 * layoutScale,
           elevation: 5,
         },
         style,
@@ -512,9 +520,9 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
         {
           shadowColor: glowColor,
           shadowOffset: { width: 0, height: 0 },
-          shadowRadius: 8,
+          shadowRadius: 8 * layoutScale,
           elevation: glowColor !== 'transparent' ? 20 : 2,
-          borderRadius: 6,
+          borderRadius: 6 * layoutScale,
         },
         animStyle,
       ]}
@@ -529,39 +537,39 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
         style={[
           styles.cardBase,
           {
-            width: dims.width,
-            height: dims.height,
+            width: faceW,
+            height: faceH,
             backgroundColor: '#f8f4ff',
             borderColor,
             borderWidth: 1.5,
-            borderRadius: 6,
+            borderRadius: 6 * layoutScale,
           },
         ]}
       >
-        <View style={styles.cardCornerTL}>
-          <Text style={[styles.cardValue, { fontSize: dims.fontSize, lineHeight: dims.lineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
+        <View style={[styles.cardCornerTL, { top: 3 * layoutScale, left: 4 * layoutScale }]}>
+          <Text style={[styles.cardValue, { fontSize, lineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
             {label}
           </Text>
-          <Text style={[styles.cardSuit, { fontSize: dims.suitSize, lineHeight: dims.suitLineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
+          <Text style={[styles.cardSuit, { fontSize: suitSize, lineHeight: suitLineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
             {suitSym}
           </Text>
         </View>
-        <Text style={[styles.cardCenter, { fontSize: dims.suitSize + 6, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
+        <Text style={[styles.cardCenter, { fontSize: suitSize + 6 * layoutScale, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
           {suitSym}
         </Text>
-        <View style={styles.cardCornerBR}>
-          <Text style={[styles.cardValue, { fontSize: dims.fontSize, lineHeight: dims.lineHeight, color: isRed ? '#dc2626' : '#1a1a2e', transform: [{ rotate: '180deg' }] }]}>
+        <View style={[styles.cardCornerBR, { bottom: 3 * layoutScale, right: 4 * layoutScale }]}>
+          <Text style={[styles.cardValue, { fontSize, lineHeight, color: isRed ? '#dc2626' : '#1a1a2e', transform: [{ rotate: '180deg' }] }]}>
             {label}
           </Text>
         </View>
         {isSpecial2 && (
-          <View style={[styles.specialBadge, { backgroundColor: '#7c3aed' }]}>
-            <Text style={styles.specialText}>R</Text>
+          <View style={[styles.specialBadge, { backgroundColor: '#7c3aed', width: 12 * layoutScale, height: 12 * layoutScale, borderRadius: 6 * layoutScale }]}>
+            <Text style={[styles.specialText, { fontSize: 7 * layoutScale }]}>R</Text>
           </View>
         )}
         {isSpecial10 && (
-          <View style={[styles.specialBadge, { backgroundColor: '#ea580c' }]}>
-            <Text style={styles.specialText}>B</Text>
+          <View style={[styles.specialBadge, { backgroundColor: '#ea580c', width: 12 * layoutScale, height: 12 * layoutScale, borderRadius: 6 * layoutScale }]}>
+            <Text style={[styles.specialText, { fontSize: 7 * layoutScale }]}>B</Text>
           </View>
         )}
       </Pressable>
