@@ -4,8 +4,8 @@ import MusicKit
 /// Plays Apple Music catalog songs for arena music.
 ///
 /// Nothing in here runs at module load. MusicKit is touched only when JavaScript
-/// calls a function, so a missing entitlement or a declined permission cannot
-/// take down startup. Android does not compile this file.
+/// calls a function, so a declined permission cannot take down startup.
+/// Android does not compile this file.
 @MainActor
 final class CatalogPlayer {
   static let shared = CatalogPlayer()
