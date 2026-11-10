@@ -39,7 +39,7 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
-import { landscapePlayerScene } from '@/lib/characterSceneLayout';
+import { landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 
@@ -437,7 +437,8 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   // Left column holds only action buttons now (name plates moved to absolute corners).
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
-  const playerScene = landscapePlayerScene(insets.left, insets.bottom, sideColW);
+  const playerCorner = landscapePlayerCorner(width, height);
+  const opponentCorner = landscapeOpponentCorner(width, height);
   const drawColW = 100;
   const duo = classifyDuoWindow(width, height);
   const book = duo.mode === 'wide';
@@ -448,40 +449,33 @@ export default function GameLandscape(): React.JSX.Element | null {
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground />
+      <View pointerEvents="none" style={{ position: 'absolute', top: opponentCorner.top, right: opponentCorner.right, zIndex: 1, width: opponentCorner.width, height: opponentCorner.height, opacity: opponentCorner.opacity }}>
+        <CharacterScenePlate
+          source={opponentAvatarPortrait}
+          width={opponentCorner.width}
+          height={opponentCorner.height}
+          opacity={1}
+        />
+      </View>
+      <View pointerEvents="none" style={{ position: 'absolute', left: playerCorner.left, bottom: playerCorner.bottom, zIndex: 1, width: playerCorner.width, height: playerCorner.height, opacity: playerCorner.opacity }}>
+        <CharacterScenePlate
+          source={myAvatarPortrait}
+          width={playerCorner.width}
+          height={playerCorner.height}
+          opacity={1}
+        />
+      </View>
       <BackButton
         label="← EXIT"
         onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })}
         style={{ position: 'absolute', top: insets.top + webTopPad + 8, left: insets.left + 14, zIndex: 55 }}
       />
 
-      {/* Opponent gamer tag — top-right corner, compact pill so it doesn't droop over cards */}
-      <View style={{ position: 'absolute', top: insets.top + webTopPad + 36, right: insets.right + 8, zIndex: 50 }}>
-        <CharacterScenePlate
-          source={opponentAvatarPortrait}
-          width={96}
-          height={120}
-          opacity={0.96}
-        />
-      </View>
-
-      {/* Player gamer tag — bottom-left, raised so it sits near the action buttons */}
-      <View style={{ position: 'absolute', bottom: playerScene.bottom, left: playerScene.left, zIndex: 50 }}>
-        <CharacterScenePlate
-          source={myAvatarPortrait}
-          width={playerScene.width}
-          height={playerScene.height}
-          opacity={playerScene.opacity}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setPlayerMenuOpen((o) => !o);
-          }}
-        />
-      </View>
-
       <View
         style={[
           styles.layout,
           {
+            zIndex: 2,
             paddingTop: insets.top + webTopPad + 4,
             paddingBottom: insets.bottom + 4,
             paddingLeft: Math.max(8, insets.left),
@@ -491,7 +485,7 @@ export default function GameLandscape(): React.JSX.Element | null {
       >
         {/* Phone landscape keeps actions on the left. Unfolded Duo moves them off the crease. */}
         {!book && (
-        <View style={[styles.leftColumn, { width: sideColW, paddingBottom: playerScene.height + 8 }]}>
+        <View style={[styles.leftColumn, { width: sideColW }]}>
           <View style={styles.actionStackInline}>
             {/* Action buttons hide during STARTER mode — tap a hand card directly. */}
             {!gameView.mustPlayStarter && (

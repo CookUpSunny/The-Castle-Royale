@@ -49,7 +49,7 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
-import { handLane, portraitOpponentScene, portraitPlayerScene } from '@/lib/characterSceneLayout';
+import { portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function fakeCoins(name: string): string {
@@ -232,11 +232,11 @@ function DeckBadge({ count }: { count: number }) {
   );
 }
 
-function OpponentCardArea({ handCount, faceUp, faceDownCount, trailingInset = 0 }: { handCount: number; faceUp: CardType[]; faceDownCount: number; trailingInset?: number }) {
+function OpponentCardArea({ handCount, faceUp, faceDownCount }: { handCount: number; faceUp: CardType[]; faceDownCount: number }) {
   const colors = useColors();
   const handOverlap = handCount > 4 ? -28 : -16;
   return (
-    <View style={[styles.opponentCardArea, trailingInset ? { marginRight: trailingInset } : null]}>
+    <View style={styles.opponentCardArea}>
       {handCount > 0 && (
         <View style={styles.opponentHandRow}>
           {Array.from({ length: handCount }).map((_, i) => (
@@ -301,10 +301,8 @@ export default function GameScreen() {
   // Lobby/setup/portrait stays unchanged so existing flows are unaffected.
   const isLandscape = width > height;
   const webTopPad = Platform.OS === 'web' ? 8 : 0;
-  const contentWidth = Math.max(280, width - insets.left - insets.right);
-  const playerScene = portraitPlayerScene(insets.left, insets.bottom || 0);
-  const opponentScene = portraitOpponentScene(insets.right, insets.top + webTopPad);
-  const lane = handLane(contentWidth, playerScene.width);
+  const playerCorner = portraitPlayerCorner(width, height);
+  const opponentCorner = portraitOpponentCorner(width, height);
 
   // ── Orientation curtain state ──────────────────────────────────────────────
   // `committedLandscape` tracks which layout is actually rendered behind the
@@ -510,7 +508,25 @@ export default function GameScreen() {
       ) : (
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
           <SceneBackground />
-          <View style={[styles.gameLayout, {
+          <View pointerEvents="none" style={{ position: 'absolute', top: opponentCorner.top, right: opponentCorner.right, zIndex: 1, width: opponentCorner.width, height: opponentCorner.height, opacity: opponentCorner.opacity }}>
+            <CharacterScenePlate
+              source={opponentAvatarPortrait}
+              width={opponentCorner.width}
+              height={opponentCorner.height}
+              opacity={1}
+            />
+          </View>
+          {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
+            <View pointerEvents="none" style={{ position: 'absolute', left: playerCorner.left, bottom: playerCorner.bottom, zIndex: 1, width: playerCorner.width, height: playerCorner.height, opacity: playerCorner.opacity }}>
+              <CharacterScenePlate
+                source={myAvatarPortrait}
+                width={playerCorner.width}
+                height={playerCorner.height}
+                opacity={1}
+              />
+            </View>
+          )}
+          <View style={[styles.gameLayout, { zIndex: 2,
             paddingTop: insets.top + webTopPad + 6,
             paddingBottom: insets.bottom || 12,
             paddingLeft: insets.left,
@@ -531,12 +547,7 @@ export default function GameScreen() {
                 });
               }}
             >
-              <OpponentCardArea
-              handCount={opponentHandCount}
-              faceUp={opponentFaceUp}
-              faceDownCount={opponentFaceDownCount}
-              trailingInset={opponentScene.width + 12}
-            />
+              <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
             </View>
             </View>
 
@@ -583,7 +594,7 @@ export default function GameScreen() {
 
             <View
               ref={selfHandRef}
-              style={[styles.playerSection, { paddingLeft: lane.origin, paddingRight: 8 }]}
+              style={styles.playerSection}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -602,45 +613,13 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
-                availableWidth={lane.fanWidth}
-                maxHalfSpread={lane.maxHalfSpread}
+                availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
               />
             </View>
 
             <EmotePicker onSend={sendEmote} />
             </View>
           </View>
-
-          {/* ── Floating HUD chips ──────────────────────────────────────────
-              Both chips are position:'absolute' so they never push game content
-              in the flex column. Opponent anchors top-right; player bottom-left. */}
-
-          {/* Opponent avatar chip — top-right corner, below the EXIT button row */}
-          <View pointerEvents="box-none" style={{ position: 'absolute', top: opponentScene.top, right: opponentScene.right, zIndex: 30 }}>
-            <CharacterScenePlate
-              source={opponentAvatarPortrait}
-              width={opponentScene.width}
-              height={opponentScene.height}
-              opacity={opponentScene.opacity}
-            />
-          </View>
-
-          {/* Player avatar chip — bottom-left, beside the hand.
-              Hidden during the blind-flip phase so it doesn't overlap the face-down glow rings. */}
-          {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
-            <View pointerEvents="box-none" style={{ position: 'absolute', left: playerScene.left, bottom: playerScene.bottom, zIndex: 30 }}>
-              <CharacterScenePlate
-                source={myAvatarPortrait}
-                width={playerScene.width}
-                height={playerScene.height}
-                opacity={playerScene.opacity}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setPlayerMenuOpen((o) => !o);
-                }}
-              />
-            </View>
-          )}
 
           {/* Cinematic card-flight overlay — spotlight + Bezier arc + 3D tilt + impact sparks.
               initialLastKey is computed inline at render time so that each portrait branch
@@ -667,7 +646,7 @@ export default function GameScreen() {
                 onPress={() => setPlayerMenuOpen(false)}
                 style={StyleSheet.absoluteFill}
               />
-              <View style={[styles.playerMenu, { bottom: (playerScene.bottom ?? 0) + playerScene.height + 28, left: playerScene.left }]}>
+              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 18 + 72, left: 16 }]}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput

@@ -46,8 +46,6 @@ interface PlayerHandProps {
   onDragEnd?: (x: number, y: number) => void;
   /** Override the available width used for fan arc math (defaults to full screen width). Pass when the container is narrower than the screen. */
   availableWidth?: number;
-  /** Caps the fan angle so a corner plate can sit beside a full hand. */
-  maxHalfSpread?: number;
 }
 
 // ─── HandCard ─────────────────────────────────────────────────────────────────
@@ -259,7 +257,6 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   onDragMove,
   onDragEnd,
   availableWidth,
-  maxHalfSpread,
 }: PlayerHandProps, ref) {
   const colors = useColors();
   const { width: screenWidth } = useWindowDimensions();
@@ -295,8 +292,8 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
 
   // One layout for the whole hand so every card shares the bottom anchor.
   const fanPositions = useMemo(
-    () => (showHand ? computeFanPositions(totalCards, containerWidth, maxHalfSpread) : []),
-    [showHand, totalCards, containerWidth, maxHalfSpread],
+    () => (showHand ? computeFanPositions(totalCards, containerWidth) : []),
+    [showHand, totalCards, containerWidth],
   );
 
   // Pre-compute each card's horizontal centre so the pan worklet can find the
