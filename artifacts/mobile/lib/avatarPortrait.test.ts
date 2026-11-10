@@ -42,10 +42,14 @@ test('a missing avatar falls back to the same name hash in both orientations', (
   assert.equal(resolveOpponentAvatarId(undefined, name), resolveOpponentAvatarId(null, name));
 });
 
-test('the opponent id does not replace the local character', () => {
-  const boards = matchPortraits('frog', 'gigi', 'Ace');
-  assert.equal(boards.localAvatarId, 'frog');
-  assert.equal(boards.opponentAvatarId, 'gigi');
+test('an unknown id falls back instead of replacing the local character', () => {
+  const boards = matchPortraits('bull', 'not-a-character', 'Shadow');
+  assert.equal(boards.localAvatarId, 'bull');
+  assert.equal(boards.opponentAvatarId, resolveOpponentAvatarId(undefined, 'Shadow'));
+
+  const known = matchPortraits('frog', 'gigi', 'Ace');
+  assert.equal(known.localAvatarId, 'frog');
+  assert.equal(known.opponentAvatarId, 'gigi');
 
   const fallback = matchPortraits('rockner', null, 'Shadow');
   assert.equal(fallback.localAvatarId, 'rockner');

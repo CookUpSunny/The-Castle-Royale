@@ -3,7 +3,20 @@
  * `artifacts/mobile/lib/avatarPortrait.ts`. Unknown values are dropped so an
  * old client (no field) and a bad payload both fall back on the board.
  */
-export const AVATAR_IDS = ['eagles', 'frog', 'troll', 'gigi', 'rockner', 'sunami'] as const;
+export const AVATAR_IDS = [
+  'tau-ceti',
+  'lioness',
+  'bull',
+  'oracle',
+  'jackal',
+  'fenix',
+  'eagles',
+  'frog',
+  'troll',
+  'gigi',
+  'rockner',
+  'sunami',
+] as const;
 
 export type AvatarId = (typeof AVATAR_IDS)[number];
 

@@ -3,7 +3,20 @@
  * seat payload. The api-server allow-list in `src/lib/avatarId.ts` must
  * stay the same set. Portrait files stay in CosmeticsContext.
  */
-export const AVATAR_IDS = ['eagles', 'frog', 'troll', 'gigi', 'rockner', 'sunami'] as const;
+export const AVATAR_IDS = [
+  'tau-ceti',
+  'lioness',
+  'bull',
+  'oracle',
+  'jackal',
+  'fenix',
+  'eagles',
+  'frog',
+  'troll',
+  'gigi',
+  'rockner',
+  'sunami',
+] as const;
 
 export type AvatarId = (typeof AVATAR_IDS)[number];
 

@@ -1,13 +1,9 @@
 import { CARD_WIDTH, computeFanPositions } from './fanLayout';
 
-/** Full-scene uploads are 1536×1024. The corner plate keeps that ratio. */
-export const SCENE_ASPECT = 1536 / 1024;
-
-/** Sharp in the corner, light enough that the table still reads through. */
-export const SCENE_OPACITY = 0.92;
-
-/** Wider than the old 54px chip, narrow enough that an 18-card fan can clear it. */
-export const PLAYER_SCENE_WIDTH = 112;
+/** Reserved corner for the in-game cutout. The picture is contained inside it. */
+export const PLAYER_SCENE_WIDTH = 132;
+export const PLAYER_SCENE_HEIGHT = 168;
+export const SCENE_OPACITY = 0.96;
 
 export interface SceneFrame {
   left: number;
@@ -22,7 +18,7 @@ export interface SceneFrame {
 /** Lower-left corner of the portrait match. The plate stays on the left. */
 export function portraitPlayerScene(safeLeft: number, safeBottom: number): SceneFrame {
   const width = PLAYER_SCENE_WIDTH;
-  const height = Math.round(width / SCENE_ASPECT);
+  const height = PLAYER_SCENE_HEIGHT;
   return {
     left: safeLeft,
     bottom: safeBottom + 6,
@@ -69,13 +65,31 @@ export function landscapePlayerScene(
   safeBottom: number,
   columnWidth: number,
 ): SceneFrame {
-  const width = Math.max(84, Math.min(columnWidth - 6, PLAYER_SCENE_WIDTH));
-  const height = Math.round(width / SCENE_ASPECT);
+  const width = Math.max(84, Math.min(columnWidth - 6, 120));
+  const height = Math.min(150, Math.round(width * 1.2));
   return {
     left: safeLeft + 2,
     bottom: safeBottom + 4,
     width,
     height,
+    opacity: SCENE_OPACITY,
+    fit: 'contain',
+  };
+}
+
+export function portraitOpponentScene(safeRight: number, safeTop: number): {
+  right: number;
+  top: number;
+  width: number;
+  height: number;
+  opacity: number;
+  fit: 'contain';
+} {
+  return {
+    right: safeRight + 6,
+    top: safeTop + 36,
+    width: 104,
+    height: 132,
     opacity: SCENE_OPACITY,
     fit: 'contain',
   };

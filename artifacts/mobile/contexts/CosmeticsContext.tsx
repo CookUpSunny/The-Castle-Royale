@@ -52,13 +52,81 @@ export interface AvatarOption {
   name: string;
   quote: string;
   color: string;
-  /** Selection frame. Vertical when a pair exists, otherwise the full scene. */
+  /** Selection frame. */
   portrait: any;
-  /** Full-scene art shown in the match corner. */
+  /** In-match corner art. Full scene or transparent cutout. */
   scene: any;
+  /** True when the selection image already includes the character name. */
+  framed?: boolean;
 }
 
 export const AVATARS: AvatarOption[] = [
+  {
+    id: 'tau-ceti',
+    name: 'Tau Ceti Player',
+    quote: 'Signal locked.',
+    color: '#22d3ee',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/tau-ceti.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/tau-ceti.png') as number,
+  },
+  {
+    id: 'lioness',
+    name: 'The Lioness',
+    quote: 'The pride takes the pot.',
+    color: '#f5c16c',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/lioness.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/lioness.png') as number,
+  },
+  {
+    id: 'bull',
+    name: 'The Bull',
+    quote: 'Hold the line.',
+    color: '#b91c1c',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/bull.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/bull.png') as number,
+  },
+  {
+    id: 'oracle',
+    name: 'The Oracle',
+    quote: 'The next card is already spoken.',
+    color: '#c4b5fd',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/oracle.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/oracle.png') as number,
+  },
+  {
+    id: 'jackal',
+    name: 'The Jackal',
+    quote: 'I keep what I take.',
+    color: '#f59e0b',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/jackal.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/jackal.png') as number,
+  },
+  {
+    id: 'fenix',
+    name: 'The Fenix',
+    quote: 'Burn, then rise.',
+    color: '#fb7185',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/fenix.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/fenix.png') as number,
+  },
   {
     id: 'eagles',
     name: 'The Eagles',

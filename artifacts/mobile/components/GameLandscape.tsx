@@ -455,13 +455,12 @@ export default function GameLandscape(): React.JSX.Element | null {
       />
 
       {/* Opponent gamer tag — top-right corner, compact pill so it doesn't droop over cards */}
-      <View style={{ position: 'absolute', top: insets.top + webTopPad + 8, right: insets.right + 14, zIndex: 50, maxWidth: 84 }}>
-        <NamePlate
-          name={opponentName}
-          isActive={!isMyTurn}
-          align="right"
-          portraitArt={opponentAvatarPortrait}
-          compact
+      <View style={{ position: 'absolute', top: insets.top + webTopPad + 36, right: insets.right + 8, zIndex: 50 }}>
+        <CharacterScenePlate
+          source={opponentAvatarPortrait}
+          width={96}
+          height={120}
+          opacity={0.96}
         />
       </View>
 
@@ -472,7 +471,6 @@ export default function GameLandscape(): React.JSX.Element | null {
           width={playerScene.width}
           height={playerScene.height}
           opacity={playerScene.opacity}
-          name={playerName}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setPlayerMenuOpen((o) => !o);

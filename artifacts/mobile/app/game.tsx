@@ -49,7 +49,7 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
-import { handLane, portraitPlayerScene } from '@/lib/characterSceneLayout';
+import { handLane, portraitOpponentScene, portraitPlayerScene } from '@/lib/characterSceneLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function fakeCoins(name: string): string {
@@ -232,11 +232,11 @@ function DeckBadge({ count }: { count: number }) {
   );
 }
 
-function OpponentCardArea({ handCount, faceUp, faceDownCount }: { handCount: number; faceUp: CardType[]; faceDownCount: number }) {
+function OpponentCardArea({ handCount, faceUp, faceDownCount, trailingInset = 0 }: { handCount: number; faceUp: CardType[]; faceDownCount: number; trailingInset?: number }) {
   const colors = useColors();
   const handOverlap = handCount > 4 ? -28 : -16;
   return (
-    <View style={styles.opponentCardArea}>
+    <View style={[styles.opponentCardArea, trailingInset ? { marginRight: trailingInset } : null]}>
       {handCount > 0 && (
         <View style={styles.opponentHandRow}>
           {Array.from({ length: handCount }).map((_, i) => (
@@ -300,8 +300,10 @@ export default function GameScreen() {
   // Switch to the cinematic landscape layout whenever the device is wider than tall.
   // Lobby/setup/portrait stays unchanged so existing flows are unaffected.
   const isLandscape = width > height;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
   const contentWidth = Math.max(280, width - insets.left - insets.right);
   const playerScene = portraitPlayerScene(insets.left, insets.bottom || 0);
+  const opponentScene = portraitOpponentScene(insets.right, insets.top + webTopPad);
   const lane = handLane(contentWidth, playerScene.width);
 
   // ── Orientation curtain state ──────────────────────────────────────────────
@@ -397,7 +399,6 @@ export default function GameScreen() {
   );
 
 
-  const webTopPad = Platform.OS === 'web' ? 8 : 0;
   const duo = classifyDuoWindow(width, height);
   const tallBook = duo.mode === 'tall';
 
@@ -530,7 +531,12 @@ export default function GameScreen() {
                 });
               }}
             >
-              <OpponentCardArea handCount={opponentHandCount} faceUp={opponentFaceUp} faceDownCount={opponentFaceDownCount} />
+              <OpponentCardArea
+              handCount={opponentHandCount}
+              faceUp={opponentFaceUp}
+              faceDownCount={opponentFaceDownCount}
+              trailingInset={opponentScene.width + 12}
+            />
             </View>
             </View>
 
@@ -610,11 +616,12 @@ export default function GameScreen() {
               in the flex column. Opponent anchors top-right; player bottom-left. */}
 
           {/* Opponent avatar chip — top-right corner, below the EXIT button row */}
-          <View pointerEvents="box-none" style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: insets.right + 10 }]}>
-            <AvatarChip
-              name={opponentName}
-              isActive={!isMyTurn}
-              portraitArt={opponentAvatarPortrait}
+          <View pointerEvents="box-none" style={{ position: 'absolute', top: opponentScene.top, right: opponentScene.right, zIndex: 30 }}>
+            <CharacterScenePlate
+              source={opponentAvatarPortrait}
+              width={opponentScene.width}
+              height={opponentScene.height}
+              opacity={opponentScene.opacity}
             />
           </View>
 
@@ -627,7 +634,6 @@ export default function GameScreen() {
                 width={playerScene.width}
                 height={playerScene.height}
                 opacity={playerScene.opacity}
-                name={playerName}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setPlayerMenuOpen((o) => !o);

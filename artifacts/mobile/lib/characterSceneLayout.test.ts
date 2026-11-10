@@ -31,5 +31,5 @@ test('the landscape plate stays inside the left column beside the hand', () => {
   assert.equal(landscapeStaysInColumn(scene, 0, 110), true);
   assert.equal(scene.fit, 'contain');
   assert.ok(scene.width <= 110);
-  assert.ok(scene.height < scene.width);
+  assert.ok(scene.height <= 150);
 });

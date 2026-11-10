@@ -235,6 +235,7 @@ export default function ArenaPickerScreen() {
                     },
                   ]}
                 >
+                  {av.framed ? null : (
                   <LinearGradient
                     colors={['transparent', 'rgba(255,255,255,0.30)']}
                     start={{ x: 0, y: 0.45 }}
@@ -242,6 +243,7 @@ export default function ArenaPickerScreen() {
                     style={StyleSheet.absoluteFill}
                     pointerEvents="none"
                   />
+                  )}
                   <Image
                     source={av.portrait}
                     style={styles.avatarImage}
@@ -252,6 +254,7 @@ export default function ArenaPickerScreen() {
                       <Text style={styles.selectedBadgeText}>✓  SELECTED</Text>
                     </View>
                   ) : null}
+                  {av.framed ? null : (
                   <View style={styles.avatarNameWrap}>
                     <Text style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
                       {av.name}
@@ -260,6 +263,7 @@ export default function ArenaPickerScreen() {
                       "{av.quote}"
                     </OutlinedText>
                   </View>
+                  )}
                 </Pressable>
               );
             })}

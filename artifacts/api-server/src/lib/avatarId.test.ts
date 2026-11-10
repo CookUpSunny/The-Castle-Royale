@@ -4,12 +4,27 @@ import test from 'node:test';
 import { applyPlayerAvatars, resolveSeatAvatar, sanitizeAvatarId } from './avatarId.js';
 import { dealGame, getGameView } from './gameEngine.js';
 
-test('sanitize accepts only the shipped characters', () => {
+test('the new characters round-trip on each side of the table', () => {
+  const state = dealGame(['ada', 'bea'], ['Ada', 'Bea']);
+  applyPlayerAvatars(state.players, [
+    { playerId: 'ada', avatarId: 'bull' },
+    { playerId: 'bea', avatarId: 'fenix' },
+  ]);
+  assert.equal(getGameView(state, 'ada').opponentAvatarId, 'fenix');
+  assert.equal(getGameView(state, 'bea').opponentAvatarId, 'bull');
+  assert.equal(getGameView(state, 'ada').avatarId, undefined);
+});
+
+test('sanitize accepts the new characters and drops anything else', () => {
   assert.equal(sanitizeAvatarId('gigi'), 'gigi');
   assert.equal(sanitizeAvatarId('  sunami '), 'sunami');
   assert.equal(sanitizeAvatarId(undefined), undefined);
   assert.equal(sanitizeAvatarId(''), undefined);
   assert.equal(sanitizeAvatarId('drop table'), undefined);
+  assert.equal(sanitizeAvatarId('bull'), 'bull');
+  assert.equal(sanitizeAvatarId('fenix'), 'fenix');
+  assert.equal(sanitizeAvatarId('tau-ceti'), 'tau-ceti');
+  assert.equal(sanitizeAvatarId('empress'), undefined);
   assert.equal(sanitizeAvatarId({ id: 'frog' }), undefined);
 });
 
