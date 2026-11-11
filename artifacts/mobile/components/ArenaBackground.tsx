@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import JackpotArenaBackground from '@/components/JackpotArenaBackground';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
 import type { ArenaId } from '@/contexts/CosmeticsContext';
 
@@ -160,7 +161,8 @@ function TableEdgeBlend({ arenaId }: { arenaId: ArenaId }) {
 function GreenTableArena() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <ArenaPhotoBase arenaId="greenTable" />
+      {/* Animated jackpot arena replaces the casino_green.png still image */}
+      <JackpotArenaBackground style={StyleSheet.absoluteFill} />
       <TableEdgeBlend arenaId="greenTable" />
       <LinearGradient
         colors={['rgba(20,100,40,0.18)', 'transparent', 'rgba(180,140,0,0.12)']}
