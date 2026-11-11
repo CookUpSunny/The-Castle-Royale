@@ -19,6 +19,8 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withSequence,
+  withSpring,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +38,7 @@ import type { LayoutRect } from '@/components/CardPlayFlight';
 import EmoteBubble from '@/components/EmoteBubble';
 import EmotePicker from '@/components/EmotePicker';
 import FaceDownReveal from '@/components/FaceDownReveal';
+import FaceDownStage from '@/components/FaceDownStage';
 import GameLandscape from '@/components/GameLandscape';
 import MusicTransport from '@/components/MusicTransport';
 import GlowPile from '@/components/GlowPile';
@@ -44,10 +47,15 @@ import CardCurtain from '@/components/CardCurtain';
 import OrientationCurtain from '@/components/OrientationCurtain';
 import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
+import { CharacterScenePlate } from '@/components/CharacterScenePlate';
+import { PlayerMenuButton, PlayerMenuGlass } from '@/components/PlayerMenuButton';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
+import { portraitMenuButton, portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
+import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
+import { HAND_RAISE, MAIN_HAND_SLOT, finalThreeFrame, handFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function fakeCoins(name: string): string {
@@ -298,6 +306,12 @@ export default function GameScreen() {
   // Switch to the cinematic landscape layout whenever the device is wider than tall.
   // Lobby/setup/portrait stays unchanged so existing flows are unaffected.
   const isLandscape = width > height;
+  const webTopPad = Platform.OS === 'web' ? 8 : 0;
+  const playerCorner = portraitPlayerCorner(width, height);
+  const opponentCorner = portraitOpponentCorner(width, height);
+  const menuButton = portraitMenuButton(insets.left, insets.bottom || 0);
+  const hand = handFrame(width, insets.left, insets.right, insets.bottom || 0);
+  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad, insets.bottom || 0, insets.right);
 
   // ── Orientation curtain state ──────────────────────────────────────────────
   // `committedLandscape` tracks which layout is actually rendered behind the
@@ -340,7 +354,7 @@ export default function GameScreen() {
   } = useGame();
   const cosmetics = useCosmetics();
   const myAvatarPortrait = useMemo(
-    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.portrait ?? null,
+    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.scene ?? null,
     [cosmetics.avatarId],
   );
   // Music is started by the game-loading screen *before* navigating here, so
@@ -383,6 +397,69 @@ export default function GameScreen() {
   const selfHandRef = useRef<View>(null);
   const opponentZoneRef = useRef<View>(null);
   const playerHandRef = useRef<PlayerHandRef>(null);
+  const draggingCardRef = useRef<CardType | null>(null);
+  const [draggingCard, setDraggingCard] = useState<CardType | null>(null);
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
+  const dragStartX = useSharedValue(0);
+  const dragStartY = useSharedValue(0);
+  const dragVisible = useSharedValue(0);
+
+  const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
+    draggingCardRef.current = card;
+    setDraggingCard(card);
+    dragX.value = x;
+    dragY.value = y;
+    dragStartX.value = x;
+    dragStartY.value = y;
+    dragVisible.value = withTiming(1, { duration: 80 });
+  }, [dragStartX, dragStartY, dragVisible, dragX, dragY]);
+
+  const handleDragMove = useCallback((x: number, y: number) => {
+    dragX.value = x;
+    dragY.value = y;
+  }, [dragX, dragY]);
+
+  const handleDragEnd = useCallback((x: number, y: number) => {
+    const card = draggingCardRef.current;
+    const pile = pileRectP;
+    const pileX = pile ? pile.x + pile.width / 2 : width / 2;
+    const pileY = pile ? pile.y + pile.height / 2 : height / 2;
+    const handTop = selfHandRectP?.y ?? height * 0.7;
+    const playable = !!card && cardMayPlay(card, gameView?.discardPile ?? [], gameView?.mustPlayStarter);
+    const decision = card
+      ? resolveDragRelease({ x, y, pileX, pileY, handTop, playable })
+      : 'snap';
+    if (decision === 'play' && card) {
+      playCard(card.id);
+      dragVisible.value = withTiming(0, { duration: 80 });
+      setTimeout(() => {
+        setDraggingCard(null);
+        draggingCardRef.current = null;
+      }, 90);
+      return;
+    }
+    dragX.value = withSpring(dragStartX.value, { damping: 20, stiffness: 200 });
+    dragY.value = withSpring(dragStartY.value, { damping: 20, stiffness: 200 });
+    dragVisible.value = withDelay(180, withTiming(0, { duration: 120 }));
+    setTimeout(() => {
+      setDraggingCard(null);
+      draggingCardRef.current = null;
+    }, 320);
+  }, [dragStartX, dragStartY, dragVisible, dragX, dragY, gameView, height, pileRectP, playCard, selfHandRectP, width]);
+
+  const dragCardStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: dragX.value - 33,
+    top: dragY.value - 70,
+    opacity: dragVisible.value,
+    zIndex: 200,
+    shadowColor: '#000000',
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    transform: [{ perspective: 800 }, { rotateX: '12deg' }, { scale: 1.08 }],
+  }));
   // End-game curtain — covers the game board, then navigates to victory behind it.
   // Portrait only; landscape owns its own curtain. The hook waits out the
   // winning card's animation and ignores a finished flag that arrives early.
@@ -392,7 +469,6 @@ export default function GameScreen() {
   );
 
 
-  const webTopPad = Platform.OS === 'web' ? 8 : 0;
   const duo = classifyDuoWindow(width, height);
   const tallBook = duo.mode === 'tall';
 
@@ -474,7 +550,7 @@ export default function GameScreen() {
   const opponentCoins = useMemo(() => fakeCoins(gameView?.opponentName ?? ''), [gameView?.opponentName]);
   const opponentAvatarPortrait = useMemo(() => {
     const id = resolveOpponentAvatarId(gameView?.opponentAvatarId, gameView?.opponentName ?? '');
-    return AVATARS.find((a) => a.id === id)?.portrait ?? null;
+    return AVATARS.find((a) => a.id === id)?.scene ?? null;
   }, [gameView?.opponentAvatarId, gameView?.opponentName]);
 
   if (!gameView) return null;
@@ -503,8 +579,26 @@ export default function GameScreen() {
         <GameLandscape />
       ) : (
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
-          <SceneBackground />
-          <View style={[styles.gameLayout, {
+          <SceneBackground burstToken={endCurtainActive && gameView.winner === gameView.myPlayerId ? 1 : 0} />
+          <View pointerEvents="none" style={{ position: 'absolute', top: opponentCorner.top, right: opponentCorner.right, zIndex: 1, width: opponentCorner.width, height: opponentCorner.height, opacity: opponentCorner.opacity }}>
+            <CharacterScenePlate
+              source={opponentAvatarPortrait}
+              width={opponentCorner.width}
+              height={opponentCorner.height}
+              opacity={1}
+            />
+          </View>
+          {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
+            <View pointerEvents="none" style={{ position: 'absolute', left: playerCorner.left, bottom: playerCorner.bottom, zIndex: 1, width: playerCorner.width, height: playerCorner.height, opacity: playerCorner.opacity }}>
+              <CharacterScenePlate
+                source={myAvatarPortrait}
+                width={playerCorner.width}
+                height={playerCorner.height}
+                opacity={1}
+              />
+            </View>
+          )}
+          <View style={[styles.gameLayout, { zIndex: 2,
             paddingTop: insets.top + webTopPad + 6,
             paddingBottom: insets.bottom || 12,
             paddingLeft: insets.left,
@@ -570,9 +664,11 @@ export default function GameScreen() {
               </View>
             </Pressable>
 
+            <View pointerEvents="none" style={{ height: MAIN_HAND_SLOT }} />
             <View
               ref={selfHandRef}
-              style={styles.playerSection}
+              pointerEvents="box-none"
+              style={[styles.playerSection, { position: 'absolute', left: 0, right: 0, bottom: HAND_RAISE, marginLeft: hand.shift, zIndex: 3 }]}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -591,6 +687,10 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
+                draggable={isMyTurn && myHand.length > 0}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
                 availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
               />
             </View>
@@ -599,31 +699,29 @@ export default function GameScreen() {
             </View>
           </View>
 
-          {/* ── Floating HUD chips ──────────────────────────────────────────
-              Both chips are position:'absolute' so they never push game content
-              in the flex column. Opponent anchors top-right; player bottom-left. */}
+          {draggingCard ? (
+            <Animated.View style={dragCardStyle} pointerEvents="none">
+              <CardComponent card={draggingCard} size="lg" />
+            </Animated.View>
+          ) : null}
 
-          {/* Opponent avatar chip — top-right corner, below the EXIT button row */}
-          <View pointerEvents="box-none" style={[styles.hudChip, { top: insets.top + webTopPad + 8, right: insets.right + 10 }]}>
-            <AvatarChip
-              name={opponentName}
-              isActive={!isMyTurn}
-              portraitArt={opponentAvatarPortrait}
-            />
-          </View>
-
-          {/* Player avatar chip — bottom-left, beside the hand.
-              Hidden during the blind-flip phase so it doesn't overlap the face-down glow rings. */}
-          {!(myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0) && (
-            <View pointerEvents="box-none" style={[styles.hudChip, { bottom: (insets.bottom || 12) + 18, left: insets.left + 10 }]}>
-              <AvatarChip
-                name={playerName}
-                isActive={isMyTurn}
-                portraitArt={myAvatarPortrait}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setPlayerMenuOpen((o) => !o);
-                }}
+          {myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0 && (
+            <View
+              pointerEvents="box-none"
+              style={{
+                position: 'absolute',
+                top: finalThree.top,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+                zIndex: 6,
+              }}
+            >
+              <FaceDownStage
+                faceDownIds={myFaceDownIds && myFaceDownIds.length > 0 ? myFaceDownIds : Array.from({ length: myFaceDownCount }, (_, i) => `fd_${i}`)}
+                isMyTurn={isMyTurn}
+                onPlayCard={playCard}
+                gap={finalThree.gap}
               />
             </View>
           )}
@@ -645,15 +743,20 @@ export default function GameScreen() {
             />
           )}
 
-          {/* Player menu popover — opens when you tap your own name card.
-              Opens above the bottom-left player chip. Tap the backdrop to dismiss. */}
+          <PlayerMenuButton
+            open={playerMenuOpen}
+            onChange={setPlayerMenuOpen}
+            style={{ position: 'absolute', left: menuButton.left, bottom: menuButton.bottom, zIndex: 40 }}
+          />
+
+          {/* Name and sound menu. The corner figure does not take taps. */}
           {playerMenuOpen && (
             <>
               <Pressable
                 onPress={() => setPlayerMenuOpen(false)}
-                style={StyleSheet.absoluteFill}
+                style={[StyleSheet.absoluteFill, { zIndex: 55 }]}
               />
-              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 18 + 72, left: 16 }]}>
+              <PlayerMenuGlass style={{ bottom: menuButton.bottom + menuButton.height + 8, left: menuButton.left, zIndex: 60 }}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput
@@ -717,7 +820,7 @@ export default function GameScreen() {
                   <Text style={styles.playerMenuIcon}>🚪</Text>
                   <Text style={styles.playerMenuLabel}>EXIT GAME</Text>
                 </Pressable>
-              </View>
+              </PlayerMenuGlass>
             </>
           )}
 
@@ -800,7 +903,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   gameLayout: { flex: 1 },
   duoPane: { flex: 1, minHeight: 0 },
-  playColumn: { flex: 1, minHeight: 0 },
+  playColumn: { flex: 1, minHeight: 0, position: 'relative' },
   topNavRow: { paddingHorizontal: 14, paddingBottom: 2 },
   hudChip: {
     position: 'absolute',
@@ -969,6 +1072,7 @@ const styles = StyleSheet.create({
   playerSection: {
     width: '100%',
     alignItems: 'center',
+    alignSelf: 'center',
     paddingHorizontal: 4,
     paddingBottom: 2,
     flexShrink: 0,

@@ -50,14 +50,9 @@ const ROLE_COPY: Record<Exclude<PaywallRole, "hidden">, { title: string; period:
     period: "Billed Monthly",
     detail: "No Ads, Exclusive Arenas, Badges And Rewards",
   },
-  beginner_luck: {
-    title: "Beginner's Luck",
-    period: "One-Time Purchase",
-    detail: "Cosmetic Starter Bundle. Yours To Keep",
-  },
 };
 
-const SHELLS: PlanView[] = (["vip_year", "high_roller", "beginner_luck"] as const).map((role) => ({
+const SHELLS: PlanView[] = (["vip_year", "high_roller"] as const).map((role) => ({
   key: role,
   role,
   title: ROLE_COPY[role].title,
@@ -168,11 +163,11 @@ export default function PaywallScreen({ onClose, featureLabel }: PaywallScreenPr
         contentContainerStyle={[styles.scrollBody, { paddingBottom: duo.insets.bottom + 28 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.freeLine}>Play Stays Free, including online games for up to four players.</Text>
+        <Text style={styles.freeLine}>Play Stays Free, including online matches for two players.</Text>
         {featureLabel ? <Text style={styles.feature}>{featureLabel}</Text> : null}
 
         <View style={styles.perkRow}>
-          {["No Ads", "Exclusive Arenas", "Badges And Rewards", "Same Rules"].map((perk) => (
+          {["Badges And Rewards", "Same Rules"].map((perk) => (
             <View key={perk} style={styles.perkChip}>
               <Text style={styles.perkText}>{perk}</Text>
             </View>
@@ -220,7 +215,7 @@ export default function PaywallScreen({ onClose, featureLabel }: PaywallScreenPr
         </View>
 
         <Text style={styles.legalBody}>
-          Payment is charged to your Apple ID at confirmation of purchase. High Roller and VIP Year renew automatically unless you cancel at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel memberships in App Store account settings. Beginner's Luck is a one-time purchase and does not renew. Memberships do not change match rules.
+          Payment is charged to your Apple ID at confirmation of purchase. High Roller and VIP Year renew automatically unless you cancel at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel memberships in App Store account settings. Memberships do not change match rules.
         </Text>
       </ScrollView>
     </View>

@@ -50,16 +50,20 @@ test('eight image backs are registered unlocked for preview and the files exist'
   assert.equal(CARD_SKINS.length, 18);
 });
 
-test('stored image skins resolve, and locked or unknown skins stay on Royal Gold', () => {
-  assert.deepEqual(resolveStoredCardSkin(null), { skin: 'royal-gold', migrate: false });
-  assert.deepEqual(resolveStoredCardSkin('royal-gold'), { skin: 'royal-gold', migrate: false });
+test('stored image skins stay, and the five basic backs move to Castle Cards', () => {
+  assert.deepEqual(resolveStoredCardSkin(null), { skin: 'castle-cards', migrate: false });
+  assert.deepEqual(resolveStoredCardSkin('royal-gold'), { skin: 'castle-cards', migrate: true });
+  assert.deepEqual(resolveStoredCardSkin('neon-glow'), { skin: 'castle-cards', migrate: true });
+  assert.deepEqual(resolveStoredCardSkin('crystal-ice'), { skin: 'castle-cards', migrate: true });
+  assert.deepEqual(resolveStoredCardSkin('sakura-blossom'), { skin: 'castle-cards', migrate: true });
+  assert.deepEqual(resolveStoredCardSkin('inferno-flame'), { skin: 'castle-cards', migrate: true });
   assert.deepEqual(resolveStoredCardSkin('atlas-red'), { skin: 'atlas-red', migrate: false });
   assert.deepEqual(resolveStoredCardSkin('royal-treasure-crest'), { skin: 'royal-treasure-crest', migrate: false });
-  assert.deepEqual(resolveStoredCardSkin('midnight-void'), { skin: 'royal-gold', migrate: false });
-  assert.deepEqual(resolveStoredCardSkin('not-a-skin'), { skin: 'royal-gold', migrate: false });
-  assert.deepEqual(resolveStoredCardSkin('classic'), { skin: 'neon-glow', migrate: true });
-  assert.deepEqual(resolveStoredCardSkin('royal'), { skin: 'royal-gold', migrate: true });
-  assert.deepEqual(resolveStoredCardSkin('cosmic'), { skin: 'royal-gold', migrate: false });
+  assert.deepEqual(resolveStoredCardSkin('midnight-void'), { skin: 'castle-cards', migrate: false });
+  assert.deepEqual(resolveStoredCardSkin('not-a-skin'), { skin: 'castle-cards', migrate: false });
+  assert.deepEqual(resolveStoredCardSkin('classic'), { skin: 'castle-cards', migrate: true });
+  assert.deepEqual(resolveStoredCardSkin('royal'), { skin: 'castle-cards', migrate: true });
+  assert.deepEqual(resolveStoredCardSkin('cosmic'), { skin: 'castle-cards', migrate: false });
 });
 
 test('subscribers can still equip a locked procedural skin, and image backs do not need one', () => {
