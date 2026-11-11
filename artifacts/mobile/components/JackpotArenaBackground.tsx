@@ -5,7 +5,7 @@ import { jackpotArenaHtml } from '@/components/jackpotArenaHtml';
 import { jackpotArenaLandscapeHtml } from '@/components/jackpotArenaLandscapeHtml';
 
 /**
- * JackpotTitleBackground — animated green/gold "JACKPOT" title arena.
+ * JackpotArenaBackground — animated green/gold "JACKPOT" arena background (replaces the casino green still).
  *
  * Self-contained WebGL effect (art + settings baked in) rendered in a WebView, following
  * the same pattern as SceneBackground's MATRIX_HTML. Orientation-aware: the portrait arena
@@ -19,17 +19,17 @@ import { jackpotArenaLandscapeHtml } from '@/components/jackpotArenaLandscapeHtm
  * recovered automatically. DPR capped at 2 for smooth 60fps on phones.
  *
  * Usage (as a full-screen background behind the title UI):
- *   const jackpot = useRef<JackpotTitleBackgroundRef>(null);
- *   <JackpotTitleBackground ref={jackpot} />
+ *   const jackpot = useRef<JackpotArenaBackgroundRef>(null);
+ *   <JackpotArenaBackground ref={jackpot} />
  *   // ...on a win:
  *   jackpot.current?.jackpot();
  */
-export interface JackpotTitleBackgroundRef {
+export interface JackpotArenaBackgroundRef {
   /** Fire the win celebration burst (works in whichever orientation is showing). */
   jackpot: () => void;
 }
 
-interface JackpotTitleBackgroundProps {
+interface JackpotArenaBackgroundProps {
   style?: ViewStyle | ViewStyle[];
   /** Allow touches to reach the arena (default false = pass-through background). */
   interactive?: boolean;
@@ -37,8 +37,8 @@ interface JackpotTitleBackgroundProps {
   orientation?: 'auto' | 'portrait' | 'landscape';
 }
 
-const JackpotTitleBackground = forwardRef<JackpotTitleBackgroundRef, JackpotTitleBackgroundProps>(
-  function JackpotTitleBackground({ style, interactive = false, orientation = 'auto' }, ref) {
+const JackpotArenaBackground = forwardRef<JackpotArenaBackgroundRef, JackpotArenaBackgroundProps>(
+  function JackpotArenaBackground({ style, interactive = false, orientation = 'auto' }, ref) {
     const webRef = useRef<WebView>(null);
     const { width, height } = useWindowDimensions();
 
@@ -86,7 +86,7 @@ const JackpotTitleBackground = forwardRef<JackpotTitleBackgroundRef, JackpotTitl
   },
 );
 
-export default JackpotTitleBackground;
+export default JackpotArenaBackground;
 
 const styles = StyleSheet.create({
   web: { flex: 1, backgroundColor: 'transparent' },
