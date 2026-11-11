@@ -89,7 +89,7 @@ export default function SettingsScreen() {
     <View style={[styles.pane, styles.about]}>
       <Text style={styles.aboutTitle}>Play Stays Free</Text>
       <Text style={styles.body}>
-        Online games for up to four players stay free. Memberships remove forced ads and add cosmetic arenas, badges, and rewards. They do not change the rules.
+        Online matches are two players and stay free. Memberships remove forced ads and add cosmetic arenas, badges, and rewards. They do not change the rules.
       </Text>
       <Pressable onPress={() => router.push("/legal?doc=terms")} style={styles.link}>
         <Text style={styles.linkText}>Terms Of Use</Text>

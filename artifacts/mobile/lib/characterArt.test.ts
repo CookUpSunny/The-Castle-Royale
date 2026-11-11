@@ -24,6 +24,15 @@ test('each new character has a framed selection card and a separate cutout', () 
   }
 });
 
+test('Kingpin and Frog keep the branch cutouts and main’s selection frames', () => {
+  for (const id of ['eagles', 'frog'] as const) {
+    assert.equal(fs.existsSync(path.join(__dirname, '../assets/avatars/select', `${id}.png`)), true);
+    assert.equal(fs.existsSync(path.join(__dirname, '../assets/avatars/scenes', `${id}.png`)), true);
+    assert.equal(fs.existsSync(path.join(__dirname, '../assets/avatars/frames', `${id}.png`)), true);
+    assert.equal(fs.existsSync(path.join(__dirname, '../assets/avatars', `${id}.png`)), true);
+  }
+});
+
 test('Frog, Eagles, and Troll keep a vertical selection frame and a separate full scene', () => {
   for (const id of ['eagles', 'frog', 'troll'] as const) {
     assert.equal(CHARACTER_ART[id].framedSelection, false);

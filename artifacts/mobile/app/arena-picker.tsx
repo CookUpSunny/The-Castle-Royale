@@ -215,6 +215,9 @@ export default function ArenaPickerScreen() {
           >
             {AVATARS.map((av) => {
               const isSelected = selectedAvatar === av.id;
+              // Baked cards already carry their own title, border and scene.
+              const bakedCard = av.selectionFrame != null || av.framed === true;
+              const pickerSource = av.selectionFrame ?? av.portrait;
               return (
                 <Pressable
                   key={av.id}
@@ -224,8 +227,8 @@ export default function ArenaPickerScreen() {
                     {
                       width: avatarCardWidth,
                       height: shortFold ? 168 : 240,
-                      borderColor: isSelected ? av.color : 'rgba(255,255,255,0.10)',
-                      borderWidth: isSelected ? 2.5 : 1,
+                      borderColor: isSelected ? av.color : bakedCard ? 'transparent' : 'rgba(255,255,255,0.10)',
+                      borderWidth: isSelected ? 2.5 : bakedCard ? 0 : 1,
                       shadowColor: av.color,
                       shadowOpacity: isSelected ? 0.85 : 0,
                       shadowRadius: 20,
@@ -235,7 +238,7 @@ export default function ArenaPickerScreen() {
                     },
                   ]}
                 >
-                  {av.framed ? null : (
+                  {bakedCard ? null : (
                   <LinearGradient
                     colors={['transparent', 'rgba(255,255,255,0.30)']}
                     start={{ x: 0, y: 0.45 }}
@@ -245,16 +248,17 @@ export default function ArenaPickerScreen() {
                   />
                   )}
                   <Image
-                    source={av.portrait}
+                    source={pickerSource}
                     style={styles.avatarImage}
                     contentFit="contain"
+                    accessibilityLabel={av.name}
                   />
                   {isSelected ? (
                     <View style={[styles.selectedBadge, { position: 'absolute', top: 10, right: 10 }]}>
                       <Text style={styles.selectedBadgeText}>✓  SELECTED</Text>
                     </View>
                   ) : null}
-                  {av.framed ? null : (
+                  {bakedCard ? null : (
                   <View style={styles.avatarNameWrap}>
                     <Text style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
                       {av.name}

@@ -44,6 +44,7 @@ export type { ArenaId } from '@/lib/loadoutSelection';
  * 2. Add the id to AVATAR_IDS in lib/avatarPortrait.ts and the api-server
  *    allow-list in artifacts/api-server/src/lib/avatarId.ts
  * 3. Add an entry to the AVATARS array  (id, name, quote, color, portrait require())
+ *    Optional: a framed selection card at assets/avatars/frames/<id>.png → selectionFrame
  * That's it — the rest of the app picks it up automatically.
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -53,12 +54,18 @@ export interface AvatarOption {
   name: string;
   quote: string;
   color: string;
-  /** Selection frame. */
+  /** Selection card when no selectionFrame is set. */
   portrait: any;
   /** In-match corner art. Full scene or transparent cutout. */
   scene: any;
   /** True when the selection image already includes the character name. */
   framed?: boolean;
+  /**
+   * Optional full selection-card art (title, scene and border baked in).
+   * When set, the loadout picker shows this in place of the portrait.
+   * Drop it into assets/avatars/frames/<id>.png (about 4:3).
+   */
+  selectionFrame?: any;
 }
 
 export const AVATARS: AvatarOption[] = [
@@ -130,23 +137,27 @@ export const AVATARS: AvatarOption[] = [
   },
   {
     id: 'eagles',
-    name: 'The Eagles',
+    name: 'The Kingpin',
     quote: 'We own this table.',
     color: '#3b82f6',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     portrait: require('../assets/avatars/select/eagles.png') as number,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     scene: require('../assets/avatars/scenes/eagles.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    selectionFrame: require('../assets/avatars/frames/eagles.png') as number,
   },
   {
     id: 'frog',
-    name: 'Gentleman Frog',
+    name: 'The Frog',
     quote: 'Gentlemen, place your bets.',
     color: '#22c55e',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     portrait: require('../assets/avatars/select/frog.png') as number,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     scene: require('../assets/avatars/scenes/frog.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    selectionFrame: require('../assets/avatars/frames/frog.png') as number,
   },
   {
     id: 'troll',

@@ -26,7 +26,7 @@ Subscription-locked arenas (`premium: true`, opened through `PaywallModal` when 
 
 Card skins: five are free (`neon-glow`, `royal-gold`, `crystal-ice`, `sakura-blossom`, `inferno-flame`). The default equipped skin is `royal-gold`. Five are locked behind the same subscription (`midnight-void`, `emerald-prestige`, `pearl-white`, `cyber-punk`, `vintage-casino`) via `setCardSkin` / `isSkinUnlocked`.
 
-All six avatars (The Eagles, Gentleman Frog, Big Bet, Gigi Gorgon, Rockner Burns, Sunami Walker) can be equipped by everyone. There is no avatar lock.
+All six avatars (The Kingpin, The Frog, Big Bet, Gigi Gorgon, Rockner Burns, Sunami Walker) can be equipped by everyone. There is no avatar lock.
 
 `PaywallModal` lists every current RevenueCat package except `beginner_luck` and `004`, and its perk copy still says a subscription unlocks every premium card skin and every premium arena. That is the old "one subscription owns the shop" model. The handoff forbids silently giving members every purchasable item.
 

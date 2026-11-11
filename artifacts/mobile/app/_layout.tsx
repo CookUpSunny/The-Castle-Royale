@@ -22,7 +22,7 @@ import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
 import { MusicProvider, useMusicPlayer } from '@/contexts/MusicContext';
-import { initializeAds } from '@/lib/mobileAds';
+import { prepareAdsAfterTrackingPrompt } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
 import { FONT_GATE_TIMEOUT_MS } from '@/lib/splashPhase';
 import { shouldPlayLaunchIntro } from '@/lib/launchIntro';
@@ -42,8 +42,6 @@ try {
 } catch (err) {
   console.warn('RevenueCat unavailable:', err instanceof Error ? err.message : err);
 }
-
-void initializeAds();
 
 const queryClient = new QueryClient();
 
@@ -85,7 +83,7 @@ function RootLayoutNav() {
   );
 }
 
-/** One Apple Music dialog after the intro is gone and home is on screen. */
+/** Tracking, then Apple Music, after the intro is gone and home is on screen. */
 function AppleMusicHomePrompt({ splashDone }: { splashDone: boolean }) {
   const { promptAppleMusicOnce } = useMusicPlayer();
   const started = useRef(false);
@@ -94,12 +92,19 @@ function AppleMusicHomePrompt({ splashDone }: { splashDone: boolean }) {
     if (!splashDone || started.current) return;
     started.current = true;
     const timer = setTimeout(() => {
-      try {
-        promptAppleMusicOnce();
-      } catch {
-        // The prompt function is responsible for its own failures.
-      }
-    }, 0);
+      void (async () => {
+        try {
+          await prepareAdsAfterTrackingPrompt();
+        } catch {
+          // A failed prompt must not block the home screen or Apple Music.
+        }
+        try {
+          promptAppleMusicOnce();
+        } catch {
+          // The prompt function is responsible for its own failures.
+        }
+      })();
+    }, 400);
     return () => clearTimeout(timer);
   }, [splashDone, promptAppleMusicOnce]);
 
