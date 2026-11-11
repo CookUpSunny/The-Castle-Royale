@@ -14,6 +14,8 @@ const TAUNTS = ['GG!', 'NICE!', 'LUCKY!', 'OOF!'];
 
 interface EmotePickerProps {
   onSend: (emote: string) => void;
+  /** Extra inset when the dock is positioned on the full screen rather than inside padded layout. */
+  dock?: { right: number; bottom: number };
 }
 
 /**
@@ -24,7 +26,7 @@ interface EmotePickerProps {
  * A 1.5s soft cooldown matches the server-side throttle so the buttons
  * don't feel ignored when the user spams them.
  */
-export default function EmotePicker({ onSend }: EmotePickerProps) {
+export default function EmotePicker({ onSend, dock }: EmotePickerProps) {
   const colors = useColors();
   const [open, setOpen] = useState<'emoji' | 'phrase' | null>(null);
   const [lastSentAt, setLastSentAt] = useState(0);
@@ -68,7 +70,7 @@ export default function EmotePicker({ onSend }: EmotePickerProps) {
   // Render the popup panel above the buttons. Pointer events disabled when
   // closed so taps fall through to the table.
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <View style={[styles.wrap, dock]} pointerEvents="box-none">
       {open ? (
         <Animated.View
           style={[
@@ -152,7 +154,8 @@ const styles = StyleSheet.create({
     bottom: 12,
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
+    alignItems: 'center',
     gap: 8,
     zIndex: 2,
   },
@@ -170,7 +173,7 @@ const styles = StyleSheet.create({
   },
   panel: {
     position: 'absolute',
-    bottom: 44,
+    bottom: 84,
     right: 0,
     borderRadius: 14,
     borderWidth: 1.5,

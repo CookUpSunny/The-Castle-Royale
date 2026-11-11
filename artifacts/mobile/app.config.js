@@ -7,6 +7,8 @@
  */
 const ADMOB_IOS_APP_ID = "ca-app-pub-2426597243989008~4741781660";
 const GOOGLE_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";
+const TRACKING_USAGE =
+  "Castle Royale uses this identifier to show ads to free players. High Roller and VIP members do not see forced ads.";
 
 function fromEnv(name, fallback) {
   const value = process.env[name];
@@ -18,6 +20,11 @@ module.exports = ({ config }) => ({
   ...config,
   plugins: [
     ...(config.plugins ?? []),
+    "expo-video",
+    [
+      "expo-tracking-transparency",
+      { userTrackingPermission: TRACKING_USAGE },
+    ],
     "./plugins/withAppleMusicKit",
     [
       "react-native-google-mobile-ads",
@@ -25,8 +32,7 @@ module.exports = ({ config }) => ({
         androidAppId: fromEnv("EXPO_PUBLIC_ADMOB_ANDROID_APP_ID", GOOGLE_TEST_ANDROID_APP_ID),
         iosAppId: fromEnv("EXPO_PUBLIC_ADMOB_IOS_APP_ID", ADMOB_IOS_APP_ID),
         delayAppMeasurementInit: true,
-        userTrackingUsageDescription:
-          "Castle Royale uses this identifier to show ads to free players. High Roller and VIP members do not see forced ads.",
+        userTrackingUsageDescription: TRACKING_USAGE,
       },
     ],
   ],

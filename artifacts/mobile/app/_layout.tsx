@@ -8,30 +8,24 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { LaunchIntro } from '@/components/LaunchIntro';
 import AdBreakHost from '@/components/AdBreakHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import RevenueCatIdentity from '@/components/RevenueCatIdentity';
-import SplashGravity from '@/components/SplashGravity';
-import SplashIntro from '@/components/SplashIntro';
-import SplashStudio from '@/components/SplashStudio';
 import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
 import { MusicProvider, useMusicPlayer } from '@/contexts/MusicContext';
-import { initializeAds } from '@/lib/mobileAds';
+import { prepareAdsAfterTrackingPrompt } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
-import {
-  advanceSplashPhase,
-  FONT_GATE_TIMEOUT_MS,
-  SPLASH_CHAIN_TIMEOUT_MS,
-  type SplashPhase,
-} from '@/lib/splashPhase';
+import { FONT_GATE_TIMEOUT_MS } from '@/lib/splashPhase';
+import { shouldPlayLaunchIntro } from '@/lib/launchIntro';
 import {
   installStartupErrorHandler,
   shouldShowStartupErrors,
@@ -49,17 +43,10 @@ try {
   console.warn('RevenueCat unavailable:', err instanceof Error ? err.message : err);
 }
 
-void initializeAds();
-
 const queryClient = new QueryClient();
 
-function skipIntro(): boolean {
-  if (process.env.EXPO_PUBLIC_SKIP_SPLASH === '1') return true;
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return new URLSearchParams(window.location.search).has('skipSplash');
-  }
-  return false;
-}
+/** Survives a resume from the background so the intro does not start again. */
+let launchIntroConsumed = false;
 
 function GameProviderBridge({ children }: { children: React.ReactNode }) {
   const { profile } = useGameCenter();
@@ -96,7 +83,7 @@ function RootLayoutNav() {
   );
 }
 
-/** One Apple Music dialog after the intro is gone and home is on screen. */
+/** Tracking, then Apple Music, after the intro is gone and home is on screen. */
 function AppleMusicHomePrompt({ splashDone }: { splashDone: boolean }) {
   const { promptAppleMusicOnce } = useMusicPlayer();
   const started = useRef(false);
@@ -105,12 +92,19 @@ function AppleMusicHomePrompt({ splashDone }: { splashDone: boolean }) {
     if (!splashDone || started.current) return;
     started.current = true;
     const timer = setTimeout(() => {
-      try {
-        promptAppleMusicOnce();
-      } catch {
-        // The prompt function is responsible for its own failures.
-      }
-    }, 0);
+      void (async () => {
+        try {
+          await prepareAdsAfterTrackingPrompt();
+        } catch {
+          // A failed prompt must not block the home screen or Apple Music.
+        }
+        try {
+          promptAppleMusicOnce();
+        } catch {
+          // The prompt function is responsible for its own failures.
+        }
+      })();
+    }, 400);
     return () => clearTimeout(timer);
   }, [splashDone, promptAppleMusicOnce]);
 
@@ -125,50 +119,83 @@ function RootLayoutBody() {
     Inter_700Bold,
   });
   const [fontWaitExpired, setFontWaitExpired] = useState(false);
-  const [splashPhase, setSplashPhase] = useState<SplashPhase>(skipIntro() ? 'done' : 'intro');
-
-  const advance = useCallback((next: SplashPhase) => {
-    setSplashPhase((current) => advanceSplashPhase(current, next));
-  }, []);
-  const showGravity = useCallback(() => advance('gravity'), [advance]);
-  const showStudio = useCallback(() => advance('studio'), [advance]);
-  const finishSplash = useCallback(() => advance('done'), [advance]);
-
-  // Hide native splash immediately — our dark-grey JS intro takes over from here.
-  // Do NOT wait for font loading; the intro overlay covers the screen during that time.
-  useEffect(() => {
-    void SplashScreen.hideAsync().catch(() => {});
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setFontWaitExpired(true), FONT_GATE_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (skipIntro()) return;
-    const timer = setTimeout(() => advance('done'), SPLASH_CHAIN_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [advance]);
+  const appReady = Boolean(fontsLoaded || fontError || fontWaitExpired);
+  const [showIntro, setShowIntro] = useState(false);
+  const [introResolved, setIntroResolved] = useState(launchIntroConsumed);
+  const [frameReady, setFrameReady] = useState(false);
 
-  const appReady = Boolean(fontsLoaded || fontError || fontWaitExpired || splashPhase === 'done');
+  useEffect(() => {
+    if (launchIntroConsumed) {
+      setIntroResolved(true);
+      return;
+    }
+    let cancelled = false;
+    const giveUp = setTimeout(() => {
+      if (cancelled) return;
+      launchIntroConsumed = true;
+      setShowIntro(false);
+      setIntroResolved(true);
+    }, 6000);
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduceMotion) => {
+        if (cancelled || launchIntroConsumed) return;
+        if (!shouldPlayLaunchIntro({ reduceMotion, alreadyPlayed: false })) {
+          launchIntroConsumed = true;
+          setShowIntro(false);
+          setIntroResolved(true);
+          return;
+        }
+        launchIntroConsumed = true;
+        setShowIntro(true);
+      })
+      .catch(() => {
+        if (cancelled || launchIntroConsumed) return;
+        launchIntroConsumed = true;
+        setShowIntro(true);
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(giveUp);
+    };
+  }, []);
+
+  const finishIntro = () => {
+    launchIntroConsumed = true;
+    setShowIntro(false);
+    setIntroResolved(true);
+  };
+
+  useEffect(() => {
+    if (frameReady || (introResolved && appReady)) {
+      void SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [appReady, frameReady, introResolved]);
 
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#07000f' }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: showIntro && !introResolved ? '#ffffff' : '#07000f' }}>
           <KeyboardProvider>
             <MusicProvider>
-              <AppleMusicHomePrompt splashDone={splashPhase === 'done'} />
+              <AppleMusicHomePrompt splashDone={appReady && introResolved} />
               <SubscriptionProvider>
                 <CosmeticsProvider>
                   <GameCenterProvider>
                     <GameProviderBridge>
                       {/* Fonts normally load under the intro. A hung font load must not hide the home screen. */}
-                      {appReady && <RootLayoutNav />}
-                      {splashPhase === 'intro' && <SplashIntro onDone={showGravity} />}
-                      {splashPhase === 'gravity' && <SplashGravity onDone={showStudio} />}
-                      {splashPhase === 'studio' && <SplashStudio onDone={finishSplash} />}
+                      {appReady && introResolved && <RootLayoutNav />}
+                      {showIntro && !introResolved && (
+                        <LaunchIntro
+                          onFirstFrame={() => setFrameReady(true)}
+                          onFinish={finishIntro}
+                        />
+                      )}
                     </GameProviderBridge>
                   </GameCenterProvider>
                 </CosmeticsProvider>

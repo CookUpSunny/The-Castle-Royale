@@ -2,19 +2,14 @@ import React, { useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { fetchAdState, reconcileAdLossCount } from '@/lib/adsApi';
 import { readLocalLossCount, rememberServerLossCount } from '@/lib/adLossStorage';
-import { initializeAds } from '@/lib/mobileAds';
-
 /**
  * Keeps the server loss count in sync. Interstitials are shown only from the
  * match-result screen. Second Chance is a once-per-tournament bracket entry,
  * not a rematch, and has no UI until tournaments exist.
+ * AdMob itself starts after the home screen, once tracking has been asked.
  */
 export default function AdBreakHost() {
   const { playerId } = useGame();
-
-  useEffect(() => {
-    void initializeAds();
-  }, []);
 
   useEffect(() => {
     if (!playerId) return;

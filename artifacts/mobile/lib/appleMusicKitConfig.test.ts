@@ -98,6 +98,10 @@ test('effective Expo iOS config keeps MusicKit without a provisioning entitlemen
   const infoPlist = modResults?.infoPlist;
   assert.ok(infoPlist, 'introspected Info.plist mod did not run');
   assert.equal(infoPlist.NSAppleMusicUsageDescription, USAGE_DESCRIPTION);
+  assert.equal(
+    infoPlist.NSUserTrackingUsageDescription,
+    'Castle Royale uses this identifier to show ads to free players. High Roller and VIP members do not see forced ads.',
+  );
   assert.deepEqual(
     forbiddenKeys(entitlements),
     [],

@@ -18,6 +18,7 @@ interface FaceDownStageProps {
   faceDownIds: string[];
   isMyTurn: boolean;
   onPlayCard: (cardId: string) => void;
+  gap?: number;
 }
 
 /**
@@ -91,7 +92,7 @@ function AnimatedFaceDownCard({
 
 const AUTO_PLAY_SECONDS = 15;
 
-export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: FaceDownStageProps) {
+export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard, gap = 12 }: FaceDownStageProps) {
   const colors = useColors();
 
   // Headline pulse only when it's the player's turn.
@@ -157,7 +158,7 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
     secondsLeft > 8 ? colors.neonGold : secondsLeft > 4 ? colors.neonOrange : '#ff4d6d';
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents="box-none">
       <Animated.Text style={[styles.headline, { color: colors.neonGold }, labelStyle]}>
         ✦ FINAL {faceDownIds.length} ✦ TAP TO REVEAL
       </Animated.Text>
@@ -171,7 +172,7 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
         </Text>
       ) : null}
 
-      <View style={styles.row}>
+      <View style={[styles.row, { gap }]} pointerEvents="auto">
         {faceDownIds.map((id, i) => (
           <AnimatedFaceDownCard
             key={id}
@@ -188,6 +189,7 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     paddingTop: 4,
     paddingBottom: 0,
     alignItems: 'center',
@@ -222,8 +224,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 22,
-    marginLeft: -40,
+    alignSelf: 'center',
   },
   cardSlot: {
     width: 88,

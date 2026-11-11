@@ -65,12 +65,39 @@ const VALID_SKIN_IDS = new Set<CardSkinId>(CARD_SKINS.map((s) => s.id));
 const UNLOCKED_SKIN_IDS = new Set<CardSkinId>(CARD_SKINS.filter((s) => s.unlocked).map((s) => s.id));
 const IMAGE_SKIN_IDS = new Set<string>(IMAGE_CARD_BACKS.map((s) => s.id));
 
+/**
+ * The five original free procedural backs have no artwork. They stay in the
+ * registry so an old save still names a real id, but the selector no longer
+ * offers them. Equipped copies move to the illustrated default.
+ */
+export const RETIRED_BASIC_SKINS = [
+  'neon-glow',
+  'royal-gold',
+  'crystal-ice',
+  'sakura-blossom',
+  'inferno-flame',
+] as const;
+
+const RETIRED_BASIC_SET = new Set<string>(RETIRED_BASIC_SKINS);
+
+/** Castle Cards is the illustrated stand-in for a removed basic back. */
+export const ILLUSTRATED_CARD_DEFAULT: ImageCardSkinId = 'castle-cards';
+
 /** One-time migration of legacy stored skin IDs from the previous cosmetics revision. */
 export const LEGACY_SKIN_MAP: Record<string, CardSkinId> = {
   classic: 'neon-glow',
   cosmic: 'midnight-void',
   royal: 'royal-gold',
 };
+
+/** The pre-match row: the eight owner-supplied illustrated backs, nothing else. */
+export function prematchIllustratedSkins(): ImageCardSkinId[] {
+  return IMAGE_CARD_BACKS.map((skin) => skin.id);
+}
+
+export function isRetiredBasicSkin(id: string | null | undefined): boolean {
+  return !!id && RETIRED_BASIC_SET.has(id);
+}
 
 export function isCardSkinId(value: string | null | undefined): value is CardSkinId {
   return !!value && VALID_SKIN_IDS.has(value as CardSkinId);
@@ -87,15 +114,20 @@ export function canEquipCardSkin(id: CardSkinId, isSubscribed = false): boolean 
 
 /**
  * Skin to show for a stored id.
- * Locked and unknown ids stay on Royal Gold and are not written back.
- * A legacy id migrates only when its replacement is unlocked.
+ * Illustrated backs are kept. The five basic procedural backs, and legacy ids
+ * that pointed at them, are rewritten to Castle Cards. A locked premium id is
+ * not granted and is not erased.
  */
 export function resolveStoredCardSkin(stored: string | null): { skin: CardSkinId; migrate: boolean } {
-  if (!stored) return { skin: 'royal-gold', migrate: false };
-  const migrated = LEGACY_SKIN_MAP[stored];
-  if (migrated && UNLOCKED_SKIN_IDS.has(migrated)) return { skin: migrated, migrate: true };
-  if (VALID_SKIN_IDS.has(stored as CardSkinId) && UNLOCKED_SKIN_IDS.has(stored as CardSkinId)) {
-    return { skin: stored as CardSkinId, migrate: false };
+  if (!stored) return { skin: ILLUSTRATED_CARD_DEFAULT, migrate: false };
+  const legacy = LEGACY_SKIN_MAP[stored];
+  const candidate = legacy ?? stored;
+  if (RETIRED_BASIC_SET.has(candidate)) {
+    return { skin: ILLUSTRATED_CARD_DEFAULT, migrate: true };
   }
-  return { skin: 'royal-gold', migrate: false };
+  if (legacy && UNLOCKED_SKIN_IDS.has(legacy)) return { skin: legacy, migrate: true };
+  if (VALID_SKIN_IDS.has(candidate as CardSkinId) && UNLOCKED_SKIN_IDS.has(candidate as CardSkinId)) {
+    return { skin: candidate as CardSkinId, migrate: false };
+  }
+  return { skin: ILLUSTRATED_CARD_DEFAULT, migrate: false };
 }
