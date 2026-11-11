@@ -15,7 +15,7 @@ export default function SettingsScreen() {
   const { restore, isRestoring } = useSubscription();
   const [notice, setNotice] = useState<string | null>(null);
   const [offerAppleMusicSettings, setOfferAppleMusicSettings] = useState(false);
-  const version = Constants.expoConfig?.version ?? "1.0.3";
+  const version = Constants.expoConfig?.version ?? "1.0.4";
   const top = topContentInset(duo.insets.top, Platform.OS);
 
   const onAppleMusic = async () => {

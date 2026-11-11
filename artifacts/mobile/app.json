@@ -3,7 +3,7 @@
     "name": "The Castle Royale",
     "slug": "thecastleroyale",
     "entryPoint": "index.js",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "thecastleroyale",
