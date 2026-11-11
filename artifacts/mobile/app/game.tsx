@@ -36,6 +36,7 @@ import type { LayoutRect } from '@/components/CardPlayFlight';
 import EmoteBubble from '@/components/EmoteBubble';
 import EmotePicker from '@/components/EmotePicker';
 import FaceDownReveal from '@/components/FaceDownReveal';
+import FaceDownStage from '@/components/FaceDownStage';
 import GameLandscape from '@/components/GameLandscape';
 import MusicTransport from '@/components/MusicTransport';
 import GlowPile from '@/components/GlowPile';
@@ -51,6 +52,7 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { portraitMenuButton, portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
+import { HAND_RAISE, finalThreeFrame, handFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function fakeCoins(name: string): string {
@@ -305,6 +307,8 @@ export default function GameScreen() {
   const playerCorner = portraitPlayerCorner(width, height);
   const opponentCorner = portraitOpponentCorner(width, height);
   const menuButton = portraitMenuButton(insets.left, insets.bottom || 0);
+  const hand = handFrame(width, insets.left, insets.right, insets.bottom || 0);
+  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad);
 
   // ── Orientation curtain state ──────────────────────────────────────────────
   // `committedLandscape` tracks which layout is actually rendered behind the
@@ -596,7 +600,7 @@ export default function GameScreen() {
 
             <View
               ref={selfHandRef}
-              style={styles.playerSection}
+              style={[styles.playerSection, { marginBottom: HAND_RAISE }]}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -615,13 +619,33 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
-                availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
+                availableWidth={Math.max(240, hand.width - 8)}
               />
             </View>
 
             <EmotePicker onSend={sendEmote} />
             </View>
           </View>
+
+          {myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0 && (
+            <View
+              pointerEvents="box-none"
+              style={{
+                position: 'absolute',
+                top: finalThree.top,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+                zIndex: 6,
+              }}
+            >
+              <FaceDownStage
+                faceDownIds={myFaceDownIds && myFaceDownIds.length > 0 ? myFaceDownIds : Array.from({ length: myFaceDownCount }, (_, i) => `fd_${i}`)}
+                isMyTurn={isMyTurn}
+                onPlayCard={playCard}
+              />
+            </View>
+          )}
 
           {/* Cinematic card-flight overlay — spotlight + Bezier arc + 3D tilt + impact sparks.
               initialLastKey is computed inline at render time so that each portrait branch
@@ -969,6 +993,7 @@ const styles = StyleSheet.create({
   playerSection: {
     width: '100%',
     alignItems: 'center',
+    alignSelf: 'center',
     paddingHorizontal: 4,
     paddingBottom: 2,
     flexShrink: 0,

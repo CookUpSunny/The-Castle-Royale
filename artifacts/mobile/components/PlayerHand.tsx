@@ -18,7 +18,6 @@ import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { CARD_WIDTH, FAN_CONTAINER_H, computeFanPositions } from '@/lib/fanLayout';
 import CardComponent from './Card';
-import FaceDownStage from './FaceDownStage';
 
 function canPlayCardFn(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -390,15 +389,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
 
   // Must be AFTER all hooks (Rules of Hooks — see comment in original code).
   if (showFaceDown) {
-    return (
-      <View style={styles.faceDownAnchor}>
-        <FaceDownStage
-          faceDownIds={faceDownIds.length > 0 ? faceDownIds : Array.from({ length: faceDownCount }).map((_, i) => `fd_${i}`)}
-          isMyTurn={isMyTurn}
-          onPlayCard={onPlayCard}
-        />
-      </View>
-    );
+    return <View style={styles.faceDownAnchor} />;
   }
 
   return (

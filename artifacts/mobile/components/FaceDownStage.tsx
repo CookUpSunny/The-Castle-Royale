@@ -157,7 +157,7 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
     secondsLeft > 8 ? colors.neonGold : secondsLeft > 4 ? colors.neonOrange : '#ff4d6d';
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents="box-none">
       <Animated.Text style={[styles.headline, { color: colors.neonGold }, labelStyle]}>
         ✦ FINAL {faceDownIds.length} ✦ TAP TO REVEAL
       </Animated.Text>
@@ -171,7 +171,7 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
         </Text>
       ) : null}
 
-      <View style={styles.row}>
+      <View style={styles.row} pointerEvents="auto">
         {faceDownIds.map((id, i) => (
           <AnimatedFaceDownCard
             key={id}
@@ -188,6 +188,7 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     paddingTop: 4,
     paddingBottom: 0,
     alignItems: 'center',
@@ -222,8 +223,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    alignSelf: 'center',
     gap: 22,
-    marginLeft: -40,
   },
   cardSlot: {
     width: 88,

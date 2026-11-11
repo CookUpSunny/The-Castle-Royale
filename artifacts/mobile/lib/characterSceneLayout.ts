@@ -1,4 +1,4 @@
-import { FAN_CONTAINER_H } from './fanLayout';
+import { menuClearance } from './matchChrome';
 
 /** The corner figure sits behind the cards. Cards may cover it. */
 export const CORNER_OPACITY = 0.62;
@@ -111,7 +111,7 @@ export interface MenuButtonFrame {
 export function portraitMenuButton(safeLeft: number, safeBottom: number): MenuButtonFrame {
   return {
     left: safeLeft + 10,
-    bottom: Math.max(safeBottom, 12) + FAN_CONTAINER_H + 10,
+    bottom: menuClearance(safeBottom),
     width: PLAYER_MENU_HIT,
     height: PLAYER_MENU_HIT,
     opens: 'playerMenu',

@@ -32,6 +32,7 @@ import SceneBackground from '@/components/SceneBackground';
 import EmoteBubble from '@/components/EmoteBubble';
 import EmotePicker from '@/components/EmotePicker';
 import FaceDownReveal from '@/components/FaceDownReveal';
+import FaceDownStage from '@/components/FaceDownStage';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import GlowPile from '@/components/GlowPile';
 import PlayerHand from '@/components/PlayerHand';
@@ -40,6 +41,7 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { landscapeMenuButton, landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
+import { HAND_RAISE, emoteDock, finalThreeFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 import { PlayerMenuButton } from '@/components/PlayerMenuButton';
@@ -441,6 +443,8 @@ export default function GameLandscape(): React.JSX.Element | null {
   const playerCorner = landscapePlayerCorner(width, height);
   const opponentCorner = landscapeOpponentCorner(width, height);
   const menuButton = landscapeMenuButton(insets.left, insets.bottom);
+  const emotes = emoteDock(insets.right, insets.bottom);
+  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad);
   const drawColW = 100;
   const duo = classifyDuoWindow(width, height);
   const book = duo.mode === 'wide';
@@ -536,7 +540,7 @@ export default function GameLandscape(): React.JSX.Element | null {
 
           <View
             ref={selfHandRefLs}
-            style={styles.playerHandSection}
+            style={[styles.playerHandSection, { marginBottom: 14 + HAND_RAISE, alignItems: 'center', width: '100%' }]}
             onLayout={() => {
               selfHandRefLs.current?.measure((_x, _y, w, h, pageX, pageY) => {
                 const r = { x: pageX, y: pageY, width: w, height: h };
@@ -582,6 +586,26 @@ export default function GameLandscape(): React.JSX.Element | null {
         </View>
       </View>
 
+      {myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0 && (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            top: finalThree.top,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            zIndex: 6,
+          }}
+        >
+          <FaceDownStage
+            faceDownIds={myFaceDownIds && myFaceDownIds.length > 0 ? myFaceDownIds : Array.from({ length: myFaceDownCount }, (_, i) => `fd_${i}`)}
+            isMyTurn={isMyTurn}
+            onPlayCard={playCard}
+          />
+        </View>
+      )}
+
       {/* Floating drag ghost card — follows finger while dragging */}
       {draggingCard && (
         <Animated.View style={dragCardStyle} pointerEvents="none">
@@ -615,7 +639,7 @@ export default function GameLandscape(): React.JSX.Element | null {
         />
       )}
 
-      <EmotePicker onSend={sendEmote} />
+      <EmotePicker onSend={sendEmote} dock={{ right: emotes.right, bottom: emotes.bottom }} />
 
       {opponentReconnecting && !opponentDisconnected && (
         <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.neonGold }]}>
