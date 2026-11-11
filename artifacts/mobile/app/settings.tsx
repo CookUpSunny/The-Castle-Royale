@@ -15,7 +15,7 @@ export default function SettingsScreen() {
   const { restore, isRestoring } = useSubscription();
   const [notice, setNotice] = useState<string | null>(null);
   const [offerAppleMusicSettings, setOfferAppleMusicSettings] = useState(false);
-  const version = Constants.expoConfig?.version ?? "1.0.3";
+  const version = Constants.expoConfig?.version ?? "1.0.4";
   const top = topContentInset(duo.insets.top, Platform.OS);
 
   const onAppleMusic = async () => {
@@ -89,7 +89,7 @@ export default function SettingsScreen() {
     <View style={[styles.pane, styles.about]}>
       <Text style={styles.aboutTitle}>Play Stays Free</Text>
       <Text style={styles.body}>
-        Online games for up to four players stay free. Memberships remove forced ads and add cosmetic arenas, badges, and rewards. They do not change the rules.
+        Online matches are two players and stay free. Memberships remove forced ads and add cosmetic arenas, badges, and rewards. They do not change the rules.
       </Text>
       <Pressable onPress={() => router.push("/legal?doc=terms")} style={styles.link}>
         <Text style={styles.linkText}>Terms Of Use</Text>

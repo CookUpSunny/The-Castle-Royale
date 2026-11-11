@@ -3,13 +3,15 @@
     "name": "The Castle Royale",
     "slug": "thecastleroyale",
     "entryPoint": "index.js",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "thecastleroyale",
     "userInterfaceStyle": "dark",
     "splash": {
-      "backgroundColor": "#1a1a1a"
+      "image": "./assets/images/castle-royale-splash-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": false,
@@ -18,7 +20,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIRequiresFullScreen": false,
-        "NSAppleMusicUsageDescription": "Castle Royale streams arena songs from Apple Music so the artist is paid for the play. Apple Music is optional. Built-in music plays if you decline or cannot stream."
+        "NSAppleMusicUsageDescription": "Castle Royale streams arena songs from Apple Music so the artist is paid for the play. Apple Music is optional. Built-in music plays if you decline or cannot stream.",
+        "NSUserTrackingUsageDescription": "Castle Royale uses this identifier to show ads to free players. High Roller and VIP members do not see forced ads."
       }
     },
     "android": {
@@ -50,6 +53,15 @@
           "ios": {
             "useFrameworks": "static"
           }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/castle-royale-splash-logo.png",
+          "imageWidth": 320,
+          "resizeMode": "contain"
         }
       ]
     ],

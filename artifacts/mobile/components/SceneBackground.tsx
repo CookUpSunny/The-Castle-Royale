@@ -14,6 +14,7 @@ import Animated, {
 import type { SharedValue } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 import RainbowRoadBackground from '@/components/RainbowRoadBackground';
+import { JackpotFelt } from '@/components/JackpotArena';
 import { useCosmetics } from '@/contexts/CosmeticsContext';
 import { ARENA_TABLE_TINT } from '@/lib/sceneAssets';
 import {
@@ -112,7 +113,7 @@ const MATRIX_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export default function SceneBackground({ sceneOverride }: { sceneOverride?: SceneId }) {
+export default function SceneBackground({ sceneOverride, burstToken = 0 }: { sceneOverride?: SceneId; burstToken?: number }) {
   const { width, height } = useWindowDimensions();
   const { arena, scene } = useCosmetics();
   const sceneId = sceneOverride ?? scene;
@@ -161,6 +162,14 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
   );
   const arenaTint = useMemo(() => getArenaTint(arena as keyof typeof ARENA_TABLE_TINT), [arena]);
 
+  if (sceneId === 'casinoGreen') {
+    return (
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <JackpotFelt burstToken={burstToken} />
+      </View>
+    );
+  }
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <LinearGradient colors={[...sceneBaseGradient(sceneId)]} style={StyleSheet.absoluteFill} />
@@ -178,7 +187,6 @@ export default function SceneBackground({ sceneOverride }: { sceneOverride?: Sce
       <LinearGradient colors={[...arenaTint]} style={StyleSheet.absoluteFill} />
 
       {sceneId === 'rainbowRoad' ? <RainbowRoadAmbience sparkle={sparkle} /> : null}
-      {sceneId === 'casinoGreen' ? <FlamingoAmbience /> : null}
       {sceneId === 'waterfallCavern' ? <WaterfallAmbience /> : null}
       {sceneId === 'olympusThrone' ? <OlympusAmbience /> : null}
       {sceneId === 'flamingoFloor' ? <FlamingoFloorAmbience /> : null}
@@ -333,19 +341,6 @@ function MatrixAmbience() {
         pointerEvents="none"
         javaScriptEnabled
         originWhitelist={['*']}
-      />
-    </View>
-  );
-}
-
-function FlamingoAmbience() {
-  return (
-    <View style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} pointerEvents="none">
-      <LinearGradient
-        colors={['transparent', 'rgba(251,113,133,0.16)', 'rgba(251,191,36,0.10)', 'transparent']}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={StyleSheet.absoluteFill}
       />
     </View>
   );

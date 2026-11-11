@@ -2,9 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { SceneId } from '@/lib/scenePacks';
 
+import { JACKPOT_ARENA_NAME } from '@/lib/jackpotArena';
+import { isArenaPremium } from '@/lib/arenaAccess';
 import {
   CARD_SKINS,
   canEquipCardSkin,
+  ILLUSTRATED_CARD_DEFAULT,
   type CardSkin,
   type CardSkinId,
 } from '@/lib/cardSkins';
@@ -51,25 +54,96 @@ export interface AvatarOption {
   name: string;
   quote: string;
   color: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  /** Selection card when no selectionFrame is set. */
   portrait: any;
+  /** In-match corner art. Full scene or transparent cutout. */
+  scene: any;
+  /** True when the selection image already includes the character name. */
+  framed?: boolean;
   /**
    * Optional full selection-card art (title, scene and border baked in).
    * When set, the loadout picker shows this in place of the portrait.
    * Drop it into assets/avatars/frames/<id>.png (about 4:3).
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   selectionFrame?: any;
 }
 
 export const AVATARS: AvatarOption[] = [
+  {
+    id: 'tau-ceti',
+    name: 'Tau Ceti Player',
+    quote: 'Signal locked.',
+    color: '#22d3ee',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/tau-ceti.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/tau-ceti.png') as number,
+  },
+  {
+    id: 'lioness',
+    name: 'The Lioness',
+    quote: 'The pride takes the pot.',
+    color: '#f5c16c',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/lioness.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/lioness.png') as number,
+  },
+  {
+    id: 'bull',
+    name: 'The Bull',
+    quote: 'Hold the line.',
+    color: '#b91c1c',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/bull.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/bull.png') as number,
+  },
+  {
+    id: 'oracle',
+    name: 'The Oracle',
+    quote: 'The next card is already spoken.',
+    color: '#c4b5fd',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/oracle.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/oracle.png') as number,
+  },
+  {
+    id: 'jackal',
+    name: 'The Jackal',
+    quote: 'I keep what I take.',
+    color: '#f59e0b',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/jackal.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/jackal.png') as number,
+  },
+  {
+    id: 'fenix',
+    name: 'The Fenix',
+    quote: 'Burn, then rise.',
+    color: '#fb7185',
+    framed: true,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    portrait: require('../assets/avatars/select/fenix.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/fenix.png') as number,
+  },
   {
     id: 'eagles',
     name: 'The Kingpin',
     quote: 'We own this table.',
     color: '#3b82f6',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    portrait: require('../assets/avatars/eagles.png') as number,
+    portrait: require('../assets/avatars/select/eagles.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/eagles.png') as number,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     selectionFrame: require('../assets/avatars/frames/eagles.png') as number,
   },
@@ -79,7 +153,9 @@ export const AVATARS: AvatarOption[] = [
     quote: 'Gentlemen, place your bets.',
     color: '#22c55e',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    portrait: require('../assets/avatars/frog.png') as number,
+    portrait: require('../assets/avatars/select/frog.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/frog.png') as number,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     selectionFrame: require('../assets/avatars/frames/frog.png') as number,
   },
@@ -89,7 +165,9 @@ export const AVATARS: AvatarOption[] = [
     quote: 'Go big or go home!',
     color: '#a855f7',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    portrait: require('../assets/avatars/troll.png') as number,
+    portrait: require('../assets/avatars/select/troll.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/troll.png') as number,
   },
   {
     id: 'gigi',
@@ -97,7 +175,9 @@ export const AVATARS: AvatarOption[] = [
     quote: 'Lucky you.',
     color: '#22c55e',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    portrait: require('../assets/avatars/gigi.png') as number,
+    portrait: require('../assets/avatars/scenes/gigi.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/gigi.png') as number,
   },
   {
     id: 'rockner',
@@ -105,7 +185,9 @@ export const AVATARS: AvatarOption[] = [
     quote: 'Winning is like cheesecake. Yummy.',
     color: '#dc2626',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    portrait: require('../assets/avatars/rockner.png') as number,
+    portrait: require('../assets/avatars/scenes/rockner.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/rockner.png') as number,
   },
   {
     id: 'sunami',
@@ -113,7 +195,9 @@ export const AVATARS: AvatarOption[] = [
     quote: 'Oh come on. Show me you can handle the game.',
     color: '#f43f5e',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    portrait: require('../assets/avatars/sunami.png') as number,
+    portrait: require('../assets/avatars/scenes/sunami.png') as number,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    scene: require('../assets/avatars/scenes/sunami.png') as number,
   },
 ];
 
@@ -127,44 +211,44 @@ export interface Arena {
 export const ARENAS: Arena[] = [
   {
     id: 'greenTable',
-    name: 'Casino Green',
-    premium: false,
-    description: 'The classic casino table — rich felt green under warm spotlight glow. Clean, timeless, and all business. No distractions. Just cards.',
+    name: JACKPOT_ARENA_NAME,
+    premium: isArenaPremium('greenTable'),
+    description: 'A green-and-gold jackpot ring turns under the cards. The ticker, sheen, and sparkles stay in motion, and a win lights the burst.',
   },
   {
     id: 'classic',
     name: 'The Flamingo Floor',
-    premium: false,
+    premium: isArenaPremium('classic'),
     description: 'Step into a dazzling neon casino where fortune favors the bold, surrounded by glowing pink lights and the thrill of high-stakes play. Flamingos dance beneath towering neon signs as players battle on a floor that pulses with pure Vegas energy.\n\nWARNING: Winning streaks may become addictive.',
   },
   {
     id: 'cosmic',
     name: 'Cosmic Sanctum',
-    premium: true,
+    premium: isArenaPremium('cosmic'),
     description: 'Drift into the depths of the universe where galaxies spiral endlessly and ancient cosmic forces surround the arena. Suspended beside a collapsing black hole, players duel among glowing crystals, celestial energy, and the silence of deep space.\n\nEvery match feels written in the stars.',
   },
   {
     id: 'royal',
     name: 'Olympus Throne',
-    premium: true,
+    premium: isArenaPremium('royal'),
     description: 'Ascend into a divine kingdom carved from marble and gold, where towering columns and heavenly statues overlook the battlefield from above the clouds. Golden sunlight pours across the arena as thunder echoes through the skies of the gods themselves.\n\nEnter the throne room of immortals.',
   },
   {
     id: 'lightning',
     name: 'An Oasis in the Cave',
-    premium: false,
+    premium: isArenaPremium('lightning'),
     description: 'Hidden deep within a mystical cavern, this tranquil sanctuary glows with flowing waterfalls, vibrant vegetation, and drifting cherry blossoms. Soft lantern light reflects across crystal-blue waters as players battle in a peaceful paradise untouched by the outside world.\n\nBeauty can be the deadliest arena of all.',
   },
   {
     id: 'matrix',
     name: 'Matrix',
-    premium: true,
+    premium: isArenaPremium('matrix'),
     description: 'Enter the digital realm where cascading code rains down through a world built entirely of data. Green characters stream endlessly as glowing circuits pulse beneath the surface — reality itself is just a program, and the cards you hold may already be written.\n\nThere is no spoon. Only the next hand.',
   },
   {
     id: 'rainbowRoad',
     name: 'Rainbow Road',
-    premium: true,
+    premium: isArenaPremium('rainbowRoad'),
     description: 'Neon loop-de-loop starfield — trolls ride a glittering rainbow track through deep space. Sparkling trails, loop-the-loops, and cosmic glow surround the table as the road itself becomes the arena.\n\nHold on tight. The next hand is around the bend.',
   },
 ];
@@ -191,7 +275,7 @@ const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
-  const [cardSkin, setCardSkinState] = useState<CardSkinId>('royal-gold');
+  const [cardSkin, setCardSkinState] = useState<CardSkinId>(ILLUSTRATED_CARD_DEFAULT);
   const [arena, setArenaState] = useState<ArenaId>('greenTable');
   const [avatarId, setAvatarState] = useState<AvatarId>('eagles');
   const [hydrated, setHydrated] = useState(false);

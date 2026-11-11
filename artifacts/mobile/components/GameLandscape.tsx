@@ -32,6 +32,7 @@ import SceneBackground from '@/components/SceneBackground';
 import EmoteBubble from '@/components/EmoteBubble';
 import EmotePicker from '@/components/EmotePicker';
 import FaceDownReveal from '@/components/FaceDownReveal';
+import FaceDownStage from '@/components/FaceDownStage';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import GlowPile from '@/components/GlowPile';
 import PlayerHand from '@/components/PlayerHand';
@@ -39,7 +40,13 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
+import { landscapeMenuButton, landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
+import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
+import { landscapeHandWindow } from '@/lib/fanLayout';
+import { emoteDock, finalThreeFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
+import { CharacterScenePlate } from '@/components/CharacterScenePlate';
+import { PlayerMenuButton, PlayerMenuGlass } from '@/components/PlayerMenuButton';
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -64,7 +71,8 @@ function NamePlate({ name, isActive, align, portraitArt, onPress, showMenuDots, 
   const initial = name.charAt(0).toUpperCase();
   const Wrapper: React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }> = onPress ? (Pressable as React.ComponentType<React.ComponentProps<typeof View> & { onPress?: () => void }>) : View;
 
-  const avatarSize = compact ? 44 : 60;
+  const avatarW = compact ? 76 : 72;
+  const avatarH = compact ? 51 : 48;
 
   return (
     <Wrapper
@@ -88,14 +96,14 @@ function NamePlate({ name, isActive, align, portraitArt, onPress, showMenuDots, 
           {
             borderColor: isActive ? colors.neonGold : colors.neonPurple,
             overflow: 'hidden',
-            width: avatarSize,
-            height: avatarSize,
-            borderRadius: compact ? 10 : 14,
+            width: avatarW,
+            height: avatarH,
+            borderRadius: 6,
           },
         ]}
       >
         {portraitArt ? (
-          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" />
+          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="contain" contentPosition="center" />
         ) : (
           <Text style={[styles.avatarText, { color: isActive ? colors.neonGold : colors.neonPurple, fontSize: compact ? 16 : 22 }]}>{initial}</Text>
         )}
@@ -267,7 +275,7 @@ export default function GameLandscape(): React.JSX.Element | null {
   // Cosmetics — actual avatar portraits for name plates
   const cosmetics = useCosmetics();
   const myAvatarPortrait = useMemo(
-    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.portrait ?? null,
+    () => AVATARS.find((a) => a.id === cosmetics.avatarId)?.scene ?? null,
     [cosmetics.avatarId],
   );
 
@@ -381,18 +389,26 @@ export default function GameLandscape(): React.JSX.Element | null {
     const drop = pileCenter;
     const card = draggingCardRef.current;
     setPileHighlighted(false);
-    if (drop && card) {
-      const dist = Math.sqrt(Math.pow(x - drop.x, 2) + Math.pow(y - drop.y, 2));
-      if (dist < 110) {
-        // Successful drop — fade ghost out immediately
-        playCard(card.id);
-        dragVisible.value = withTiming(0, { duration: 100 });
-        setTimeout(() => {
-          setDraggingCard(null);
-          draggingCardRef.current = null;
-        }, 120);
-        return;
-      }
+    const handTop = selfHandRectLs ? selfHandRectLs.y : height * 0.75;
+    const playable = !!card && cardMayPlay(card, gameView?.discardPile ?? [], gameView?.mustPlayStarter);
+    const decision = drop && card
+      ? resolveDragRelease({
+          x,
+          y,
+          pileX: drop.x,
+          pileY: drop.y,
+          handTop,
+          playable,
+        })
+      : 'snap';
+    if (decision === 'play' && card) {
+      playCard(card.id);
+      dragVisible.value = withTiming(0, { duration: 80 });
+      setTimeout(() => {
+        setDraggingCard(null);
+        draggingCardRef.current = null;
+      }, 90);
+      return;
     }
     // Missed drop — spring ghost back to start position then fade
     dragX.value = withSpring(dragStartX.value, { damping: 20, stiffness: 200 });
@@ -402,15 +418,20 @@ export default function GameLandscape(): React.JSX.Element | null {
       setDraggingCard(null);
       draggingCardRef.current = null;
     }, 320);
-  }, [pileCenter, playCard, dragX, dragY, dragStartX, dragStartY, dragVisible]);
+  }, [pileCenter, playCard, dragX, dragY, dragStartX, dragStartY, dragVisible, selfHandRectLs, height, gameView]);
 
   const dragCardStyle = useAnimatedStyle(() => ({
     position: 'absolute',
-    left: dragX.value - 28,
-    top: dragY.value - 39,
+    left: dragX.value - 33,
+    top: dragY.value - 70,
     opacity: dragVisible.value,
     zIndex: 200,
     pointerEvents: 'none' as const,
+    shadowColor: '#000000',
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    transform: [{ perspective: 800 }, { rotateX: '12deg' }, { scale: 1.08 }],
   }));
 
   const drawAnimStyle = useAnimatedStyle(() => ({
@@ -430,10 +451,15 @@ export default function GameLandscape(): React.JSX.Element | null {
   } = gameView;
 
   const opponentAvatarId = resolveOpponentAvatarId(gameView.opponentAvatarId, opponentName);
-  const opponentAvatarPortrait = AVATARS.find((a) => a.id === opponentAvatarId)?.portrait ?? null;
+  const opponentAvatarPortrait = AVATARS.find((a) => a.id === opponentAvatarId)?.scene ?? null;
 
   // Left column holds only action buttons now (name plates moved to absolute corners).
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
+  const playerCorner = landscapePlayerCorner(width, height);
+  const opponentCorner = landscapeOpponentCorner(width, height);
+  const menuButton = landscapeMenuButton(insets.left, insets.bottom);
+  const emotes = emoteDock(insets.right, insets.bottom);
+  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad, insets.bottom, insets.right);
   const drawColW = 100;
   const duo = classifyDuoWindow(width, height);
   const book = duo.mode === 'wide';
@@ -443,43 +469,34 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
-      <SceneBackground />
+      <SceneBackground burstToken={endCurtainActive && gameView.winner === gameView.myPlayerId ? 1 : 0} />
+      <View pointerEvents="none" style={{ position: 'absolute', top: opponentCorner.top, right: opponentCorner.right, zIndex: 1, width: opponentCorner.width, height: opponentCorner.height, opacity: opponentCorner.opacity }}>
+        <CharacterScenePlate
+          source={opponentAvatarPortrait}
+          width={opponentCorner.width}
+          height={opponentCorner.height}
+          opacity={1}
+        />
+      </View>
+      <View pointerEvents="none" style={{ position: 'absolute', left: playerCorner.left, bottom: playerCorner.bottom, zIndex: 1, width: playerCorner.width, height: playerCorner.height, opacity: playerCorner.opacity }}>
+        <CharacterScenePlate
+          source={myAvatarPortrait}
+          width={playerCorner.width}
+          height={playerCorner.height}
+          opacity={1}
+        />
+      </View>
       <BackButton
         label="← EXIT"
         onPress={() => confirmLeave(() => { leaveGame(); router.replace('/'); })}
         style={{ position: 'absolute', top: insets.top + webTopPad + 8, left: insets.left + 14, zIndex: 55 }}
       />
 
-      {/* Opponent gamer tag — top-right corner, compact pill so it doesn't droop over cards */}
-      <View style={{ position: 'absolute', top: insets.top + webTopPad + 8, right: insets.right + 14, zIndex: 50, maxWidth: 84 }}>
-        <NamePlate
-          name={opponentName}
-          isActive={!isMyTurn}
-          align="right"
-          portraitArt={opponentAvatarPortrait}
-          compact
-        />
-      </View>
-
-      {/* Player gamer tag — bottom-left, raised so it sits near the action buttons */}
-      <View style={{ position: 'absolute', bottom: insets.bottom + 72, left: insets.left + 14, zIndex: 50, maxWidth: 96 }}>
-        <NamePlate
-          name={playerName}
-          isActive={isMyTurn}
-          align="left"
-          portraitArt={myAvatarPortrait}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setPlayerMenuOpen((o) => !o);
-          }}
-          showMenuDots
-        />
-      </View>
-
       <View
         style={[
           styles.layout,
           {
+            zIndex: 2,
             paddingTop: insets.top + webTopPad + 4,
             paddingBottom: insets.bottom + 4,
             paddingLeft: Math.max(8, insets.left),
@@ -536,9 +553,11 @@ export default function GameLandscape(): React.JSX.Element | null {
             <GlowPile pile={discardPile} lastEventType={lastEventType} highlighted={pileHighlighted} />
           </View>
 
+          <View pointerEvents="none" style={{ height: landscapeHandWindow() }} />
           <View
             ref={selfHandRefLs}
-            style={styles.playerHandSection}
+            pointerEvents="box-none"
+            style={[styles.playerHandSection, { position: 'absolute', left: 8, right: 8, bottom: 0, alignItems: 'center', zIndex: 4 }]}
             onLayout={() => {
               selfHandRefLs.current?.measure((_x, _y, w, h, pageX, pageY) => {
                 const r = { x: pageX, y: pageY, width: w, height: h };
@@ -556,6 +575,7 @@ export default function GameLandscape(): React.JSX.Element | null {
               onPlayCard={playCard}
               onPlayCards={playCards}
               mustPlayStarter={gameView.mustPlayStarter}
+              fanMode="landscape"
               draggable={isMyTurn && myHand.length > 0}
               onDragStart={handleDragStart}
               onDragMove={handleDragMove}
@@ -583,6 +603,27 @@ export default function GameLandscape(): React.JSX.Element | null {
           </View>
         </View>
       </View>
+
+      {myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0 && (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            top: finalThree.top,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            zIndex: 6,
+          }}
+        >
+          <FaceDownStage
+            faceDownIds={myFaceDownIds && myFaceDownIds.length > 0 ? myFaceDownIds : Array.from({ length: myFaceDownCount }, (_, i) => `fd_${i}`)}
+            isMyTurn={isMyTurn}
+            onPlayCard={playCard}
+            gap={finalThree.gap}
+          />
+        </View>
+      )}
 
       {/* Floating drag ghost card — follows finger while dragging */}
       {draggingCard && (
@@ -617,7 +658,7 @@ export default function GameLandscape(): React.JSX.Element | null {
         />
       )}
 
-      <EmotePicker onSend={sendEmote} />
+      <EmotePicker onSend={sendEmote} dock={{ right: emotes.right, bottom: emotes.bottom }} />
 
       {opponentReconnecting && !opponentDisconnected && (
         <View style={[styles.disconnectBanner, { backgroundColor: colors.card, borderColor: colors.neonGold }]}>
@@ -669,17 +710,20 @@ export default function GameLandscape(): React.JSX.Element | null {
       {/* Player menu popover (Exit Game). Anchored over the player name plate
           on the left column, just below where the plate sits. Tap backdrop to
           close. */}
+      <PlayerMenuButton
+        open={playerMenuOpen}
+        onChange={setPlayerMenuOpen}
+        style={{ position: 'absolute', left: menuButton.left, bottom: menuButton.bottom, zIndex: 40 }}
+      />
+
       {playerMenuOpen && (
         <>
           <Pressable
             onPress={() => setPlayerMenuOpen(false)}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, { zIndex: 55 }]}
           />
-          <View
-            style={[
-              styles.playerMenuLs,
-              { left: insets.left + 16, bottom: insets.bottom + 146 },
-            ]}
+          <PlayerMenuGlass
+            style={{ left: menuButton.left, bottom: menuButton.bottom + menuButton.height + 8, zIndex: 60 }}
           >
             {/* Volume gauge — 4 tappable segments + mute toggle */}
             <View style={styles.playerMenuItemLs}>
@@ -737,7 +781,7 @@ export default function GameLandscape(): React.JSX.Element | null {
               <Text style={styles.playerMenuIconLs}>🚪</Text>
               <Text style={styles.playerMenuLabelLs}>EXIT GAME</Text>
             </Pressable>
-          </View>
+          </PlayerMenuGlass>
         </>
       )}
 
@@ -877,7 +921,7 @@ const styles = StyleSheet.create({
     width: 1,
   },
 
-  centerColumn: { flex: 1, justifyContent: 'space-between', paddingVertical: 4 },
+  centerColumn: { flex: 1, justifyContent: 'space-between', paddingVertical: 4, position: 'relative' },
 
   opponentTopRow: {
     flexDirection: 'row',

@@ -15,6 +15,7 @@ import {
   type CardSkinId,
   useCosmetics,
 } from '@/contexts/CosmeticsContext';
+import { isRetiredBasicSkin } from '@/lib/cardSkins';
 import { useColors } from '@/hooks/useColors';
 import { useSubscription } from '@/lib/revenuecat';
 import { membershipPriceLine, paywallRole } from '@workspace/monetization/client';
@@ -111,7 +112,7 @@ export default function CosmeticsModal({ visible, onClose, initialTab = 'arenas'
             ))}
 
           {tab === 'cards' &&
-            CARD_SKINS.map((c: CardSkin) => (
+            CARD_SKINS.filter((c) => !isRetiredBasicSkin(c.id)).map((c: CardSkin) => (
               <CosmeticRow
                 key={c.id}
                 name={c.name}
@@ -229,7 +230,7 @@ function CosmeticRow({ name, description, badge, locked, selected, onPress, prev
 }
 
 const ARENA_IMAGES: Record<ArenaId, ImageSourcePropType> = {
-  greenTable: require('../assets/arenas/casino_green_wide.png'),
+  greenTable: require('../assets/arenas/jackpot-still.jpg'),
   classic:   require('../assets/arenas/flamingo_floor.png'),
   cosmic:    require('../assets/arenas/cosmic_sanctum.png'),
   royal:     require('../assets/arenas/olympus_throne.png'),

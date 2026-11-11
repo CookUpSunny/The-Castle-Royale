@@ -52,10 +52,10 @@ function TermsBody() {
   return (
     <>
       <Text style={styles.p}>
-        Online play for one to four players stays free. High Roller and VIP Year are auto-renewing memberships. Beginner's Luck is a one-time cosmetic bundle. None of these change who wins a match.
+        Online matches are two players and stay free. High Roller and VIP Year are auto-renewing memberships. They remove forced ads and unlock exclusive arenas. They do not change who wins a match.
       </Text>
       <Text style={styles.p}>
-        Payment is charged to your Apple ID at confirmation of purchase. A membership renews automatically unless you cancel at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel memberships in your App Store account settings after purchase. Beginner's Luck does not renew.
+        Payment is charged to your Apple ID at confirmation of purchase. A membership renews automatically unless you cancel at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel memberships in your App Store account settings after purchase.
       </Text>
       <Pressable onPress={() => void WebBrowser.openBrowserAsync(APPLE_EULA)} style={styles.linkBtn}>
         <Text style={styles.link}>Apple Standard EULA</Text>

@@ -16,9 +16,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
-import { CARD_WIDTH, FAN_CONTAINER_H, computeFanPositions } from '@/lib/fanLayout';
+import { CARD_WIDTH, FAN_CONTAINER_H, computeFanPositions, computeLandscapeFanPositions, landscapeHandWindow } from '@/lib/fanLayout';
 import CardComponent from './Card';
-import FaceDownStage from './FaceDownStage';
 
 function canPlayCardFn(card: CardType, pile: CardType[]): boolean {
   if (pile.length === 0) return true;
@@ -46,6 +45,8 @@ interface PlayerHandProps {
   onDragEnd?: (x: number, y: number) => void;
   /** Override the available width used for fan arc math (defaults to full screen width). Pass when the container is narrower than the screen. */
   availableWidth?: number;
+  /** Landscape uses a low wide row cropped on the bottom edge. Portrait keeps the standing fan. */
+  fanMode?: 'portrait' | 'landscape';
 }
 
 // ─── HandCard ─────────────────────────────────────────────────────────────────
@@ -156,7 +157,7 @@ function HandCard({
     const _onDragMove = onDragMove;
     const _onDragEnd = onDragEnd;
     return Gesture.Pan()
-      .activateAfterLongPress(350)
+      .minDistance(12)
       .onStart((e) => {
         'worklet';
         if (_onDragStart) runOnJS(_onDragStart)(_card, e.absoluteX, e.absoluteY);
@@ -257,6 +258,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   onDragMove,
   onDragEnd,
   availableWidth,
+  fanMode = 'portrait',
 }: PlayerHandProps, ref) {
   const colors = useColors();
   const { width: screenWidth } = useWindowDimensions();
@@ -292,8 +294,12 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
 
   // One layout for the whole hand so every card shares the bottom anchor.
   const fanPositions = useMemo(
-    () => (showHand ? computeFanPositions(totalCards, containerWidth) : []),
-    [showHand, totalCards, containerWidth],
+    () => (showHand
+      ? (fanMode === 'landscape'
+        ? computeLandscapeFanPositions(totalCards, containerWidth)
+        : computeFanPositions(totalCards, containerWidth))
+      : []),
+    [showHand, totalCards, containerWidth, fanMode],
   );
 
   // Pre-compute each card's horizontal centre so the pan worklet can find the
@@ -390,15 +396,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
 
   // Must be AFTER all hooks (Rules of Hooks — see comment in original code).
   if (showFaceDown) {
-    return (
-      <View style={styles.faceDownAnchor}>
-        <FaceDownStage
-          faceDownIds={faceDownIds.length > 0 ? faceDownIds : Array.from({ length: faceDownCount }).map((_, i) => `fd_${i}`)}
-          isMyTurn={isMyTurn}
-          onPlayCard={onPlayCard}
-        />
-      </View>
-    );
+    return <View style={styles.faceDownAnchor} />;
   }
 
   return (
@@ -443,7 +441,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
         </View>
       )}
 
-      <View style={[styles.anchorSlot, { width: containerWidth }]}>
+      <View style={[styles.anchorSlot, fanMode === 'landscape' ? { height: landscapeHandWindow(), overflow: 'hidden' } : null, { width: containerWidth }]}>
       {showFaceUp ? (
         /* Face-up final phase — same bottom anchor as the fan, single-tap play. */
         <View style={styles.faceUpRow}>
@@ -617,6 +615,7 @@ const faceUpStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     paddingBottom: 0,
     alignItems: 'center',
     overflow: 'visible',

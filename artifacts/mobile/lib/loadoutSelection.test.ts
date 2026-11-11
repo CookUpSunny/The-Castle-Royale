@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { prematchIllustratedSkins } from './cardSkins';
 import {
   arenaAfterHydration,
   avatarAfterHydration,
@@ -23,16 +24,16 @@ const saved = {
 test('stored character, arena, and card back survive hydration', () => {
   assert.equal(avatarAfterHydration({ dirty: false, current: 'eagles', stored: 'frog' }), 'frog');
   assert.equal(arenaAfterHydration({ dirty: false, current: 'greenTable', stored: 'cosmic' }), 'cosmic');
-  assert.deepEqual(cardAfterHydration({ dirty: false, current: 'royal-gold', stored: 'neon-glow' }), {
-    skin: 'neon-glow',
-    migrate: false,
+  assert.deepEqual(cardAfterHydration({ dirty: false, current: 'castle-cards', stored: 'neon-glow' }), {
+    skin: 'castle-cards',
+    migrate: true,
   });
   assert.deepEqual(cardAfterHydration({ dirty: false, current: 'crystal-ice', stored: 'royal' }), {
-    skin: 'royal-gold',
+    skin: 'castle-cards',
     migrate: true,
   });
   assert.deepEqual(cardAfterHydration({ dirty: false, current: 'royal-gold', stored: 'classic' }), {
-    skin: 'neon-glow',
+    skin: 'castle-cards',
     migrate: true,
   });
   assert.deepEqual(cardAfterHydration({ dirty: false, current: 'crystal-ice', stored: 'cosmic' }), {
@@ -160,16 +161,9 @@ test('after hydration, start keeps the saved loadout unless the player picked an
   assert.equal(shownLoadout(saved).card, 'crystal-ice');
 });
 
-test('the pre-match card row offers image backs to every player and keeps premium skins subscribed', () => {
-  const free = equippableCardSkins(false);
-  assert.deepEqual(free.slice(0, 5), [
-    'neon-glow',
-    'royal-gold',
-    'crystal-ice',
-    'sakura-blossom',
-    'inferno-flame',
-  ]);
-  for (const id of [
+test('the pre-match row is only the eight illustrated backs', () => {
+  const row = prematchIllustratedSkins();
+  assert.deepEqual(row, [
     'atlas-red',
     'castle-cards',
     'queens-hand',
@@ -178,11 +172,10 @@ test('the pre-match card row offers image backs to every player and keeps premiu
     'lady-luck',
     'gold-obsession',
     'royal-treasure-crest',
-  ]) {
-    assert.equal(free.includes(id), true, id);
+  ]);
+  for (const basic of ['neon-glow', 'royal-gold', 'crystal-ice', 'sakura-blossom', 'inferno-flame']) {
+    assert.equal(row.includes(basic as never), false);
   }
-  assert.equal(free.includes('midnight-void'), false);
-  assert.equal(free.length, 13);
   assert.equal(equippableCardSkins(true).includes('midnight-void'), true);
-  assert.equal(equippableCardSkins(true).length, 18);
+  assert.equal(equippableCardSkins(false).includes('midnight-void'), false);
 });

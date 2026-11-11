@@ -6,6 +6,8 @@ export function adsAvailable(): boolean {
 
 export async function initializeAds(): Promise<void> {}
 
+export async function prepareAdsAfterTrackingPrompt(): Promise<void> {}
+
 export async function showInterstitialAd(): Promise<boolean> {
   return false;
 }
