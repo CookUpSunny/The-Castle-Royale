@@ -8,6 +8,10 @@ export const JACKPOT_BURST_SCRIPT = 'window.castleJackpot && window.castleJackpo
 
 export const JACKPOT_ORIGIN_WHITELIST = ['about:blank', 'data:'] as const;
 
+export function jackpotPage(width: number, height: number): 'portrait' | 'landscape' {
+  return width > height ? 'landscape' : 'portrait';
+}
+
 export function jackpotLoadAllowed(url: string): boolean {
   if (!url || url === 'about:blank') return true;
   return url.startsWith('about:') || url.startsWith('data:');

@@ -5,14 +5,17 @@ import {
   AppState,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 import { jackpotArenaHtml } from '@/components/jackpotArenaHtml';
+import { jackpotArenaLandscapeHtml } from '@/components/jackpotArenaLandscapeHtml';
 import {
   JACKPOT_BURST_SCRIPT,
   JACKPOT_FELT,
   JACKPOT_ORIGIN_WHITELIST,
   jackpotLoadAllowed,
+  jackpotPage,
   shouldMountJackpotWebView,
 } from '@/lib/jackpotArena';
 
@@ -50,6 +53,14 @@ export function JackpotFelt({ burstToken = 0 }: { burstToken?: number }) {
     return () => sub.remove();
   }, []);
 
+  const { width, height } = useWindowDimensions();
+  const page = jackpotPage(width, height);
+  const html = page === 'landscape' ? jackpotArenaLandscapeHtml : jackpotArenaHtml;
+
+  useEffect(() => {
+    setFailed(false);
+  }, [page]);
+
   const mount = shouldMountJackpotWebView({
     arenaActive: true,
     appActive,
@@ -73,8 +84,9 @@ export function JackpotFelt({ burstToken = 0 }: { burstToken?: number }) {
       <Image source={STILL} style={StyleSheet.absoluteFill} contentFit="cover" />
       {mount ? (
         <WebView
+          key={page}
           ref={webRef}
-          source={{ html: jackpotArenaHtml, baseUrl: 'about:blank' }}
+          source={{ html, baseUrl: 'about:blank' }}
           style={styles.web}
           pointerEvents="none"
           originWhitelist={[...JACKPOT_ORIGIN_WHITELIST]}
