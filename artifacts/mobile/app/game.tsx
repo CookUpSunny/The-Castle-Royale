@@ -308,7 +308,7 @@ export default function GameScreen() {
   const opponentCorner = portraitOpponentCorner(width, height);
   const menuButton = portraitMenuButton(insets.left, insets.bottom || 0);
   const hand = handFrame(width, insets.left, insets.right, insets.bottom || 0);
-  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad);
+  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad, insets.bottom || 0, insets.right);
 
   // ── Orientation curtain state ──────────────────────────────────────────────
   // `committedLandscape` tracks which layout is actually rendered behind the
@@ -600,7 +600,7 @@ export default function GameScreen() {
 
             <View
               ref={selfHandRef}
-              style={[styles.playerSection, { marginBottom: HAND_RAISE }]}
+              style={[styles.playerSection, { marginBottom: HAND_RAISE, marginLeft: hand.shift }]}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -619,7 +619,7 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
-                availableWidth={Math.max(240, hand.width - 8)}
+                availableWidth={hand.width}
               />
             </View>
 
@@ -643,6 +643,7 @@ export default function GameScreen() {
                 faceDownIds={myFaceDownIds && myFaceDownIds.length > 0 ? myFaceDownIds : Array.from({ length: myFaceDownCount }, (_, i) => `fd_${i}`)}
                 isMyTurn={isMyTurn}
                 onPlayCard={playCard}
+                gap={finalThree.gap}
               />
             </View>
           )}

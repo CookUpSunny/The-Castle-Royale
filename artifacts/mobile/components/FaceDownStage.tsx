@@ -18,6 +18,7 @@ interface FaceDownStageProps {
   faceDownIds: string[];
   isMyTurn: boolean;
   onPlayCard: (cardId: string) => void;
+  gap?: number;
 }
 
 /**
@@ -91,7 +92,7 @@ function AnimatedFaceDownCard({
 
 const AUTO_PLAY_SECONDS = 15;
 
-export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: FaceDownStageProps) {
+export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard, gap = 12 }: FaceDownStageProps) {
   const colors = useColors();
 
   // Headline pulse only when it's the player's turn.
@@ -171,7 +172,7 @@ export default function FaceDownStage({ faceDownIds, isMyTurn, onPlayCard }: Fac
         </Text>
       ) : null}
 
-      <View style={styles.row} pointerEvents="auto">
+      <View style={[styles.row, { gap }]} pointerEvents="auto">
         {faceDownIds.map((id, i) => (
           <AnimatedFaceDownCard
             key={id}
@@ -224,7 +225,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    gap: 22,
   },
   cardSlot: {
     width: 88,

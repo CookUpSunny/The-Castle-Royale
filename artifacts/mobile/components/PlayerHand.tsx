@@ -608,6 +608,7 @@ const faceUpStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     paddingBottom: 0,
     alignItems: 'center',
     overflow: 'visible',

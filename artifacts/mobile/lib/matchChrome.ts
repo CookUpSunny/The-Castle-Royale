@@ -1,18 +1,31 @@
 import { FAN_CONTAINER_H } from './fanLayout';
 
-/** How far the hand sits above the safe-area padding. The fan shape is unchanged. */
-export const HAND_RAISE = 36;
+/** Lowest painted card edge sits this far above the fan box bottom. */
+const FAN_BASELINE = 8;
+/** PLAY ALL chips sit above the fan and move with it. */
+const CHIP_BLOCK = 54;
 
 export const EMOTE_BUTTON = 34;
 export const EMOTE_GAP = 8;
+/** Gap between the raised cards and the top of the chat button. */
+const CLEARANCE = 12;
+
+/**
+ * The hand block (chips and fan) is lifted so the cards clear the home
+ * indicator and the stacked chat/emoji column.
+ * The dock sits 12pt inside the safe padding, then two buttons and a gap.
+ */
+export const HAND_RAISE = 12 + EMOTE_BUTTON + EMOTE_GAP + EMOTE_BUTTON + CLEARANCE - (2 + FAN_BASELINE);
 
 export interface HandFrame {
   width: number;
   bottom: number;
   centerX: number;
+  /** Nudge inside the safe-area padding so the fan center is the screen center. */
+  shift: number;
 }
 
-/** Safe-area hand box. The fan stays centered in this width and is lifted off the home indicator. */
+/** Fan box centered on the screen, raised clear of the corner buttons. */
 export function handFrame(
   screenWidth: number,
   safeLeft: number,
@@ -20,10 +33,13 @@ export function handFrame(
   safeBottom: number,
 ): HandFrame {
   const width = Math.max(240, Math.round(screenWidth - safeLeft - safeRight));
+  const screenCenter = screenWidth / 2;
+  const safeCenter = safeLeft + width / 2;
   return {
     width,
     bottom: Math.max(safeBottom, 12) + HAND_RAISE,
-    centerX: safeLeft + width / 2,
+    centerX: screenCenter,
+    shift: screenCenter - safeCenter,
   };
 }
 
@@ -36,11 +52,12 @@ export interface EmoteDock {
   emojiBottom: number;
 }
 
-/** Chat sits directly above the emoji button, in one column. */
+/** Chat sits directly above the emoji button, in one right-edge column. */
 export function emoteDock(safeRight: number, safeBottom: number): EmoteDock {
   const bottom = Math.max(safeBottom, 12);
+  const right = Math.max(safeRight, 12);
   return {
-    right: Math.max(safeRight, 12),
+    right,
     bottom,
     button: EMOTE_BUTTON,
     gap: EMOTE_GAP,
@@ -49,35 +66,58 @@ export function emoteDock(safeRight: number, safeBottom: number): EmoteDock {
   };
 }
 
+/** Owner's red line: y≈712 on a 1024-tall screenshot, just under the pile count. */
+export const FINAL_TITLE_FRACTION = 712 / 1024;
+
+const FINAL_CARD_W = 66;
+const FINAL_SLOT = 88;
+const FINAL_GAP = 12;
+/** Title, subtitle, and timer, then the card row. */
+export const FINAL_LEAD = 78;
+export const FINAL_CARD_H = 122;
+
 export interface FinalThreeFrame {
   top: number;
   centerX: number;
   width: number;
   align: 'center';
+  gap: number;
+  cardTop: number;
+  cardBottom: number;
+  rowRight: number;
 }
 
 /**
- * Final 3 title in the upper-middle, with the card row centered on the same axis beneath it.
+ * Final 3 title on the red line. The three cards are centered beneath it
+ * and stay left of the chat/emoji column.
  */
 export function finalThreeFrame(
   screenWidth: number,
   screenHeight: number,
   safeTop: number,
+  safeBottom: number,
+  safeRight = 0,
 ): FinalThreeFrame {
-  const preferred = Math.round(screenHeight * 0.30);
-  const top = Math.min(
-    Math.round(screenHeight * 0.40),
-    Math.max(preferred, safeTop + 56),
-  );
+  const block = FINAL_LEAD + FINAL_CARD_H;
+  const preferred = Math.round(screenHeight * FINAL_TITLE_FRACTION);
+  const maxTop = screenHeight - Math.max(safeBottom, 12) - block;
+  const top = Math.max(safeTop + 8, Math.min(preferred, maxTop));
+  const between = (FINAL_SLOT - FINAL_CARD_W) + FINAL_GAP;
+  const rowWidth = FINAL_CARD_W * 3 + between * 2;
+  const centerX = screenWidth / 2;
   return {
     top,
-    centerX: screenWidth / 2,
+    centerX,
     width: screenWidth,
     align: 'center',
+    gap: FINAL_GAP,
+    cardTop: top + FINAL_LEAD,
+    cardBottom: top + block,
+    rowRight: centerX + rowWidth / 2,
   };
 }
 
-/** The menu button stays just above the raised fan. */
+/** The menu button stays above the raised chips, on the player's side. */
 export function menuClearance(safeBottom: number): number {
-  return Math.max(safeBottom, 12) + FAN_CONTAINER_H + HAND_RAISE + 10;
+  return Math.max(safeBottom, 12) + HAND_RAISE + FAN_CONTAINER_H + CHIP_BLOCK + 8;
 }

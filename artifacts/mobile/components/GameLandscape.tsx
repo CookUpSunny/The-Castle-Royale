@@ -444,7 +444,7 @@ export default function GameLandscape(): React.JSX.Element | null {
   const opponentCorner = landscapeOpponentCorner(width, height);
   const menuButton = landscapeMenuButton(insets.left, insets.bottom);
   const emotes = emoteDock(insets.right, insets.bottom);
-  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad);
+  const finalThree = finalThreeFrame(width, height, insets.top + webTopPad, insets.bottom, insets.right);
   const drawColW = 100;
   const duo = classifyDuoWindow(width, height);
   const book = duo.mode === 'wide';
@@ -602,6 +602,7 @@ export default function GameLandscape(): React.JSX.Element | null {
             faceDownIds={myFaceDownIds && myFaceDownIds.length > 0 ? myFaceDownIds : Array.from({ length: myFaceDownCount }, (_, i) => `fd_${i}`)}
             isMyTurn={isMyTurn}
             onPlayCard={playCard}
+            gap={finalThree.gap}
           />
         </View>
       )}
