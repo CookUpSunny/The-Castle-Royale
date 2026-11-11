@@ -46,7 +46,7 @@ import { landscapeHandWindow } from '@/lib/fanLayout';
 import { emoteDock, finalThreeFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
-import { PlayerMenuButton } from '@/components/PlayerMenuButton';
+import { PlayerMenuButton, PlayerMenuGlass } from '@/components/PlayerMenuButton';
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -722,11 +722,8 @@ export default function GameLandscape(): React.JSX.Element | null {
             onPress={() => setPlayerMenuOpen(false)}
             style={[StyleSheet.absoluteFill, { zIndex: 55 }]}
           />
-          <View
-            style={[
-              styles.playerMenuLs,
-              { left: menuButton.left, bottom: menuButton.bottom + menuButton.height + 8, zIndex: 60 },
-            ]}
+          <PlayerMenuGlass
+            style={{ left: menuButton.left, bottom: menuButton.bottom + menuButton.height + 8, zIndex: 60 }}
           >
             {/* Volume gauge — 4 tappable segments + mute toggle */}
             <View style={styles.playerMenuItemLs}>
@@ -784,7 +781,7 @@ export default function GameLandscape(): React.JSX.Element | null {
               <Text style={styles.playerMenuIconLs}>🚪</Text>
               <Text style={styles.playerMenuLabelLs}>EXIT GAME</Text>
             </Pressable>
-          </View>
+          </PlayerMenuGlass>
         </>
       )}
 

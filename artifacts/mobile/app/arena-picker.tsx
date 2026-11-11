@@ -162,7 +162,7 @@ export default function ArenaPickerScreen() {
   const avatarSnapInterval = avatarCardWidth + 14;
   const avatarCarouselPad = Math.max(12, (paneWidth - avatarCardWidth) / 2);
   const webTopPad = Platform.OS === 'web' ? 8 : 0;
-  const cardPreviewWidth = Math.min(Math.max(200, paneWidth * 0.78), 320);
+  const cardPreviewWidth = Math.round(Math.min(Math.max(200, paneWidth * 0.78), 320) / 2);
   const cardScale = cardPreviewWidth / 56;
   const cardSnap = cardPreviewWidth + 36;
 

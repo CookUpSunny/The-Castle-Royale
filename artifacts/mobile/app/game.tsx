@@ -48,7 +48,7 @@ import OrientationCurtain from '@/components/OrientationCurtain';
 import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
-import { PlayerMenuButton } from '@/components/PlayerMenuButton';
+import { PlayerMenuButton, PlayerMenuGlass } from '@/components/PlayerMenuButton';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
@@ -756,7 +756,7 @@ export default function GameScreen() {
                 onPress={() => setPlayerMenuOpen(false)}
                 style={[StyleSheet.absoluteFill, { zIndex: 55 }]}
               />
-              <View style={[styles.playerMenu, { bottom: menuButton.bottom + menuButton.height + 8, left: menuButton.left, zIndex: 60 }]}>
+              <PlayerMenuGlass style={{ bottom: menuButton.bottom + menuButton.height + 8, left: menuButton.left, zIndex: 60 }}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput
@@ -820,7 +820,7 @@ export default function GameScreen() {
                   <Text style={styles.playerMenuIcon}>🚪</Text>
                   <Text style={styles.playerMenuLabel}>EXIT GAME</Text>
                 </Pressable>
-              </View>
+              </PlayerMenuGlass>
             </>
           )}
 

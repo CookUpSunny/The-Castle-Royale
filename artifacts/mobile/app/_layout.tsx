@@ -8,8 +8,8 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,9 +17,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AdBreakHost from '@/components/AdBreakHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import RevenueCatIdentity from '@/components/RevenueCatIdentity';
-import SplashGravity from '@/components/SplashGravity';
-import SplashIntro from '@/components/SplashIntro';
-import SplashStudio from '@/components/SplashStudio';
 import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
@@ -27,10 +24,7 @@ import { MusicProvider, useMusicPlayer } from '@/contexts/MusicContext';
 import { initializeAds } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
 import {
-  advanceSplashPhase,
   FONT_GATE_TIMEOUT_MS,
-  SPLASH_CHAIN_TIMEOUT_MS,
-  type SplashPhase,
 } from '@/lib/splashPhase';
 import {
   installStartupErrorHandler,
@@ -52,14 +46,6 @@ try {
 void initializeAds();
 
 const queryClient = new QueryClient();
-
-function skipIntro(): boolean {
-  if (process.env.EXPO_PUBLIC_SKIP_SPLASH === '1') return true;
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return new URLSearchParams(window.location.search).has('skipSplash');
-  }
-  return false;
-}
 
 function GameProviderBridge({ children }: { children: React.ReactNode }) {
   const { profile } = useGameCenter();
@@ -125,33 +111,18 @@ function RootLayoutBody() {
     Inter_700Bold,
   });
   const [fontWaitExpired, setFontWaitExpired] = useState(false);
-  const [splashPhase, setSplashPhase] = useState<SplashPhase>(skipIntro() ? 'done' : 'intro');
-
-  const advance = useCallback((next: SplashPhase) => {
-    setSplashPhase((current) => advanceSplashPhase(current, next));
-  }, []);
-  const showGravity = useCallback(() => advance('gravity'), [advance]);
-  const showStudio = useCallback(() => advance('studio'), [advance]);
-  const finishSplash = useCallback(() => advance('done'), [advance]);
-
-  // Hide native splash immediately — our dark-grey JS intro takes over from here.
-  // Do NOT wait for font loading; the intro overlay covers the screen during that time.
-  useEffect(() => {
-    void SplashScreen.hideAsync().catch(() => {});
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setFontWaitExpired(true), FONT_GATE_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (skipIntro()) return;
-    const timer = setTimeout(() => advance('done'), SPLASH_CHAIN_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [advance]);
+  const appReady = Boolean(fontsLoaded || fontError || fontWaitExpired);
 
-  const appReady = Boolean(fontsLoaded || fontError || fontWaitExpired || splashPhase === 'done');
+  useEffect(() => {
+    if (!appReady) return;
+    void SplashScreen.hideAsync().catch(() => {});
+  }, [appReady]);
 
   return (
     <SafeAreaProvider>
@@ -159,16 +130,13 @@ function RootLayoutBody() {
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#07000f' }}>
           <KeyboardProvider>
             <MusicProvider>
-              <AppleMusicHomePrompt splashDone={splashPhase === 'done'} />
+              <AppleMusicHomePrompt splashDone={appReady} />
               <SubscriptionProvider>
                 <CosmeticsProvider>
                   <GameCenterProvider>
                     <GameProviderBridge>
                       {/* Fonts normally load under the intro. A hung font load must not hide the home screen. */}
                       {appReady && <RootLayoutNav />}
-                      {splashPhase === 'intro' && <SplashIntro onDone={showGravity} />}
-                      {splashPhase === 'gravity' && <SplashGravity onDone={showStudio} />}
-                      {splashPhase === 'studio' && <SplashStudio onDone={finishSplash} />}
                     </GameProviderBridge>
                   </GameCenterProvider>
                 </CosmeticsProvider>
