@@ -9,11 +9,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { AccessibilityInfo, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { LaunchIntro } from '@/components/LaunchIntro';
 import AdBreakHost from '@/components/AdBreakHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import RevenueCatIdentity from '@/components/RevenueCatIdentity';
@@ -23,9 +24,8 @@ import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext'
 import { MusicProvider, useMusicPlayer } from '@/contexts/MusicContext';
 import { initializeAds } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
-import {
-  FONT_GATE_TIMEOUT_MS,
-} from '@/lib/splashPhase';
+import { FONT_GATE_TIMEOUT_MS } from '@/lib/splashPhase';
+import { shouldPlayLaunchIntro } from '@/lib/launchIntro';
 import {
   installStartupErrorHandler,
   shouldShowStartupErrors,
@@ -46,6 +46,9 @@ try {
 void initializeAds();
 
 const queryClient = new QueryClient();
+
+/** Survives a resume from the background so the intro does not start again. */
+let launchIntroConsumed = false;
 
 function GameProviderBridge({ children }: { children: React.ReactNode }) {
   const { profile } = useGameCenter();
@@ -118,25 +121,76 @@ function RootLayoutBody() {
   }, []);
 
   const appReady = Boolean(fontsLoaded || fontError || fontWaitExpired);
+  const [showIntro, setShowIntro] = useState(false);
+  const [introResolved, setIntroResolved] = useState(launchIntroConsumed);
+  const [frameReady, setFrameReady] = useState(false);
 
   useEffect(() => {
-    if (!appReady) return;
-    void SplashScreen.hideAsync().catch(() => {});
-  }, [appReady]);
+    if (launchIntroConsumed) {
+      setIntroResolved(true);
+      return;
+    }
+    let cancelled = false;
+    const giveUp = setTimeout(() => {
+      if (cancelled) return;
+      launchIntroConsumed = true;
+      setShowIntro(false);
+      setIntroResolved(true);
+    }, 6000);
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduceMotion) => {
+        if (cancelled || launchIntroConsumed) return;
+        if (!shouldPlayLaunchIntro({ reduceMotion, alreadyPlayed: false })) {
+          launchIntroConsumed = true;
+          setShowIntro(false);
+          setIntroResolved(true);
+          return;
+        }
+        launchIntroConsumed = true;
+        setShowIntro(true);
+      })
+      .catch(() => {
+        if (cancelled || launchIntroConsumed) return;
+        launchIntroConsumed = true;
+        setShowIntro(true);
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(giveUp);
+    };
+  }, []);
+
+  const finishIntro = () => {
+    launchIntroConsumed = true;
+    setShowIntro(false);
+    setIntroResolved(true);
+  };
+
+  useEffect(() => {
+    if (frameReady || (introResolved && appReady)) {
+      void SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [appReady, frameReady, introResolved]);
 
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#07000f' }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: showIntro && !introResolved ? '#ffffff' : '#07000f' }}>
           <KeyboardProvider>
             <MusicProvider>
-              <AppleMusicHomePrompt splashDone={appReady} />
+              <AppleMusicHomePrompt splashDone={appReady && introResolved} />
               <SubscriptionProvider>
                 <CosmeticsProvider>
                   <GameCenterProvider>
                     <GameProviderBridge>
                       {/* Fonts normally load under the intro. A hung font load must not hide the home screen. */}
-                      {appReady && <RootLayoutNav />}
+                      {appReady && introResolved && <RootLayoutNav />}
+                      {showIntro && !introResolved && (
+                        <LaunchIntro
+                          onFirstFrame={() => setFrameReady(true)}
+                          onFinish={finishIntro}
+                        />
+                      )}
                     </GameProviderBridge>
                   </GameCenterProvider>
                 </CosmeticsProvider>

@@ -14,7 +14,7 @@
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test lib/endSequence.test.ts lib/fanLayout.test.ts lib/duoLayout.test.ts lib/splashPhase.test.ts lib/cardSkins.test.ts lib/avatarPortrait.test.ts lib/loadoutSelection.test.ts lib/arenaAccess.test.ts lib/characterArt.test.ts lib/characterSceneLayout.test.ts lib/matchChrome.test.ts lib/jackpotArena.test.ts lib/cardPlayMotion.test.ts lib/appleMusicCatalog.test.ts lib/appleMusicKitConfig.test.ts lib/castleMusicKitPlayback.test.ts",
+    "test": "tsx --test lib/endSequence.test.ts lib/fanLayout.test.ts lib/duoLayout.test.ts lib/splashPhase.test.ts lib/cardSkins.test.ts lib/avatarPortrait.test.ts lib/loadoutSelection.test.ts lib/arenaAccess.test.ts lib/characterArt.test.ts lib/characterSceneLayout.test.ts lib/matchChrome.test.ts lib/jackpotArena.test.ts lib/cardPlayMotion.test.ts lib/launchIntro.test.ts lib/appleMusicCatalog.test.ts lib/appleMusicKitConfig.test.ts lib/castleMusicKitPlayback.test.ts",
     "eas:build:ios": "eas build --platform ios --profile production --non-interactive",
     "eas:submit:ios": "eas submit --platform ios --profile production --latest --non-interactive",
     "eas:ship:ios": "pnpm run eas:build:ios && pnpm run eas:submit:ios"
@@ -79,6 +79,7 @@
     "expo-build-properties": "~55.0.18",
     "expo-modules-autolinking": "~55.0.24",
     "expo-sensors": "~55.0.19",
+    "expo-video": "~55.0.21",
     "react": "19.2.0",
     "react-native": "0.83.10",
     "react-native-game-center": "^1.2.3",

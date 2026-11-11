@@ -18,6 +18,7 @@ module.exports = ({ config }) => ({
   ...config,
   plugins: [
     ...(config.plugins ?? []),
+    "expo-video",
     "./plugins/withAppleMusicKit",
     [
       "react-native-google-mobile-ads",
