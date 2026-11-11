@@ -211,6 +211,8 @@ export default function ArenaPickerScreen() {
           >
             {AVATARS.map((av) => {
               const isSelected = selectedAvatar === av.id;
+              // Framed art already carries its own title, border and scene.
+              const framed = av.selectionFrame != null;
               return (
                 <Pressable
                   key={av.id}
@@ -220,8 +222,8 @@ export default function ArenaPickerScreen() {
                     {
                       width: avatarCardWidth,
                       height: shortFold ? 168 : 240,
-                      borderColor: isSelected ? av.color : 'rgba(255,255,255,0.10)',
-                      borderWidth: isSelected ? 2.5 : 1,
+                      borderColor: isSelected ? av.color : framed ? 'transparent' : 'rgba(255,255,255,0.10)',
+                      borderWidth: isSelected ? 2.5 : framed ? 0 : 1,
                       shadowColor: av.color,
                       shadowOpacity: isSelected ? 0.85 : 0,
                       shadowRadius: 20,
@@ -231,23 +233,35 @@ export default function ArenaPickerScreen() {
                     },
                   ]}
                 >
-                  <LinearGradient
-                    colors={['transparent', 'rgba(255,255,255,0.30)']}
-                    start={{ x: 0, y: 0.45 }}
-                    end={{ x: 0, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                    pointerEvents="none"
-                  />
-                  <Image
-                    source={av.portrait}
-                    style={styles.avatarImage}
-                    contentFit="cover"
-                  />
+                  {framed ? (
+                    <Image
+                      source={av.selectionFrame}
+                      style={styles.avatarImage}
+                      contentFit="contain"
+                      accessibilityLabel={av.name}
+                    />
+                  ) : (
+                    <>
+                      <LinearGradient
+                        colors={['transparent', 'rgba(255,255,255,0.30)']}
+                        start={{ x: 0, y: 0.45 }}
+                        end={{ x: 0, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                        pointerEvents="none"
+                      />
+                      <Image
+                        source={av.portrait}
+                        style={styles.avatarImage}
+                        contentFit="cover"
+                      />
+                    </>
+                  )}
                   {isSelected ? (
                     <View style={[styles.selectedBadge, { position: 'absolute', top: 10, right: 10 }]}>
                       <Text style={styles.selectedBadgeText}>✓  SELECTED</Text>
                     </View>
                   ) : null}
+                  {framed ? null : (
                   <View style={styles.avatarNameWrap}>
                     <Text style={[styles.avatarName, { color: isSelected ? av.color : '#1a0030' }]}>
                       {av.name}
@@ -256,6 +270,7 @@ export default function ArenaPickerScreen() {
                       "{av.quote}"
                     </OutlinedText>
                   </View>
+                  )}
                 </Pressable>
               );
             })}
