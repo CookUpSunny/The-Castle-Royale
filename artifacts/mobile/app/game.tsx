@@ -45,11 +45,12 @@ import OrientationCurtain from '@/components/OrientationCurtain';
 import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
+import { PlayerMenuButton } from '@/components/PlayerMenuButton';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
-import { portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
+import { portraitMenuButton, portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function fakeCoins(name: string): string {
@@ -303,6 +304,7 @@ export default function GameScreen() {
   const webTopPad = Platform.OS === 'web' ? 8 : 0;
   const playerCorner = portraitPlayerCorner(width, height);
   const opponentCorner = portraitOpponentCorner(width, height);
+  const menuButton = portraitMenuButton(insets.left, insets.bottom || 0);
 
   // ── Orientation curtain state ──────────────────────────────────────────────
   // `committedLandscape` tracks which layout is actually rendered behind the
@@ -638,15 +640,20 @@ export default function GameScreen() {
             />
           )}
 
-          {/* Player menu popover — opens when you tap your own name card.
-              Opens above the bottom-left player chip. Tap the backdrop to dismiss. */}
+          <PlayerMenuButton
+            open={playerMenuOpen}
+            onChange={setPlayerMenuOpen}
+            style={{ position: 'absolute', left: menuButton.left, bottom: menuButton.bottom, zIndex: 40 }}
+          />
+
+          {/* Name and sound menu. The corner figure does not take taps. */}
           {playerMenuOpen && (
             <>
               <Pressable
                 onPress={() => setPlayerMenuOpen(false)}
-                style={StyleSheet.absoluteFill}
+                style={[StyleSheet.absoluteFill, { zIndex: 55 }]}
               />
-              <View style={[styles.playerMenu, { bottom: (insets.bottom || 12) + 18 + 72, left: 16 }]}>
+              <View style={[styles.playerMenu, { bottom: menuButton.bottom + menuButton.height + 8, left: menuButton.left, zIndex: 60 }]}>
                 {editingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput

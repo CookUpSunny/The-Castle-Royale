@@ -39,9 +39,10 @@ import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
-import { landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
+import { landscapeMenuButton, landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
+import { PlayerMenuButton } from '@/components/PlayerMenuButton';
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -439,6 +440,7 @@ export default function GameLandscape(): React.JSX.Element | null {
   const sideColW = Math.max(90, Math.min(130, width * 0.10));
   const playerCorner = landscapePlayerCorner(width, height);
   const opponentCorner = landscapeOpponentCorner(width, height);
+  const menuButton = landscapeMenuButton(insets.left, insets.bottom);
   const drawColW = 100;
   const duo = classifyDuoWindow(width, height);
   const book = duo.mode === 'wide';
@@ -665,16 +667,22 @@ export default function GameLandscape(): React.JSX.Element | null {
       {/* Player menu popover (Exit Game). Anchored over the player name plate
           on the left column, just below where the plate sits. Tap backdrop to
           close. */}
+      <PlayerMenuButton
+        open={playerMenuOpen}
+        onChange={setPlayerMenuOpen}
+        style={{ position: 'absolute', left: menuButton.left, bottom: menuButton.bottom, zIndex: 40 }}
+      />
+
       {playerMenuOpen && (
         <>
           <Pressable
             onPress={() => setPlayerMenuOpen(false)}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, { zIndex: 55 }]}
           />
           <View
             style={[
               styles.playerMenuLs,
-              { left: insets.left + 16, bottom: insets.bottom + 146 },
+              { left: menuButton.left, bottom: menuButton.bottom + menuButton.height + 8, zIndex: 60 },
             ]}
           >
             {/* Volume gauge — 4 tappable segments + mute toggle */}
