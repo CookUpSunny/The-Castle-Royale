@@ -10,7 +10,7 @@ interface ArenaBackgroundProps {
 }
 
 export const ARENA_IMAGES: Partial<Record<ArenaId, number>> = {
-  greenTable: require('@/assets/arenas/casino_green.png') as number,
+  greenTable: require('@/assets/arenas/jackpot-still.jpg') as number,
   classic:   require('@/assets/arenas/flamingo_floor.png') as number,
   cosmic:    require('@/assets/arenas/cosmic_sanctum.png') as number,
   royal:     require('@/assets/arenas/olympus_throne.png') as number,
@@ -85,7 +85,7 @@ const ARENA_BLEND: Record<ArenaId, readonly [string, string, string, string, str
 };
 
 const ARENA_PHOTO_LABELS: Partial<Record<ArenaId, string>> = {
-  greenTable: 'CASINO GREEN',
+  greenTable: 'JACKPOT',
   classic:   'FLAMINGO FLOOR',
   cosmic:    'COSMIC SANCTUM',
   royal:     'OLYMPUS THRONE',
@@ -93,7 +93,7 @@ const ARENA_PHOTO_LABELS: Partial<Record<ArenaId, string>> = {
 };
 
 const ARENA_FALLBACK_COLORS: Record<ArenaId, readonly [string, string, string]> = {
-  greenTable: ['#0a2e14', '#0d3b1a', '#0a2e14'],
+  greenTable: ['#06120c', '#0c2416', '#06120c'],
   classic:    ['#3d0a28', '#5c1040', '#8a1050'],
   cosmic:     ['#0d0520', '#1a0840', '#100530'],
   royal:      ['#1e1200', '#3a2200', '#2a1a00'],
@@ -159,14 +159,12 @@ function TableEdgeBlend({ arenaId }: { arenaId: ArenaId }) {
 
 function GreenTableArena() {
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <ArenaPhotoBase arenaId="greenTable" />
-      <TableEdgeBlend arenaId="greenTable" />
-      <LinearGradient
-        colors={['rgba(20,100,40,0.18)', 'transparent', 'rgba(180,140,0,0.12)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#06120c' }]} pointerEvents="none">
+      <Image
+        source={ARENA_IMAGES.greenTable}
         style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
       />
     </View>
   );

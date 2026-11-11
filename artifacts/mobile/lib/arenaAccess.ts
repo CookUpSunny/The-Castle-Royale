@@ -3,7 +3,7 @@ import type { ArenaId } from './loadoutSelection';
 /**
  * Which arenas a player may enter without a subscription.
  *
- * The catalog already had three free tables: Casino Green (`greenTable`),
+ * The free tables are Jackpot (`greenTable`, Casino Green's slot),
  * The Flamingo Floor (`classic`), and An Oasis in the Cave (`lightning`).
  * Cosmic Sanctum and Olympus Throne join that set. Matrix and Rainbow Road
  * stay subscription-only. This does not grant any other paid item.

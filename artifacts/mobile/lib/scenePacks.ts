@@ -11,7 +11,7 @@ export interface SceneMeta {
 }
 
 export const SCENES_META: SceneMeta[] = [
-  { id: 'casinoGreen', name: 'Casino Green', description: 'Rich felt green under warm spotlight glow' },
+  { id: 'casinoGreen', name: 'Jackpot', description: 'Green and gold jackpot ring under the cards' },
   { id: 'waterfallCavern', name: 'Waterfall Grotto', description: 'Serene cavern pool with mist and sun rays' },
   { id: 'olympusThrone', name: 'Olympus Throne', description: 'Marble arena above the clouds, gods watching from above' },
 ];

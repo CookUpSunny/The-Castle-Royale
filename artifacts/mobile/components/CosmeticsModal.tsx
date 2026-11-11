@@ -230,7 +230,7 @@ function CosmeticRow({ name, description, badge, locked, selected, onPress, prev
 }
 
 const ARENA_IMAGES: Record<ArenaId, ImageSourcePropType> = {
-  greenTable: require('../assets/arenas/casino_green_wide.png'),
+  greenTable: require('../assets/arenas/jackpot-still.jpg'),
   classic:   require('../assets/arenas/flamingo_floor.png'),
   cosmic:    require('../assets/arenas/cosmic_sanctum.png'),
   royal:     require('../assets/arenas/olympus_throne.png'),

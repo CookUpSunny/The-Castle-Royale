@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { SceneId } from '@/lib/scenePacks';
 
+import { JACKPOT_ARENA_NAME } from '@/lib/jackpotArena';
 import { isArenaPremium } from '@/lib/arenaAccess';
 import {
   CARD_SKINS,
@@ -199,9 +200,9 @@ export interface Arena {
 export const ARENAS: Arena[] = [
   {
     id: 'greenTable',
-    name: 'Casino Green',
+    name: JACKPOT_ARENA_NAME,
     premium: isArenaPremium('greenTable'),
-    description: 'The classic casino table — rich felt green under warm spotlight glow. Clean, timeless, and all business. No distractions. Just cards.',
+    description: 'A green-and-gold jackpot ring turns under the cards. The ticker, sheen, and sparkles stay in motion, and a win lights the burst.',
   },
   {
     id: 'classic',

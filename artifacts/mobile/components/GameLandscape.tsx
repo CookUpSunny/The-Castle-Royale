@@ -454,7 +454,7 @@ export default function GameLandscape(): React.JSX.Element | null {
 
   return (
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
-      <SceneBackground />
+      <SceneBackground burstToken={endCurtainActive && gameView.winner === gameView.myPlayerId ? 1 : 0} />
       <View pointerEvents="none" style={{ position: 'absolute', top: opponentCorner.top, right: opponentCorner.right, zIndex: 1, width: opponentCorner.width, height: opponentCorner.height, opacity: opponentCorner.opacity }}>
         <CharacterScenePlate
           source={opponentAvatarPortrait}
