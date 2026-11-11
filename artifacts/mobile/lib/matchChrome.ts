@@ -1,4 +1,4 @@
-import { FAN_CONTAINER_H } from './fanLayout';
+import { FAN_CONTAINER_H, landscapeHandWindow } from './fanLayout';
 
 /** PLAY ALL chips sit above the fan and move with it. */
 const CHIP_BLOCK = 54;
@@ -69,9 +69,9 @@ export function portraitCenterFrame(playColumnHeight: number): CenterFrame {
   };
 }
 
-/** Landscape center column. The hand keeps main's 14pt margin in the flow. */
+/** Landscape table. The hand is a short bottom band, so the pile stays in the middle. */
 export function landscapeCenterFrame(columnHeight: number, opponentHeight: number): CenterFrame {
-  const handSlot = MAIN_HAND_SLOT + LANDSCAPE_HAND_MARGIN;
+  const handSlot = landscapeHandWindow();
   const tableHeight = columnHeight - opponentHeight - handSlot;
   return {
     handSlot,

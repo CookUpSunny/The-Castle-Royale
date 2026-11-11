@@ -19,6 +19,8 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withSequence,
+  withSpring,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,6 +54,7 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { portraitMenuButton, portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
+import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
 import { HAND_RAISE, MAIN_HAND_SLOT, finalThreeFrame, handFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
@@ -394,6 +397,69 @@ export default function GameScreen() {
   const selfHandRef = useRef<View>(null);
   const opponentZoneRef = useRef<View>(null);
   const playerHandRef = useRef<PlayerHandRef>(null);
+  const draggingCardRef = useRef<CardType | null>(null);
+  const [draggingCard, setDraggingCard] = useState<CardType | null>(null);
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
+  const dragStartX = useSharedValue(0);
+  const dragStartY = useSharedValue(0);
+  const dragVisible = useSharedValue(0);
+
+  const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
+    draggingCardRef.current = card;
+    setDraggingCard(card);
+    dragX.value = x;
+    dragY.value = y;
+    dragStartX.value = x;
+    dragStartY.value = y;
+    dragVisible.value = withTiming(1, { duration: 80 });
+  }, [dragStartX, dragStartY, dragVisible, dragX, dragY]);
+
+  const handleDragMove = useCallback((x: number, y: number) => {
+    dragX.value = x;
+    dragY.value = y;
+  }, [dragX, dragY]);
+
+  const handleDragEnd = useCallback((x: number, y: number) => {
+    const card = draggingCardRef.current;
+    const pile = pileRectP;
+    const pileX = pile ? pile.x + pile.width / 2 : width / 2;
+    const pileY = pile ? pile.y + pile.height / 2 : height / 2;
+    const handTop = selfHandRectP?.y ?? height * 0.7;
+    const playable = !!card && cardMayPlay(card, gameView?.discardPile ?? [], gameView?.mustPlayStarter);
+    const decision = card
+      ? resolveDragRelease({ x, y, pileX, pileY, handTop, playable })
+      : 'snap';
+    if (decision === 'play' && card) {
+      playCard(card.id);
+      dragVisible.value = withTiming(0, { duration: 80 });
+      setTimeout(() => {
+        setDraggingCard(null);
+        draggingCardRef.current = null;
+      }, 90);
+      return;
+    }
+    dragX.value = withSpring(dragStartX.value, { damping: 20, stiffness: 200 });
+    dragY.value = withSpring(dragStartY.value, { damping: 20, stiffness: 200 });
+    dragVisible.value = withDelay(180, withTiming(0, { duration: 120 }));
+    setTimeout(() => {
+      setDraggingCard(null);
+      draggingCardRef.current = null;
+    }, 320);
+  }, [dragStartX, dragStartY, dragVisible, dragX, dragY, gameView, height, pileRectP, playCard, selfHandRectP, width]);
+
+  const dragCardStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: dragX.value - 33,
+    top: dragY.value - 70,
+    opacity: dragVisible.value,
+    zIndex: 200,
+    shadowColor: '#000000',
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    transform: [{ perspective: 800 }, { rotateX: '12deg' }, { scale: 1.08 }],
+  }));
   // End-game curtain — covers the game board, then navigates to victory behind it.
   // Portrait only; landscape owns its own curtain. The hook waits out the
   // winning card's animation and ignores a finished flag that arrives early.
@@ -621,6 +687,10 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
+                draggable={isMyTurn && myHand.length > 0}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
                 availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
               />
             </View>
@@ -628,6 +698,12 @@ export default function GameScreen() {
             <EmotePicker onSend={sendEmote} />
             </View>
           </View>
+
+          {draggingCard ? (
+            <Animated.View style={dragCardStyle} pointerEvents="none">
+              <CardComponent card={draggingCard} size="lg" />
+            </Animated.View>
+          ) : null}
 
           {myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0 && (
             <View

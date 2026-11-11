@@ -38,8 +38,10 @@ test('the center pile matches main for an 18-card hand and for Final 3', () => {
   assert.deepEqual(portraitCenterFrame(480), portraitCenterFrame(480));
 
   const mainLand = landscapeCenterFrame(390, 80);
-  assert.equal(mainLand.handSlot, 162 + 14);
-  assert.equal(mainLand.tableHeight, 390 - 80 - (162 + 14));
+  const visible = Math.round(100 * 0.75);
+  assert.equal(mainLand.handSlot, visible);
+  assert.equal(mainLand.tableHeight, 390 - 80 - visible);
+  assert.ok(mainLand.tableHeight > mainLand.handSlot);
   assert.equal(mainLand.pileCenterY, mainLand.tableHeight / 2);
   assert.deepEqual(landscapeCenterFrame(390, 80), mainLand);
 });

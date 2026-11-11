@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  CARD_HEIGHT,
   CARD_WIDTH,
   FAN_CONTAINER_H,
   cardVisualBottom,
   computeFanPositions,
+  computeLandscapeFanPositions,
+  landscapeHandWindow,
 } from './fanLayout';
 
 function lowestBottom(total: number, width = 390): number {
@@ -35,5 +38,20 @@ test('the fan stays centered in its container', () => {
     const placed = computeFanPositions(3, width);
     const middle = placed[1]!;
     assert.ok(Math.abs(middle.left + CARD_WIDTH / 2 - width / 2) < 0.05);
+  }
+});
+
+test('a landscape hand hugs the bottom edge and spreads across the table', () => {
+  const width = 700;
+  const placed = computeLandscapeFanPositions(10, width);
+  const visible = landscapeHandWindow();
+  assert.ok(visible / CARD_HEIGHT > 0.7 && visible / CARD_HEIGHT < 0.82);
+  const left = Math.min(...placed.map((card) => card.left));
+  const right = Math.max(...placed.map((card) => card.left + CARD_WIDTH));
+  assert.ok(right - left > width * 0.5);
+  assert.ok(Math.abs(placed[4]!.left + CARD_WIDTH / 2 - width / 2) < 30);
+  for (const card of placed) {
+    assert.equal(card.top, 0);
+    assert.ok(card.top + CARD_HEIGHT > visible);
   }
 });

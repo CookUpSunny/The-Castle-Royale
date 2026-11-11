@@ -41,7 +41,9 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { landscapeMenuButton, landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
-import { HAND_RAISE, LANDSCAPE_HAND_MARGIN, MAIN_HAND_SLOT, emoteDock, finalThreeFrame } from '@/lib/matchChrome';
+import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
+import { landscapeHandWindow } from '@/lib/fanLayout';
+import { emoteDock, finalThreeFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 import { PlayerMenuButton } from '@/components/PlayerMenuButton';
@@ -387,18 +389,26 @@ export default function GameLandscape(): React.JSX.Element | null {
     const drop = pileCenter;
     const card = draggingCardRef.current;
     setPileHighlighted(false);
-    if (drop && card) {
-      const dist = Math.sqrt(Math.pow(x - drop.x, 2) + Math.pow(y - drop.y, 2));
-      if (dist < 110) {
-        // Successful drop — fade ghost out immediately
-        playCard(card.id);
-        dragVisible.value = withTiming(0, { duration: 100 });
-        setTimeout(() => {
-          setDraggingCard(null);
-          draggingCardRef.current = null;
-        }, 120);
-        return;
-      }
+    const handTop = selfHandRectLs ? selfHandRectLs.y : height * 0.75;
+    const playable = !!card && cardMayPlay(card, gameView?.discardPile ?? [], gameView?.mustPlayStarter);
+    const decision = drop && card
+      ? resolveDragRelease({
+          x,
+          y,
+          pileX: drop.x,
+          pileY: drop.y,
+          handTop,
+          playable,
+        })
+      : 'snap';
+    if (decision === 'play' && card) {
+      playCard(card.id);
+      dragVisible.value = withTiming(0, { duration: 80 });
+      setTimeout(() => {
+        setDraggingCard(null);
+        draggingCardRef.current = null;
+      }, 90);
+      return;
     }
     // Missed drop — spring ghost back to start position then fade
     dragX.value = withSpring(dragStartX.value, { damping: 20, stiffness: 200 });
@@ -408,15 +418,20 @@ export default function GameLandscape(): React.JSX.Element | null {
       setDraggingCard(null);
       draggingCardRef.current = null;
     }, 320);
-  }, [pileCenter, playCard, dragX, dragY, dragStartX, dragStartY, dragVisible]);
+  }, [pileCenter, playCard, dragX, dragY, dragStartX, dragStartY, dragVisible, selfHandRectLs, height, gameView]);
 
   const dragCardStyle = useAnimatedStyle(() => ({
     position: 'absolute',
-    left: dragX.value - 28,
-    top: dragY.value - 39,
+    left: dragX.value - 33,
+    top: dragY.value - 70,
     opacity: dragVisible.value,
     zIndex: 200,
     pointerEvents: 'none' as const,
+    shadowColor: '#000000',
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    transform: [{ perspective: 800 }, { rotateX: '12deg' }, { scale: 1.08 }],
   }));
 
   const drawAnimStyle = useAnimatedStyle(() => ({
@@ -538,11 +553,11 @@ export default function GameLandscape(): React.JSX.Element | null {
             <GlowPile pile={discardPile} lastEventType={lastEventType} highlighted={pileHighlighted} />
           </View>
 
-          <View pointerEvents="none" style={{ height: MAIN_HAND_SLOT, marginBottom: LANDSCAPE_HAND_MARGIN }} />
+          <View pointerEvents="none" style={{ height: landscapeHandWindow() }} />
           <View
             ref={selfHandRefLs}
             pointerEvents="box-none"
-            style={[styles.playerHandSection, { position: 'absolute', left: 0, right: 0, bottom: LANDSCAPE_HAND_MARGIN + HAND_RAISE, alignItems: 'center', width: '100%', zIndex: 3 }]}
+            style={[styles.playerHandSection, { position: 'absolute', left: 8, right: 8, bottom: 0, alignItems: 'center', zIndex: 4 }]}
             onLayout={() => {
               selfHandRefLs.current?.measure((_x, _y, w, h, pageX, pageY) => {
                 const r = { x: pageX, y: pageY, width: w, height: h };
@@ -560,6 +575,7 @@ export default function GameLandscape(): React.JSX.Element | null {
               onPlayCard={playCard}
               onPlayCards={playCards}
               mustPlayStarter={gameView.mustPlayStarter}
+              fanMode="landscape"
               draggable={isMyTurn && myHand.length > 0}
               onDragStart={handleDragStart}
               onDragMove={handleDragMove}

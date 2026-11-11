@@ -76,3 +76,33 @@ export function computeFanPosition(index: number, total: number, containerWidth:
   const placed = computeFanPositions(total, containerWidth);
   return placed[index] ?? rawFanPosition(index, total, containerWidth);
 }
+
+/** Fraction of each landscape card that stays on screen. The rest is below the edge. */
+export const LANDSCAPE_VISIBLE_FRACTION = 0.75;
+
+export function landscapeHandWindow(): number {
+  return Math.round(CARD_HEIGHT * LANDSCAPE_VISIBLE_FRACTION);
+}
+
+/**
+ * A wide, low fan for landscape. Cards share one row along the bottom.
+ * Their lower quarter sits below the visible window so the table stays clear.
+ */
+export function computeLandscapeFanPositions(total: number, containerWidth: number): FanPlacement[] {
+  if (total <= 0) return [];
+  const margin = 16;
+  const maxSpan = Math.max(0, containerWidth - CARD_WIDTH - margin * 2);
+  const idealStep = 52;
+  const step = total <= 1 ? 0 : Math.min(idealStep, maxSpan / (total - 1));
+  const rowWidth = CARD_WIDTH + step * Math.max(0, total - 1);
+  const origin = (containerWidth - rowWidth) / 2;
+  const center = (total - 1) / 2;
+  return Array.from({ length: total }, (_, index) => {
+    const t = total <= 1 ? 0 : (index - center) / Math.max(center, 1);
+    return {
+      left: origin + index * step,
+      top: 0,
+      rotationDeg: t * 7,
+    };
+  });
+}

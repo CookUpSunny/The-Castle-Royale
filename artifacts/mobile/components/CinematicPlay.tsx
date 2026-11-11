@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
@@ -85,6 +85,13 @@ export default function CinematicPlay({
   // sideDir: +1 for self (right bank), -1 for opponent (left bank).
   // Used inside useAnimatedStyle worklets to drive rotateY direction.
   const sideDir = useSharedValue(1);
+  const plainMotion = useSharedValue(0);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+      plainMotion.value = value ? 1 : 0;
+    }).catch(() => {});
+  }, [plainMotion]);
 
   const [spotTrigger, setSpotTrigger] = useState(0);
 
@@ -177,22 +184,26 @@ export default function CinematicPlay({
     const antY = ant * 8;
 
     const punch = impact.value;
-    const baseScale = 0.9 + t * 0.14;
-
-    const rX = tiltRotX(t);
-    const rY = tiltRotY(t, sideDir.value);
+    const baseScale = plainMotion.value > 0 ? 1 : 0.92 + Math.sin(Math.min(t, 1) * Math.PI) * 0.18;
+    const rX = plainMotion.value > 0 ? 0 : tiltRotX(t);
+    const rY = plainMotion.value > 0 ? 0 : tiltRotY(t, sideDir.value);
+    const spin = plainMotion.value > 0 ? 0 : t * 16;
 
     return {
       position: 'absolute',
       left: bx + antX,
       top: by + antY,
       opacity: fade,
+      shadowColor: '#000000',
+      shadowOpacity: plainMotion.value > 0 ? 0 : 0.28 + t * 0.35,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 12 },
       transform: [
         { perspective: 800 },
         { rotateX: `${rX}deg` },
         { rotateY: `${rY}deg` },
-        { rotate: `${t * 16}deg` },
-        { scale: baseScale + punch * 0.08 },
+        { rotate: `${spin}deg` },
+        { scale: baseScale + punch * 0.06 },
       ],
       zIndex: 120,
       elevation: 30,
