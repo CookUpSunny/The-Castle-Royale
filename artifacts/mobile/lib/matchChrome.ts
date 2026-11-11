@@ -1,21 +1,21 @@
 import { FAN_CONTAINER_H } from './fanLayout';
 
-/** Lowest painted card edge sits this far above the fan box bottom. */
-const FAN_BASELINE = 8;
 /** PLAY ALL chips sit above the fan and move with it. */
 const CHIP_BLOCK = 54;
 
 export const EMOTE_BUTTON = 34;
 export const EMOTE_GAP = 8;
-/** Gap between the raised cards and the top of the chat button. */
-const CLEARANCE = 12;
 
 /**
- * The hand block (chips and fan) is lifted so the cards clear the home
- * indicator and the stacked chat/emoji column.
- * The dock sits 12pt inside the safe padding, then two buttons and a gap.
+ * Visual lift of the hand above main's in-flow slot. About half of the
+ * earlier 36pt raise. It is not added to the flex column, so the pile stays put.
  */
-export const HAND_RAISE = 12 + EMOTE_BUTTON + EMOTE_GAP + EMOTE_BUTTON + CLEARANCE - (2 + FAN_BASELINE);
+export const HAND_RAISE = 18;
+
+/** In-flow height main reserves for the fan. Chips and Final 3 do not grow it. */
+export const MAIN_HAND_SLOT = FAN_CONTAINER_H + 2;
+/** Landscape hand margin on main, below the center column. */
+export const LANDSCAPE_HAND_MARGIN = 14;
 
 export interface HandFrame {
   width: number;
@@ -25,7 +25,7 @@ export interface HandFrame {
   shift: number;
 }
 
-/** Fan box centered on the screen, raised clear of the corner buttons. */
+/** Fan box centered on the screen, a short step above main's slot. */
 export function handFrame(
   screenWidth: number,
   safeLeft: number,
@@ -40,6 +40,44 @@ export function handFrame(
     bottom: Math.max(safeBottom, 12) + HAND_RAISE,
     centerX: screenCenter,
     shift: screenCenter - safeCenter,
+  };
+}
+
+export interface CenterFrame {
+  handSlot: number;
+  tableHeight: number;
+  pileNudge: number;
+  /** Pile group center, measured from the top of the table area. */
+  pileCenterY: number;
+}
+
+/**
+ * Portrait center area as on main aaf8024e. The 16pt nudge drops the pile
+ * 8pt. The hand slot does not grow for an 18-card fan or the Final 3 stage.
+ */
+export function portraitCenterFrame(playColumnHeight: number): CenterFrame {
+  const handSlot = MAIN_HAND_SLOT;
+  const tableHeight = playColumnHeight - handSlot;
+  const paddingTop = 6;
+  const pileNudge = 16;
+  const contentCenter = paddingTop + (tableHeight - paddingTop) / 2;
+  return {
+    handSlot,
+    tableHeight,
+    pileNudge,
+    pileCenterY: contentCenter + pileNudge / 2,
+  };
+}
+
+/** Landscape center column. The hand keeps main's 14pt margin in the flow. */
+export function landscapeCenterFrame(columnHeight: number, opponentHeight: number): CenterFrame {
+  const handSlot = MAIN_HAND_SLOT + LANDSCAPE_HAND_MARGIN;
+  const tableHeight = columnHeight - opponentHeight - handSlot;
+  return {
+    handSlot,
+    tableHeight,
+    pileNudge: 16,
+    pileCenterY: tableHeight / 2,
   };
 }
 

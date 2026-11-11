@@ -41,7 +41,7 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { landscapeMenuButton, landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
-import { HAND_RAISE, emoteDock, finalThreeFrame } from '@/lib/matchChrome';
+import { HAND_RAISE, LANDSCAPE_HAND_MARGIN, MAIN_HAND_SLOT, emoteDock, finalThreeFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 import { PlayerMenuButton } from '@/components/PlayerMenuButton';
@@ -538,9 +538,11 @@ export default function GameLandscape(): React.JSX.Element | null {
             <GlowPile pile={discardPile} lastEventType={lastEventType} highlighted={pileHighlighted} />
           </View>
 
+          <View pointerEvents="none" style={{ height: MAIN_HAND_SLOT, marginBottom: LANDSCAPE_HAND_MARGIN }} />
           <View
             ref={selfHandRefLs}
-            style={[styles.playerHandSection, { marginBottom: 14 + HAND_RAISE, alignItems: 'center', width: '100%' }]}
+            pointerEvents="box-none"
+            style={[styles.playerHandSection, { position: 'absolute', left: 0, right: 0, bottom: LANDSCAPE_HAND_MARGIN + HAND_RAISE, alignItems: 'center', width: '100%', zIndex: 3 }]}
             onLayout={() => {
               selfHandRefLs.current?.measure((_x, _y, w, h, pageX, pageY) => {
                 const r = { x: pageX, y: pageY, width: w, height: h };
@@ -906,7 +908,7 @@ const styles = StyleSheet.create({
     width: 1,
   },
 
-  centerColumn: { flex: 1, justifyContent: 'space-between', paddingVertical: 4 },
+  centerColumn: { flex: 1, justifyContent: 'space-between', paddingVertical: 4, position: 'relative' },
 
   opponentTopRow: {
     flexDirection: 'row',

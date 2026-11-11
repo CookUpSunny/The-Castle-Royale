@@ -52,7 +52,7 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { portraitMenuButton, portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
-import { HAND_RAISE, finalThreeFrame, handFrame } from '@/lib/matchChrome';
+import { HAND_RAISE, MAIN_HAND_SLOT, finalThreeFrame, handFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
 
 function fakeCoins(name: string): string {
@@ -171,7 +171,7 @@ function AvatarChip({ name, isActive, portraitArt, onPress }: {
         ]}
       >
         {portraitArt ? (
-          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="contain" />
+          <Image source={portraitArt} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <Text style={[avatarChipStyles.initial, { color: isActive ? colors.neonGold : colors.neonPurple }]}>
             {initial}
@@ -184,9 +184,9 @@ function AvatarChip({ name, isActive, portraitArt, onPress }: {
 
 const avatarChipStyles = StyleSheet.create({
   chip: {
-    width: 84,
-    height: 56,
-    borderRadius: 8,
+    width: 54,
+    height: 54,
+    borderRadius: 12,
     borderWidth: 2,
     overflow: 'hidden',
     backgroundColor: '#0d001ad9',
@@ -598,9 +598,11 @@ export default function GameScreen() {
               </View>
             </Pressable>
 
+            <View pointerEvents="none" style={{ height: MAIN_HAND_SLOT }} />
             <View
               ref={selfHandRef}
-              style={[styles.playerSection, { marginBottom: HAND_RAISE, marginLeft: hand.shift }]}
+              pointerEvents="box-none"
+              style={[styles.playerSection, { position: 'absolute', left: 0, right: 0, bottom: HAND_RAISE, marginLeft: hand.shift, zIndex: 3 }]}
               onLayout={() => {
                 selfHandRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                   const r = { x: pageX, y: pageY, width: w, height: h };
@@ -619,7 +621,7 @@ export default function GameScreen() {
                 onPlayCard={playCard}
                 onPlayCards={playCards}
                 mustPlayStarter={gameView.mustPlayStarter}
-                availableWidth={hand.width}
+                availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
               />
             </View>
 
@@ -825,7 +827,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   gameLayout: { flex: 1 },
   duoPane: { flex: 1, minHeight: 0 },
-  playColumn: { flex: 1, minHeight: 0 },
+  playColumn: { flex: 1, minHeight: 0, position: 'relative' },
   topNavRow: { paddingHorizontal: 14, paddingBottom: 2 },
   hudChip: {
     position: 'absolute',
