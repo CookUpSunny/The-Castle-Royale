@@ -17,6 +17,9 @@ import { ARENAS, AVATARS, CARD_SKINS, useCosmetics } from '@/contexts/CosmeticsC
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { prematchIllustratedSkins } from '@/lib/cardSkins';
+import { GRANDSCAPE_MIRROR_PACK } from '@/lib/grandscapeMirrorPack';
+import { grandscapeCardBackSource, grandscapeMarketingSource } from '@/lib/grandscapeMirrorImages';
+import { useGrandscapePack } from '@/lib/useGrandscapePack';
 import {
   confirmLoadout,
   shownLoadout,
@@ -41,6 +44,72 @@ type OutlinedTextProps = React.ComponentProps<typeof Text> & {
   outlineWidth?: number;
 };
 
+function GrandscapePackTile({
+  width,
+  artWidth,
+  artHeight,
+  highlighted,
+  priceLabel,
+  status,
+  onPress,
+}: {
+  width: number;
+  artWidth: number;
+  artHeight: number;
+  highlighted: boolean;
+  priceLabel: string;
+  status: 'equipped' | 'owned' | 'available' | 'unavailable' | 'checking';
+  onPress: () => void;
+}) {
+  const back = grandscapeCardBackSource();
+  const marketing = grandscapeMarketingSource();
+  const art = back ?? marketing;
+  const caption = highlighted
+    ? '✓  SELECTED'
+    : status === 'checking'
+      ? 'CHECKING…'
+      : status === 'available'
+        ? 'TAP TO BUY'
+        : status === 'unavailable'
+          ? 'UNAVAILABLE'
+          : 'TAP TO EQUIP';
+  return (
+    <Pressable
+      testID="grandscape-mirror-pack-tile"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.cardBackTile,
+        {
+          width,
+          borderColor: highlighted ? '#ffd700' : 'rgba(255,255,255,0.10)',
+          borderWidth: highlighted ? 2.5 : 1,
+          opacity: pressed ? 0.88 : status === 'unavailable' || status === 'checking' ? 0.72 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.packArtFrame, { width: artWidth, height: artHeight, borderRadius: Math.max(6, artWidth * 0.08) }]}>
+        {art ? (
+          <Image
+            source={art}
+            style={{ width: artWidth, height: artHeight }}
+            contentFit="contain"
+            accessibilityLabel={GRANDSCAPE_MIRROR_PACK.name}
+          />
+        ) : (
+          <Text style={styles.packArtMark}>GM</Text>
+        )}
+      </View>
+      <Text style={[styles.cardBackName, { color: highlighted ? '#ffd700' : '#f4efe4' }]} numberOfLines={2}>
+        {GRANDSCAPE_MIRROR_PACK.name}
+      </Text>
+      {status === 'owned' || status === 'equipped' ? null : (
+        <Text style={styles.packPrice}>{priceLabel}</Text>
+      )}
+      <Text style={styles.selectedBadgeText}>{caption}</Text>
+    </Pressable>
+  );
+}
+
 function OutlinedText({ style, outlineColor = 'white', outlineWidth = 1, children, ...rest }: OutlinedTextProps) {
   return (
     <View>
@@ -63,12 +132,14 @@ export default function ArenaPickerScreen() {
   const { arena, setArena, avatarId, setAvatar, cardSkin, setCardSkin, hydrated } = useCosmetics();
   const { quickPlayBot, joinQueue, connectionStatus, gameView, isInQueue } = useGame();
   const { isSubscribed } = useSubscription();
+  const pack = useGrandscapePack();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [avatarOverride, setAvatarOverride] = useState<typeof avatarId | null>(null);
   const [arenaOverride, setArenaOverride] = useState<typeof arena | null>(null);
   const [cardOverride, setCardOverride] = useState<typeof cardSkin | null>(null);
+  const [packOverride, setPackOverride] = useState<boolean | null>(null);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [paywallFeature, setPaywallFeature] = useState<string | undefined>(undefined);
   const pendingEnterRef = useRef(false);
@@ -88,6 +159,10 @@ export default function ArenaPickerScreen() {
   const selectedCard = shown.card;
   const illustratedIds = new Set<string>(prematchIllustratedSkins());
   const cardChoices = CARD_SKINS.filter((skin) => illustratedIds.has(skin.id));
+  const packHighlighted = packOverride === false
+    ? false
+    : (packOverride === true || pack.storedPack === 'grandscape-mirror')
+      && (pack.owns || (pack.storeLoading && pack.storedPack === 'grandscape-mirror'));
 
   const lastNavigatedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -105,6 +180,8 @@ export default function ArenaPickerScreen() {
     setArena(confirmed.arena);
     setAvatar(confirmed.avatar);
     setCardSkin(confirmed.card, isSubscribed);
+    if (packOverride === true && pack.owns) pack.equip();
+    else if (packOverride === false) pack.unequip();
     if (mode === 'bot') {
       quickPlayBot();
       router.replace('/game-loading?mode=bot');
@@ -150,7 +227,7 @@ export default function ArenaPickerScreen() {
     if (!confirmed) return;
     pendingEnterRef.current = false;
     promptAndEnter(confirmed);
-  }, [hydrated, avatarId, arena, cardSkin, avatarOverride, arenaOverride, cardOverride, connectionStatus, isSubscribed, mode]);
+  }, [hydrated, avatarId, arena, cardSkin, avatarOverride, arenaOverride, cardOverride, packOverride, pack.owns, connectionStatus, isSubscribed, mode]);
 
   const duo = useDuoWindow();
   const book = duo.mode === 'wide';
@@ -165,6 +242,28 @@ export default function ArenaPickerScreen() {
   const cardPreviewWidth = Math.round(Math.min(Math.max(200, paneWidth * 0.78), 320) / 2);
   const cardScale = cardPreviewWidth / 56;
   const cardSnap = cardPreviewWidth + 36;
+
+  const onGrandscapePress = async () => {
+    if (packHighlighted && pack.owns) {
+      setPackOverride(false);
+      return;
+    }
+    if (pack.storeLoading && !pack.owns) return;
+    if (pack.owns) {
+      setPackOverride(true);
+      return;
+    }
+    if (pack.shop.canPurchase) {
+      try {
+        const result = await pack.buy();
+        if (result === 'purchased') setPackOverride(true);
+      } catch (err) {
+        Alert.alert('Purchase failed', err instanceof Error ? err.message : 'Please try again.');
+      }
+      return;
+    }
+    Alert.alert('Unavailable', 'Grandscape Mirror Pack is not available from the App Store yet.');
+  };
 
   const selectedAvatarData = AVATARS.find((a) => a.id === selectedAvatar);
 
@@ -305,12 +404,24 @@ export default function ArenaPickerScreen() {
             snapToAlignment="center"
             contentContainerStyle={[styles.cardBackRow, { paddingHorizontal: Math.max(16, (paneWidth - cardPreviewWidth) / 2) }]}
           >
+            <GrandscapePackTile
+              width={cardPreviewWidth}
+              artWidth={56 * cardScale}
+              artHeight={78 * cardScale}
+              highlighted={packHighlighted}
+              priceLabel={pack.shop.priceLabel}
+              status={pack.storeLoading && !pack.owns ? 'checking' : pack.shop.status}
+              onPress={() => { void onGrandscapePress(); }}
+            />
             {cardChoices.map((skin) => {
-              const isSelected = selectedCard === skin.id;
+              const isSelected = !packHighlighted && selectedCard === skin.id;
               return (
                 <Pressable
                   key={skin.id}
-                  onPress={() => setCardOverride(skin.id)}
+                  onPress={() => {
+                    setPackOverride(false);
+                    setCardOverride(skin.id);
+                  }}
                   style={({ pressed }) => [
                     styles.cardBackTile,
                     {
@@ -516,6 +627,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.6,
     textAlign: 'center',
+  },
+  packArtFrame: {
+    overflow: 'hidden',
+    backgroundColor: '#07000f',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  packArtMark: {
+    color: '#ffd700',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  packPrice: {
+    color: '#ffd700',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   dotsRow: {
     flexDirection: 'row',

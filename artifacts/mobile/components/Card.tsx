@@ -15,6 +15,7 @@ import { type Card as CardType, getCardLabel, getSuitSymbol, isRedSuit } from '@
 import { type CardSkinId, type ArenaId, useCosmetics } from '@/contexts/CosmeticsContext';
 import { CARD_BACK_IMAGES } from '@/lib/cardBackImages';
 import { isImageCardSkinId, type ProceduralCardSkinId } from '@/lib/cardSkins';
+import { grandscapeCardBackSource, grandscapeFaceSource } from '@/lib/grandscapeMirrorImages';
 import { useColors } from '@/hooks/useColors';
 
 const ARENA_FELT_SHADOW: Record<ArenaId, string> = {
@@ -68,6 +69,22 @@ export function CardBack({
 }) {
   const cosmetics = useCosmetics();
   const skin = skinOverride ?? cosmetics.cardSkin ?? 'royal-gold';
+  // A forced preview keeps that back. The equipped pack replaces the live back
+  // only, and only when its artwork is actually bundled.
+  const packBack = !skinOverride && cosmetics.cardFacePackActive === 'grandscape-mirror'
+    ? grandscapeCardBackSource()
+    : null;
+  if (packBack) {
+    return (
+      <ImageCardBack
+        source={packBack}
+        size={size}
+        style={style}
+        scale={scale}
+        testID="card-back-grandscape-mirror"
+      />
+    );
+  }
   return <SkinnedCardBack skin={skin} size={size} style={style} scale={scale} />;
 }
 
@@ -384,7 +401,7 @@ function CardStar({ left, top, size, delay, bright }: CosmicStarSpec) {
 
 export default function Card({ card, faceDown, size = 'md', onPress, onLongPress, isPlayable, disabled, multiplicity, style, layoutScale = 1 }: CardProps) {
   const colors = useColors();
-  const { arena } = useCosmetics();
+  const { arena, cardFacePackActive } = useCosmetics();
   const dims = SIZES[size];
   const faceW = dims.width * layoutScale;
   const faceH = dims.height * layoutScale;
@@ -500,6 +517,8 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
   if (isSpecial10) borderColor = colors.neonOrange;
 
   const feltShadowColor = ARENA_FELT_SHADOW[arena] ?? '#0a0a0a';
+  const faceArt = cardFacePackActive === 'grandscape-mirror' ? grandscapeFaceSource(card) : null;
+  const faceLabel = `${label} of ${suitSym}`;
 
   return (
     <View
@@ -534,6 +553,7 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || (!onPress && !onLongPress)}
+        accessibilityLabel={faceLabel}
         style={[
           styles.cardBase,
           {
@@ -546,22 +566,35 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
           },
         ]}
       >
-        <View style={[styles.cardCornerTL, { top: 3 * layoutScale, left: 4 * layoutScale }]}>
-          <Text style={[styles.cardValue, { fontSize, lineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
-            {label}
-          </Text>
-          <Text style={[styles.cardSuit, { fontSize: suitSize, lineHeight: suitLineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
-            {suitSym}
-          </Text>
-        </View>
-        <Text style={[styles.cardCenter, { fontSize: suitSize + 6 * layoutScale, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
-          {suitSym}
-        </Text>
-        <View style={[styles.cardCornerBR, { bottom: 3 * layoutScale, right: 4 * layoutScale }]}>
-          <Text style={[styles.cardValue, { fontSize, lineHeight, color: isRed ? '#dc2626' : '#1a1a2e', transform: [{ rotate: '180deg' }] }]}>
-            {label}
-          </Text>
-        </View>
+        {faceArt ? (
+          <Image
+            source={faceArt}
+            resizeMode="contain"
+            fadeDuration={0}
+            style={{ width: faceW, height: faceH }}
+            accessibilityIgnoresInvertColors
+            testID="card-face-grandscape-mirror"
+          />
+        ) : (
+          <>
+            <View style={[styles.cardCornerTL, { top: 3 * layoutScale, left: 4 * layoutScale }]}>
+              <Text style={[styles.cardValue, { fontSize, lineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
+                {label}
+              </Text>
+              <Text style={[styles.cardSuit, { fontSize: suitSize, lineHeight: suitLineHeight, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
+                {suitSym}
+              </Text>
+            </View>
+            <Text style={[styles.cardCenter, { fontSize: suitSize + 6 * layoutScale, color: isRed ? '#dc2626' : '#1a1a2e' }]}>
+              {suitSym}
+            </Text>
+            <View style={[styles.cardCornerBR, { bottom: 3 * layoutScale, right: 4 * layoutScale }]}>
+              <Text style={[styles.cardValue, { fontSize, lineHeight, color: isRed ? '#dc2626' : '#1a1a2e', transform: [{ rotate: '180deg' }] }]}>
+                {label}
+              </Text>
+            </View>
+          </>
+        )}
         {isSpecial2 && (
           <View style={[styles.specialBadge, { backgroundColor: '#7c3aed', width: 12 * layoutScale, height: 12 * layoutScale, borderRadius: 6 * layoutScale }]}>
             <Text style={[styles.specialText, { fontSize: 7 * layoutScale }]}>R</Text>

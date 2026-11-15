@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CardBack } from '@/components/Card';
 import ArenaBackground from '@/components/ArenaBackground';
@@ -16,6 +16,12 @@ import {
   useCosmetics,
 } from '@/contexts/CosmeticsContext';
 import { isRetiredBasicSkin } from '@/lib/cardSkins';
+import {
+  GRANDSCAPE_MIRROR_PACK,
+  GRANDSCAPE_SHOP_PREVIEW_CARDS,
+} from '@/lib/grandscapeMirrorPack';
+import { grandscapeFaceSource, grandscapeMarketingSource } from '@/lib/grandscapeMirrorImages';
+import { useGrandscapePack } from '@/lib/useGrandscapePack';
 import { useColors } from '@/hooks/useColors';
 import { useSubscription } from '@/lib/revenuecat';
 import { membershipPriceLine, paywallRole } from '@workspace/monetization/client';
@@ -111,6 +117,7 @@ export default function CosmeticsModal({ visible, onClose, initialTab = 'arenas'
               />
             ))}
 
+          {tab === 'cards' && <GrandscapePackRow />}
           {tab === 'cards' &&
             CARD_SKINS.filter((c) => !isRetiredBasicSkin(c.id)).map((c: CardSkin) => (
               <CosmeticRow
@@ -243,6 +250,131 @@ function ArenaPreview({ arenaId }: { arenaId: ArenaId }) {
   return (
     <View style={styles.arenaPreviewBox}>
       <Image source={ARENA_IMAGES[arenaId]} style={styles.arenaPreviewImage} resizeMode="cover" />
+    </View>
+  );
+}
+
+function GrandscapePackRow() {
+  const colors = useColors();
+  const pack = useGrandscapePack();
+  const [error, setError] = React.useState<string | null>(null);
+  const [note, setNote] = React.useState<string | null>(null);
+  const marketing = grandscapeMarketingSource();
+  const previewFaces = GRANDSCAPE_SHOP_PREVIEW_CARDS
+    .map((card) => ({ card, source: grandscapeFaceSource(card) }))
+    .filter((item) => item.source != null);
+  const checking = pack.storeLoading && !pack.owns;
+  const busy = pack.isPurchasing || pack.isRestoring;
+  const actionLabel = checking ? 'Checking…' : pack.shop.actionLabel;
+
+  const onPress = async () => {
+    setError(null);
+    setNote(null);
+    try {
+      if (pack.shop.canUnequip) {
+        pack.unequip();
+        Haptics.selectionAsync().catch(() => {});
+        return;
+      }
+      if (pack.shop.canEquip) {
+        pack.equip();
+        Haptics.selectionAsync().catch(() => {});
+        return;
+      }
+      if (!pack.shop.canPurchase) return;
+      Haptics.selectionAsync().catch(() => {});
+      const result = await pack.buy();
+      if (result === 'purchased') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Purchase failed. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    }
+  };
+
+  const onRestore = async () => {
+    setError(null);
+    setNote(null);
+    try {
+      const restored = await pack.restorePack();
+      setNote(restored ? 'Grandscape Mirror Pack restored on this Apple ID.' : 'No Grandscape Mirror Pack found on this Apple ID.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Restore failed. Please try again.');
+    }
+  };
+
+  const locked = pack.shop.status === 'unavailable' || pack.shop.status === 'available';
+
+  return (
+    <View testID="grandscape-mirror-pack-row" style={[styles.itemRow, { borderColor: pack.equipped ? colors.neonGold : '#3a1a5e', backgroundColor: pack.equipped ? '#3a1a5e80' : '#1a053590' }]}>
+      <View style={styles.itemPreview}>
+        {marketing ? (
+          <Image source={marketing} resizeMode="contain" style={styles.arenaPreviewImage} accessibilityIgnoresInvertColors />
+        ) : (
+          <View style={styles.packMark}>
+            <Text style={[styles.packMarkText, { color: colors.neonGold }]}>GM</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.itemMeta}>
+        <View style={styles.itemNameRow}>
+          <Text style={[styles.itemName, { color: colors.foreground }]} numberOfLines={2}>
+            {GRANDSCAPE_MIRROR_PACK.name}
+          </Text>
+          <View style={[styles.premiumBadge, { borderColor: colors.neonGold }]}>
+            <Text style={[styles.premiumText, { color: colors.neonGold }]}>{pack.shop.priceLabel}</Text>
+          </View>
+        </View>
+        <Text style={[styles.itemDesc, { color: colors.mutedForeground }]}>
+          {GRANDSCAPE_MIRROR_PACK.description}
+        </Text>
+        {previewFaces.length > 0 ? (
+          <View style={styles.faceStrip}>
+            {previewFaces.map((item) => (
+              <Image
+                key={`${item.card.suit}${item.card.value}`}
+                source={item.source!}
+                resizeMode="contain"
+                style={styles.faceThumb}
+                accessibilityIgnoresInvertColors
+              />
+            ))}
+          </View>
+        ) : null}
+        <View style={styles.packActions}>
+          <Pressable
+            testID="grandscape-mirror-pack-action"
+            onPress={() => { void onPress(); }}
+            disabled={busy || checking || (!pack.shop.canPurchase && !pack.shop.canEquip && !pack.shop.canUnequip)}
+            style={[
+              styles.packAction,
+              {
+                borderColor: colors.neonGold,
+                opacity: locked && pack.shop.status === 'unavailable' ? 0.55 : 1,
+              },
+            ]}
+          >
+            {busy ? (
+              <ActivityIndicator color={colors.neonGold} />
+            ) : (
+              <Text style={[styles.packActionText, { color: colors.neonGold }]}>{actionLabel}</Text>
+            )}
+          </Pressable>
+          <Pressable onPress={() => { void onRestore(); }} disabled={busy} hitSlop={6}>
+            <Text style={[styles.tapToEquip, { color: colors.mutedForeground }]}>
+              {pack.isRestoring ? 'Restoring…' : 'Restore Purchases'}
+            </Text>
+          </Pressable>
+        </View>
+        {pack.equipped ? (
+          <Text style={[styles.equippedText, { color: colors.neonGold }]}>✓ EQUIPPED</Text>
+        ) : pack.shop.status === 'owned' ? (
+          <Text style={[styles.tapToEquip, { color: colors.mutedForeground }]}>Owned. Tap Equip to use it.</Text>
+        ) : null}
+        {error ? <Text style={styles.packError}>{error}</Text> : null}
+        {note ? <Text style={[styles.tapToEquip, { color: colors.foreground }]}>{note}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -402,6 +534,52 @@ const styles = StyleSheet.create({
   tapToEquip: {
     fontSize: 11,
     fontStyle: 'italic',
+  },
+  packMark: {
+    flex: 1,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  packMarkText: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  faceStrip: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 2,
+  },
+  faceThumb: {
+    width: 28,
+    height: 42,
+  },
+  packActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  packAction: {
+    minWidth: 108,
+    minHeight: 28,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3a1a5e60',
+  },
+  packActionText: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  packError: {
+    color: '#fb7185',
+    fontSize: 11,
+    marginTop: 2,
   },
   pricePane: { flex: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   footnote: {

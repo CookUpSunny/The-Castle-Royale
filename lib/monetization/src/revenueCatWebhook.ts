@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { isPremiumActive } from "./adRules";
 import { emptyAdAccount, type AdAccount, type AdStore } from "./store";
 import {
+  isCardFacePackProduct,
   isPremiumSubscriptionProduct,
   isUnassignedNonConsumable,
   PREMIUM_ENTITLEMENT_ID,
@@ -42,6 +43,10 @@ export function webhookAuthorized(header: string | undefined, expected: string |
 function mentionsPremium(event: RevenueCatEvent): boolean {
   // These App Store IAPs are imported but not assigned an unlock yet.
   if (isUnassignedNonConsumable(event.product_id)) return false;
+  // Grandscape Mirror is a cosmetic non-consumable. A non-renewing purchase
+  // with no expiration must not become a lifetime membership, even if the
+  // event is also tagged with the premium entitlement by mistake.
+  if (isCardFacePackProduct(event.product_id)) return false;
   const entitlements = event.entitlement_ids ?? [];
   if (entitlements.some((id) => id === PREMIUM_ENTITLEMENT_ID)) return true;
   if (isPremiumSubscriptionProduct(event.product_id)) return true;

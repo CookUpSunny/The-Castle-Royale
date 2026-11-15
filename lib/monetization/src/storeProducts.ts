@@ -16,6 +16,15 @@ export const PREMIUM_SUBSCRIPTION_PRODUCT_IDS = ["monthly_high_roller", "vip_yea
 
 export const UNASSIGNED_NON_CONSUMABLE_PRODUCT_IDS = ["beginner_luck", "004"] as const;
 
+/**
+ * Grandscape Mirror Pack. One-time non-consumable cosmetic.
+ * It grants `grandscape_mirror_pack` only. It must not grant `premium`.
+ * App Store Connect and the RevenueCat product still have to be created;
+ * this id is the contract the app already purchases against.
+ */
+export const GRANDSCAPE_MIRROR_PRODUCT_ID = "grandscape_mirror_pack";
+export const GRANDSCAPE_MIRROR_ENTITLEMENT_ID = "grandscape_mirror_pack";
+
 /** Store identifier without a Play base-plan suffix (`product:basePlan`). */
 export function storeProductId(productId: string | null | undefined): string {
   const raw = productId?.trim().toLowerCase() ?? "";
@@ -31,6 +40,11 @@ export function isPremiumSubscriptionProduct(productId: string | null | undefine
 export function isUnassignedNonConsumable(productId: string | null | undefined): boolean {
   const id = storeProductId(productId);
   return (UNASSIGNED_NON_CONSUMABLE_PRODUCT_IDS as readonly string[]).includes(id);
+}
+
+/** The illustrated card-face pack. Not a membership and not an unassigned IAP. */
+export function isCardFacePackProduct(productId: string | null | undefined): boolean {
+  return storeProductId(productId) === GRANDSCAPE_MIRROR_PRODUCT_ID;
 }
 
 /** Known VIP subscriptions first. Anything else sorts after them. */
