@@ -58,13 +58,29 @@ test('ace of spades resolves to the playable face, never the marketing crown', (
   }
 });
 
-test('the face image module does not reference the marketing crown', () => {
+test('bundled art is the 52 faces, the back, and a separate marketing ace', () => {
+  const root = path.join(__dirname, '../assets/cardpacks/grandscape-mirror');
+  for (const item of grandscapeExpectedAssetFiles()) {
+    const file = path.join(root, item.file);
+    assert.equal(fs.existsSync(file), true, file);
+    assert.equal(fs.statSync(file).size > 0, true, file);
+  }
+  const marketing = fs.readFileSync(path.join(root, GRANDSCAPE_MARKETING_FILE));
+  const playableAce = fs.readFileSync(path.join(root, 'spades/A.webp'));
+  assert.equal(marketing.equals(playableAce), false);
+
   const src = fs.readFileSync(path.join(__dirname, 'grandscapeMirrorImages.ts'), 'utf8');
-  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-  assert.equal(code.includes('ace_of_spades_crown'), false);
-  assert.equal(code.includes('marketing/'), false);
-  assert.match(code, /GRANDSCAPE_FACE_SOURCES/);
-  assert.match(code, /grandscapePlayableFaceFile/);
+  const faceBlock = src.slice(src.indexOf('GRANDSCAPE_FACE_SOURCES'), src.indexOf('GRANDSCAPE_CARD_BACK_SOURCE'));
+  assert.equal(faceBlock.includes('ace_of_spades_crown'), false);
+  assert.equal(faceBlock.includes('marketing/'), false);
+  assert.equal(faceBlock.includes('cardback.webp'), false);
+  for (const file of GRANDSCAPE_PLAYABLE_FACE_FILES) {
+    assert.equal(faceBlock.includes(file), true, file);
+  }
+  const marketingBlock = src.slice(src.indexOf('GRANDSCAPE_MARKETING_SOURCE'));
+  assert.equal(marketingBlock.includes('marketing/ace_of_spades_crown.webp'), true);
+  assert.equal((src.match(/ace_of_spades_crown\.webp/g) ?? []).length, 1);
+  assert.match(src, /grandscapePlayableFaceFile/);
 });
 
 test('ownership is the grandscape entitlement, not a membership', () => {
