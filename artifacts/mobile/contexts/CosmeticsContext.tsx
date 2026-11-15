@@ -14,6 +14,14 @@ import {
 import type { AvatarId } from '@/lib/avatarPortrait';
 import { noteEquippedAvatar } from '@/lib/equippedAvatar';
 import {
+  activeCardFacePack,
+  cardFacePackAfterHydration,
+  GRANDSCAPE_MIRROR_PACK_ID,
+  ownsGrandscapeMirrorPack,
+  type CardFacePackId,
+} from '@/lib/grandscapeMirrorPack';
+import { useSubscription } from '@/lib/revenuecat';
+import {
   arenaAfterHydration,
   avatarAfterHydration,
   cardAfterHydration,
@@ -22,6 +30,7 @@ import {
 import { warmGameVisualCache } from '@/lib/preloadGameAssets';
 
 export type { CardSkin, CardSkinId };
+export type { CardFacePackId };
 export { CARD_SKINS };
 export type { AvatarId } from '@/lib/avatarPortrait';
 export type { ArenaId } from '@/lib/loadoutSelection';
@@ -36,6 +45,10 @@ export type { ArenaId } from '@/lib/loadoutSelection';
  * registered separately with unlocked preview so they can be rendered before
  * purchase ownership exists. Equipping a locked procedural skin still
  * requires an active subscription.
+ *
+ * Grandscape Mirror is a separate card-face pack. It is not unlocked by the
+ * membership. While it is equipped and owned, card faces and the card back
+ * use that pack. Unequipping restores the standard faces and the selected back.
  */
 
 /**
@@ -255,6 +268,13 @@ export const ARENAS: Arena[] = [
 
 interface CosmeticsContextType {
   cardSkin: CardSkinId;
+  /**
+   * Saved Grandscape choice. Stays set across a restore even before customer
+   * info has loaded. It does not by itself change the deck.
+   */
+  cardFacePack: CardFacePackId | null;
+  /** Saved pack that the player currently owns. Null keeps the standard deck. */
+  cardFacePackActive: CardFacePackId | null;
   arena: ArenaId;
   scene: SceneId;
   avatarId: AvatarId;
@@ -262,6 +282,11 @@ interface CosmeticsContextType {
   hydrated: boolean;
   /** Pass `isSubscribed` so premium skins can be equipped by active subscribers. */
   setCardSkin: (id: CardSkinId, isSubscribed?: boolean) => void;
+  /**
+   * Equip the face pack only when `owned` is true. Pass null to unequip.
+   * Ownership is the RevenueCat entitlement, not the membership.
+   */
+  setCardFacePack: (id: CardFacePackId | null, owned: boolean) => void;
   setArena: (id: ArenaId) => void;
   setAvatar: (id: AvatarId) => void;
   /** True if the given skin is free, or `isSubscribed` is true. */
@@ -271,11 +296,14 @@ interface CosmeticsContextType {
 const CosmeticsContext = createContext<CosmeticsContextType | null>(null);
 
 const STORAGE_CARD_KEY = 'cosmetics.cardSkin';
+const STORAGE_CARD_PACK_KEY = 'cosmetics.cardFacePack';
 const STORAGE_ARENA_KEY = 'cosmetics.arena';
 const STORAGE_AVATAR_KEY = 'cosmetics.avatar';
 
 export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
+  const { customerInfo } = useSubscription();
   const [cardSkin, setCardSkinState] = useState<CardSkinId>(ILLUSTRATED_CARD_DEFAULT);
+  const [cardFacePack, setCardFacePackState] = useState<CardFacePackId | null>(null);
   const [arena, setArenaState] = useState<ArenaId>('greenTable');
   const [avatarId, setAvatarState] = useState<AvatarId>('eagles');
   const [hydrated, setHydrated] = useState(false);
@@ -284,6 +312,8 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   const avatarDirtyRef = useRef(false);
   const arenaDirtyRef = useRef(false);
   const cardDirtyRef = useRef(false);
+  const cardPackDirtyRef = useRef(false);
+  const cardFacePackActive = activeCardFacePack(cardFacePack, ownsGrandscapeMirrorPack(customerInfo));
 
   // Derive the scene from the arena so the background imagery matches the
   // arena the player selected. Each arena now has its own scene.
@@ -300,12 +330,18 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const [storedCard, storedArena, storedAvatar] = await Promise.all([
+        const [storedCard, storedArena, storedAvatar, storedPack] = await Promise.all([
           AsyncStorage.getItem(STORAGE_CARD_KEY),
           AsyncStorage.getItem(STORAGE_ARENA_KEY),
           AsyncStorage.getItem(STORAGE_AVATAR_KEY),
+          AsyncStorage.getItem(STORAGE_CARD_PACK_KEY),
         ]);
         if (cancelled) return;
+        setCardFacePackState((current) => cardFacePackAfterHydration({
+          dirty: cardPackDirtyRef.current,
+          current,
+          stored: storedPack,
+        }));
         setCardSkinState((current) => {
           const next = cardAfterHydration({
             dirty: cardDirtyRef.current,
@@ -353,6 +389,16 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_CARD_KEY, id).catch(() => {});
   }, []);
 
+  const setCardFacePack = useCallback((id: CardFacePackId | null, owned: boolean) => {
+    if (id !== null) {
+      if (id !== GRANDSCAPE_MIRROR_PACK_ID || !owned) return;
+    }
+    cardPackDirtyRef.current = true;
+    setCardFacePackState(id);
+    if (id) AsyncStorage.setItem(STORAGE_CARD_PACK_KEY, id).catch(() => {});
+    else AsyncStorage.removeItem(STORAGE_CARD_PACK_KEY).catch(() => {});
+  }, []);
+
   const setArena = useCallback((id: ArenaId) => {
     arenaDirtyRef.current = true;
     setArenaState(id);
@@ -372,7 +418,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <CosmeticsContext.Provider value={{ cardSkin, arena, scene, avatarId, hydrated, setCardSkin, setArena, setAvatar, isSkinUnlocked }}>
+    <CosmeticsContext.Provider value={{ cardSkin, cardFacePack, cardFacePackActive, arena, scene, avatarId, hydrated, setCardSkin, setCardFacePack, setArena, setAvatar, isSkinUnlocked }}>
       {children}
     </CosmeticsContext.Provider>
   );

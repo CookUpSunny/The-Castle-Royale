@@ -6,6 +6,7 @@ import {
   decideInterstitial,
   mergeLossCounts,
   reconcileLossCount,
+  isCardFacePackProduct,
   isPremiumSubscriptionProduct,
   isUnassignedNonConsumable,
   membershipPriceLine,
@@ -483,6 +484,10 @@ test("paywall shows memberships and hides products that grant nothing", () => {
   assert.equal(paywallRole("monthly_high_roller"), "high_roller");
   assert.equal(paywallRole("beginner_luck"), "hidden");
   assert.equal(paywallRole("004"), "hidden");
+  assert.equal(paywallRole("grandscape_mirror_pack"), "hidden");
+  assert.equal(isCardFacePackProduct("grandscape_mirror_pack"), true);
+  assert.equal(isPremiumSubscriptionProduct("grandscape_mirror_pack"), false);
+  assert.equal(isUnassignedNonConsumable("grandscape_mirror_pack"), false);
   assert.equal(paywallSortRank("vip_year") < paywallSortRank("high_roller"), true);
   assert.equal(isPremiumSubscriptionProduct("beginner_luck"), false);
   assert.equal(isUnassignedNonConsumable("beginner_luck"), true);
@@ -495,4 +500,27 @@ test("paywall shows memberships and hides products that grant nothing", () => {
   const empty = membershipPriceLine([]);
   assert.match(empty, /App Store/);
   assert.equal(/\d/.test(empty), false);
+});
+
+test("grandscape mirror pack purchase does not grant premium", async () => {
+  const store = memoryStore();
+  const now = new Date("2026-11-15T00:00:00Z");
+  const result = await applyRevenueCatEvent(store, {
+    type: "NON_RENEWING_PURCHASE",
+    app_user_id: "p-pack",
+    entitlement_ids: ["grandscape_mirror_pack"],
+    product_id: "grandscape_mirror_pack",
+    expiration_at_ms: null,
+  }, now);
+  assert.equal(result.applied, false);
+  assert.equal(result.isPremium, false);
+  assert.equal(store.accounts.get("p-pack")?.premiumLifetime ?? false, false);
+
+  const misTagged = decidePremiumChange({
+    type: "NON_RENEWING_PURCHASE",
+    product_id: "grandscape_mirror_pack",
+    entitlement_ids: ["premium", "grandscape_mirror_pack"],
+    expiration_at_ms: null,
+  });
+  assert.equal(misTagged.action, "ignore");
 });
