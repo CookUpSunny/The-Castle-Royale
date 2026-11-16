@@ -17,6 +17,7 @@ import {
 } from "@workspace/monetization/client";
 import DuoSplit from "@/components/DuoSplit";
 import LegalCopy, { type LegalDoc } from "@/components/LegalCopy";
+import ShopGoldButton from "@/components/ShopGoldButton";
 import { useDuoWindow } from "@/hooks/useDuoWindow";
 import { useSubscription } from "@/lib/revenuecat";
 
@@ -25,6 +26,11 @@ const HERO = require("../assets/images/paywall-hero.jpg") as number;
 interface PaywallScreenProps {
   onClose: () => void;
   featureLabel?: string;
+  /**
+   * Royal Shop memberships tab. Plans sit in a row and each one buys with the
+   * shop's gold button. The standalone paywall leaves this unset.
+   */
+  shopEntry?: boolean;
 }
 
 interface PlanView {
@@ -85,7 +91,7 @@ function plansFromPackages(packages: PurchasesPackage[]): PlanView[] {
   return plans.sort((a, b) => paywallSortRank(a.role) - paywallSortRank(b.role));
 }
 
-export default function PaywallScreen({ onClose, featureLabel }: PaywallScreenProps) {
+export default function PaywallScreen({ onClose, featureLabel, shopEntry }: PaywallScreenProps) {
   const duo = useDuoWindow();
   const { offerings, purchase, restore, isPurchasing, isRestoring, isLoading } = useSubscription();
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +137,41 @@ export default function PaywallScreen({ onClose, featureLabel }: PaywallScreenPr
       setError(err instanceof Error ? err.message : "Restore failed. Please try again.");
     }
   };
+
+  if (shopEntry && !legal) {
+    return (
+      <View style={styles.shopEntry}>
+        <Text style={styles.freeLine}>Play stays free, including online matches for two players. Memberships are cosmetic.</Text>
+        {featureLabel ? <Text style={styles.feature}>{featureLabel}</Text> : null}
+        {isLoading ? (
+          <ActivityIndicator color="#f0d78c" style={{ marginVertical: 20 }} />
+        ) : (
+          <View style={styles.shopPlans}>
+            {plans.map((plan) => (
+              <View key={plan.key} style={[styles.card, plan.role === "vip_year" && styles.cardBest, styles.shopPlan]}>
+                <Text style={styles.cardTitle}>{plan.title}</Text>
+                <Text style={styles.cardPeriod}>{plan.period}</Text>
+                <Text style={styles.cardDetail}>{plan.detail}</Text>
+                <ShopGoldButton
+                  label={plan.purchasable ? `Buy ${plan.priceLabel}` : plan.priceLabel}
+                  disabled={!plan.purchasable || isPurchasing}
+                  onPress={() => void handlePurchase(plan)}
+                  testID={`shop-membership-${plan.role}`}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+        {!storeReady && !isLoading ? (
+          <Text style={styles.note}>Prices appear when the App Store is available. No amount is shown until then.</Text>
+        ) : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Pressable onPress={() => void handleRestore()} disabled={isRestoring} style={styles.restoreBtn}>
+          <Text style={styles.restoreText}>{isRestoring ? "Restoring…" : "Restore Purchases"}</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (legal) {
     return (
@@ -382,4 +423,7 @@ const styles = StyleSheet.create({
   legalLink: { color: "#f0d78c", fontSize: 13, fontWeight: "700", textDecorationLine: "underline" },
   legalDot: { color: "#8eaea0" },
   legalBody: { color: "#8eaea0", fontSize: 11, lineHeight: 16, textAlign: "center" },
+  shopEntry: { flex: 1, justifyContent: "center", paddingHorizontal: 8, gap: 8 },
+  shopPlans: { flexDirection: "row", gap: 12, alignItems: "stretch" },
+  shopPlan: { flex: 1, justifyContent: "space-between", gap: 8 },
 });

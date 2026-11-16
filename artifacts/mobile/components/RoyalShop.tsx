@@ -3,7 +3,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -18,6 +19,7 @@ import { ARENAS, useCosmetics } from '@/contexts/CosmeticsContext';
 import ArenaBackground, { ARENA_IMAGES } from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 import PaywallScreen from '@/components/PaywallScreen';
+import ShopGoldButton from '@/components/ShopGoldButton';
 import {
   GRANDSCAPE_MIRROR_PACK,
   GRANDSCAPE_LIFETIME_PACKAGE_ID,
@@ -40,6 +42,7 @@ import {
   type ShopArenaEntry,
   type StoreItemState,
 } from '@/lib/royalShop';
+import { restoredShopOrientationLock } from '@/lib/shopOrientation';
 import { useGrandscapePack } from '@/lib/useGrandscapePack';
 import type { ArenaId } from '@/lib/loadoutSelection';
 
@@ -51,11 +54,43 @@ const TABS: { id: ShopTab; label: string }[] = [
   { id: 'memberships', label: 'Memberships' },
 ];
 
+const TILE_WIDTH = 168;
+
 function arenaName(id: ArenaId): string {
   return ARENAS.find((arena) => arena.id === id)?.name ?? id;
 }
 
+/**
+ * Landscape only while this screen is mounted. The previous lock is put back
+ * on close, which for this app is DEFAULT, so a match still follows the phone.
+ */
+function useShopLandscapeLock() {
+  useEffect(() => {
+    let alive = true;
+    let restoreName = 'DEFAULT';
+    (async () => {
+      try {
+        const previous = await ScreenOrientation.getOrientationLockAsync();
+        restoreName = restoredShopOrientationLock(ScreenOrientation.OrientationLock[previous]);
+        if (!alive) return;
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      } catch {
+        // Web and hosts without the native module keep the current orientation.
+      }
+    })();
+    return () => {
+      alive = false;
+      const named = ScreenOrientation.OrientationLock[restoreName as keyof typeof ScreenOrientation.OrientationLock];
+      const restore = typeof named === 'number' ? named : ScreenOrientation.OrientationLock.DEFAULT;
+      ScreenOrientation.lockAsync(restore).catch(() => {
+        void ScreenOrientation.unlockAsync().catch(() => {});
+      });
+    };
+  }, []);
+}
+
 export default function RoyalShop() {
+  useShopLandscapeLock();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
@@ -203,30 +238,38 @@ export default function RoyalShop() {
     router.back();
   };
 
-  if (tab === 'memberships') {
-    return (
-      <View style={styles.root}>
-        <PaywallScreen onClose={() => setTab('packs')} />
-      </View>
-    );
-  }
+  const selectTab = (next: ShopTab) => {
+    setTab(next);
+    setPackOpen(false);
+    setArenaIndex(null);
+  };
 
-  const gap = 12;
-  const tileWidth = Math.min(188, Math.floor((width - insets.left - insets.right - 32 - gap) / 2));
   const detailArena = arenaIndex !== null ? arenaStates[arenaIndex] : null;
+  const showingArena = Boolean(detailArena);
+  const gridItems = tab === 'packs' ? 1 : arenaStates.length;
+  const columns = Math.max(1, Math.ceil(gridItems / 2));
+  const gridWidth = columns * TILE_WIDTH + Math.max(0, columns - 1) * 12;
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={['#1a0a28', '#07140f', '#07000f']}
-        locations={[0, 0.45, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={[styles.header, { paddingTop: insets.top + 8, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]}>
+      {showingArena && detailArena ? (
+        <ArenaBackground arenaOverride={detailArena.entry.id} />
+      ) : (
+        <LinearGradient
+          colors={['#1a0a28', '#07140f', '#07000f']}
+          locations={[0, 0.45, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      {showingArena ? <View pointerEvents="none" style={styles.scrim} /> : null}
+
+      <View style={[styles.topBar, { paddingTop: insets.top + 8, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }]}>
         <BackButton label="← BACK" onPress={goBack} labelStyle={styles.backLabel} />
-        <Text style={[styles.kicker, bodyFont ? { fontFamily: bodyFont } : null]}>Castle Royale</Text>
-        <Text style={[styles.title, titleFont ? { fontFamily: titleFont } : null]}>Royal Shop</Text>
-        <Text style={styles.subtitle}>Cosmetic looks for your table. Match rules stay the same.</Text>
+        <View style={styles.titleBlock}>
+          <Text style={[styles.kicker, bodyFont ? { fontFamily: bodyFont } : null]}>Castle Royale</Text>
+          <Text style={[styles.title, titleFont ? { fontFamily: titleFont } : null]}>Royal Shop</Text>
+          <Text style={styles.subtitle} numberOfLines={1}>Cosmetic looks for your table. Match rules stay the same.</Text>
+        </View>
         <View style={styles.tabs}>
           {TABS.map((item) => {
             const active = tab === item.id;
@@ -234,11 +277,7 @@ export default function RoyalShop() {
               <Pressable
                 key={item.id}
                 testID={`shop-tab-${item.id}`}
-                onPress={() => {
-                  setTab(item.id);
-                  setPackOpen(false);
-                  setArenaIndex(null);
-                }}
+                onPress={() => selectTab(item.id)}
                 style={[styles.tab, active && styles.tabActive]}
               >
                 <Text style={[styles.tabText, active && styles.tabTextActive]}>{item.label}</Text>
@@ -248,8 +287,15 @@ export default function RoyalShop() {
         </View>
       </View>
 
-      {packOpen ? (
-        <PackDetail
+      {tab === 'memberships' ? (
+        <View style={[styles.body, { paddingLeft: insets.left + 16, paddingRight: insets.right + 16, paddingBottom: insets.bottom + 8 }]}>
+          <PaywallScreen shopEntry onClose={() => selectTab('packs')} />
+        </View>
+      ) : packOpen ? (
+        <DetailStage
+          title={GRANDSCAPE_MIRROR_PACK.name}
+          body={GRANDSCAPE_MIRROR_PACK.description}
+          note="Cosmetic card faces and a matching back. One-time unlock. It does not change how a hand is played."
           state={packShown}
           titleFont={titleFont}
           bodyFont={bodyFont}
@@ -257,17 +303,23 @@ export default function RoyalShop() {
           notice={notice}
           noticeTone={noticeTone}
           onBuy={() => void onBuyPack()}
-          onEquip={onEquipPack}
+          onSelect={onEquipPack}
+          hero={<PackFan />}
+          edge={insets.left}
         />
       ) : detailArena ? (
-        <ArenaDetail
-          entry={detailArena.entry}
+        <DetailStage
+          title={arenaName(detailArena.entry.id)}
+          body={detailArena.entry.blurb}
+          note="A cosmetic table. Selecting it changes the look behind your cards, not the rules."
           state={detailArena.state}
           titleFont={titleFont}
           bodyFont={bodyFont}
           busy={isPurchasing}
           notice={notice}
           noticeTone={noticeTone}
+          onBuy={() => void onBuyArena(detailArena.entry)}
+          onSelect={() => onSelectArena(detailArena.entry)}
           onPrev={() => setArenaIndex((index) => {
             const current = index ?? 0;
             return (current - 1 + SHOP_ARENA_CATALOG.length) % SHOP_ARENA_CATALOG.length;
@@ -276,76 +328,67 @@ export default function RoyalShop() {
             const current = index ?? 0;
             return (current + 1) % SHOP_ARENA_CATALOG.length;
           })}
-          onBuy={() => void onBuyArena(detailArena.entry)}
-          onSelect={() => onSelectArena(detailArena.entry)}
+          hero={<ArenaHero id={detailArena.entry.id} />}
+          edge={insets.left}
         />
       ) : (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[
-            styles.scrollBody,
-            { paddingBottom: insets.bottom + 28, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {tab === 'packs' ? (
-            <View style={styles.grid}>
-              <ShopTile
-                testID="shop-tile-grandscape"
-                width={tileWidth}
-                name={GRANDSCAPE_MIRROR_PACK.name}
-                state={packShown}
-                titleFont={titleFont}
-                onPress={() => setPackOpen(true)}
-                art={
-                  <Image
-                    source={grandscapeMarketingSource() ?? grandscapeCardBackSource() ?? undefined}
-                    style={styles.tileArtImage}
-                    contentFit="contain"
-                    accessibilityLabel={GRANDSCAPE_MIRROR_PACK.name}
-                  />
-                }
-              />
-            </View>
-          ) : (
-            <View style={styles.grid}>
-              {arenaStates.map(({ entry, state }) => (
+        <View style={[styles.body, { paddingLeft: insets.left + 16, paddingRight: insets.right + 8, paddingBottom: insets.bottom + 8 }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
+            <View style={[styles.grid, { width: Math.max(gridWidth, width - insets.left - insets.right - 32) }]}>
+              {tab === 'packs' ? (
                 <ShopTile
-                  key={entry.id}
-                  testID={`shop-tile-arena-${entry.id}`}
-                  width={tileWidth}
-                  name={arenaName(entry.id)}
-                  state={state}
+                  testID="shop-tile-grandscape"
+                  name={GRANDSCAPE_MIRROR_PACK.name}
+                  state={packShown}
                   titleFont={titleFont}
-                  onPress={() => openArena(entry.id)}
+                  onPress={() => setPackOpen(true)}
                   art={
                     <Image
-                      source={ARENA_IMAGES[entry.id]}
-                      style={styles.tileArtFill}
-                      contentFit="cover"
-                      accessibilityLabel={arenaName(entry.id)}
+                      source={grandscapeMarketingSource() ?? grandscapeCardBackSource() ?? undefined}
+                      style={styles.tileArtImage}
+                      contentFit="contain"
+                      accessibilityLabel={GRANDSCAPE_MIRROR_PACK.name}
                     />
                   }
                 />
-              ))}
+              ) : (
+                arenaStates.map(({ entry, state }) => (
+                  <ShopTile
+                    key={entry.id}
+                    testID={`shop-tile-arena-${entry.id}`}
+                    name={arenaName(entry.id)}
+                    state={state}
+                    titleFont={titleFont}
+                    onPress={() => openArena(entry.id)}
+                    art={
+                      <Image
+                        source={ARENA_IMAGES[entry.id]}
+                        style={styles.tileArtFill}
+                        contentFit="cover"
+                        accessibilityLabel={arenaName(entry.id)}
+                      />
+                    }
+                  />
+                ))
+              )}
             </View>
-          )}
-
-          {notice ? (
-            <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text>
-          ) : null}
-
-          <Pressable
-            testID="shop-restore"
-            onPress={() => void onRestore()}
-            disabled={isRestoring || pack.isRestoring}
-            style={styles.restoreBtn}
-          >
-            <Text style={styles.restoreText}>
-              {isRestoring || pack.isRestoring ? 'Restoring…' : 'Restore Purchases'}
-            </Text>
-          </Pressable>
-        </ScrollView>
+          </ScrollView>
+          <View style={styles.gridFooter}>
+            {notice ? (
+              <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text>
+            ) : <View />}
+            <Pressable
+              testID="shop-restore"
+              onPress={() => void onRestore()}
+              disabled={isRestoring || pack.isRestoring}
+              style={styles.restoreBtn}
+            >
+              <Text style={styles.restoreText}>
+                {isRestoring || pack.isRestoring ? 'Restoring…' : 'Restore Purchases'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -353,7 +396,6 @@ export default function RoyalShop() {
 
 function ShopTile({
   testID,
-  width,
   name,
   state,
   titleFont,
@@ -361,7 +403,6 @@ function ShopTile({
   onPress,
 }: {
   testID: string;
-  width: number;
   name: string;
   state: StoreItemState;
   titleFont?: string;
@@ -374,7 +415,6 @@ function ShopTile({
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
-        { width },
         state.status === 'equipped' && styles.tileEquipped,
         pressed && { opacity: 0.9 },
       ]}
@@ -412,175 +452,132 @@ function ShopTile({
   );
 }
 
-function PackDetail({
-  state,
-  titleFont,
-  bodyFont,
-  busy,
-  notice,
-  noticeTone,
-  onBuy,
-  onEquip,
-}: {
-  state: StoreItemState;
-  titleFont?: string;
-  bodyFont?: string;
-  busy: boolean;
-  notice: string | null;
-  noticeTone: 'info' | 'error';
-  onBuy: () => void;
-  onEquip: () => void;
-}) {
+function PackFan() {
   const faces = GRANDSCAPE_SHOP_PREVIEW_CARDS.map((card) => grandscapeFaceSource(card)).filter(Boolean);
   const back = grandscapeCardBackSource();
   return (
-    <ScrollView contentContainerStyle={styles.detailScroll} showsVerticalScrollIndicator={false}>
-      <View style={styles.fanRow} testID="shop-pack-preview">
-        {faces.map((source, index) => (
-          <View
-            key={index}
-            style={[
-              styles.fanCard,
-              {
-                marginLeft: index === 0 ? 0 : -36,
-                zIndex: index,
-                transform: [{ rotate: `${(index - (faces.length - 1) / 2) * 8}deg` }],
-              },
-            ]}
-          >
-            <Image source={source ?? undefined} style={styles.fanImage} contentFit="contain" />
-          </View>
-        ))}
-        {back ? (
-          <View style={[styles.fanCard, styles.fanBack, { zIndex: faces.length }]}>
-            <Image source={back} style={styles.fanImage} contentFit="contain" />
-          </View>
-        ) : null}
-      </View>
-      <Text style={[styles.detailName, titleFont ? { fontFamily: titleFont } : null]}>{GRANDSCAPE_MIRROR_PACK.name}</Text>
-      <Text style={[styles.detailBody, bodyFont ? { fontFamily: bodyFont } : null]}>{GRANDSCAPE_MIRROR_PACK.description}</Text>
-      <Text style={styles.detailNote}>Cosmetic card faces and a matching back. One-time unlock. It does not change how a hand is played.</Text>
-      <ActionButton state={state} busy={busy} onBuy={onBuy} onSelect={onEquip} />
-      {notice ? <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text> : null}
-    </ScrollView>
+    <View style={styles.fanRow} testID="shop-pack-preview">
+      {faces.map((source, index) => (
+        <View
+          key={index}
+          style={[
+            styles.fanCard,
+            {
+              marginLeft: index === 0 ? 0 : -34,
+              zIndex: index,
+              transform: [{ rotate: `${(index - (faces.length - 1) / 2) * 8}deg` }],
+            },
+          ]}
+        >
+          <Image source={source ?? undefined} style={styles.fanImage} contentFit="contain" />
+        </View>
+      ))}
+      {back ? (
+        <View style={[styles.fanCard, styles.fanBack, { zIndex: faces.length }]}>
+          <Image source={back} style={styles.fanImage} contentFit="contain" />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
-function ArenaDetail({
-  entry,
+function ArenaHero({ id }: { id: ArenaId }) {
+  return (
+    <View style={styles.arenaHero} testID="shop-arena-hero">
+      <Image
+        source={ARENA_IMAGES[id]}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        accessibilityLabel={arenaName(id)}
+      />
+    </View>
+  );
+}
+
+function DetailStage({
+  hero,
+  title,
+  body,
+  note,
   state,
   titleFont,
   bodyFont,
   busy,
   notice,
   noticeTone,
-  onPrev,
-  onNext,
   onBuy,
   onSelect,
+  onPrev,
+  onNext,
+  edge,
 }: {
-  entry: ShopArenaEntry;
+  hero: React.ReactNode;
+  title: string;
+  body: string;
+  note: string;
   state: StoreItemState;
   titleFont?: string;
   bodyFont?: string;
   busy: boolean;
   notice: string | null;
   noticeTone: 'info' | 'error';
-  onPrev: () => void;
-  onNext: () => void;
   onBuy: () => void;
   onSelect: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  edge: number;
 }) {
+  const disabled = busy || (!state.canPurchase && !state.canSelect);
+  const onPress = state.canPurchase ? onBuy : state.canSelect ? onSelect : undefined;
   return (
-    <View style={styles.arenaStage} testID="shop-arena-detail">
-      <ArenaBackground arenaOverride={entry.id} />
-      <Pressable
-        testID="shop-arena-prev"
-        onPress={onPrev}
-        style={[styles.arrow, styles.arrowLeft]}
-        accessibilityLabel="Previous arena"
-      >
-        <Text style={styles.arrowText}>‹</Text>
-      </Pressable>
-      <Pressable
-        testID="shop-arena-next"
-        onPress={onNext}
-        style={[styles.arrow, styles.arrowRight]}
-        accessibilityLabel="Next arena"
-      >
-        <Text style={styles.arrowText}>›</Text>
-      </Pressable>
-      <View style={styles.arenaPanel}>
-        <Text style={[styles.detailName, titleFont ? { fontFamily: titleFont } : null]}>{arenaName(entry.id)}</Text>
-        <Text style={[styles.detailBody, bodyFont ? { fontFamily: bodyFont } : null]}>{entry.blurb}</Text>
-        <Text style={styles.detailNote}>A cosmetic table. Selecting it changes the look behind your cards, not the rules.</Text>
-        <ActionButton state={state} busy={busy} onBuy={onBuy} onSelect={onSelect} />
+    <View style={[styles.detailRow, { paddingLeft: edge + 8, paddingRight: edge + 16 }]} testID="shop-detail">
+      {onPrev ? (
+        <Pressable testID="shop-arena-prev" onPress={onPrev} style={styles.arrow} accessibilityLabel="Previous arena">
+          <Text style={styles.arrowText}>‹</Text>
+        </Pressable>
+      ) : null}
+      <View style={styles.heroSlot}>{hero}</View>
+      {onNext ? (
+        <Pressable testID="shop-arena-next" onPress={onNext} style={styles.arrow} accessibilityLabel="Next arena">
+          <Text style={styles.arrowText}>›</Text>
+        </Pressable>
+      ) : null}
+      <View style={styles.copyPanel}>
+        <Text style={[styles.detailName, titleFont ? { fontFamily: titleFont } : null]}>{title}</Text>
+        <Text style={[styles.detailBody, bodyFont ? { fontFamily: bodyFont } : null]}>{body}</Text>
+        <Text style={styles.detailNote}>{note}</Text>
+        <ShopGoldButton label={busy ? 'Please wait…' : state.actionLabel} disabled={disabled} onPress={onPress} />
         {notice ? <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text> : null}
       </View>
     </View>
   );
 }
 
-function ActionButton({
-  state,
-  busy,
-  onBuy,
-  onSelect,
-}: {
-  state: StoreItemState;
-  busy: boolean;
-  onBuy: () => void;
-  onSelect: () => void;
-}) {
-  const disabled = busy || (!state.canPurchase && !state.canSelect);
-  const label = busy ? 'Please wait…' : state.actionLabel;
-  const onPress = state.canPurchase ? onBuy : state.canSelect ? onSelect : undefined;
-  return (
-    <Pressable
-      testID="shop-action"
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [pressed && !disabled && { opacity: 0.88 }]}
-    >
-      <LinearGradient
-        colors={disabled && !state.canSelect ? ['#3a3048', '#24182f'] : ['#f8e7a2', '#e0b03a', '#f3d36a']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.actionBtn, disabled && !state.canSelect && styles.actionBtnDisabled]}
-      >
-        <Text style={[styles.actionText, disabled && !state.canSelect && styles.actionTextDisabled]}>{label}</Text>
-      </LinearGradient>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#07000f' },
-  header: { paddingBottom: 8 },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(7, 0, 15, 0.62)' },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 },
+  titleBlock: { flexShrink: 1, maxWidth: 280 },
   backLabel: { color: '#f0d78c', letterSpacing: 1.4 },
   kicker: {
     color: '#7ee7ff',
     fontSize: 11,
     letterSpacing: 2.4,
     textTransform: 'uppercase',
-    marginTop: 4,
   },
   title: {
     color: '#f6e7a8',
-    fontSize: 32,
+    fontSize: 26,
     letterSpacing: 0.4,
     textShadowColor: 'rgba(255, 215, 0, 0.45)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
-  subtitle: { color: '#c4b6de', fontSize: 13, marginTop: 4, marginBottom: 12 },
-  tabs: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  subtitle: { color: '#c4b6de', fontSize: 12, marginTop: 1 },
+  tabs: { flexDirection: 'row', gap: 8, marginLeft: 'auto' },
   tab: {
-    flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(240, 215, 140, 0.28)',
@@ -595,12 +592,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
   },
-  tabText: { color: '#b7a8cf', fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
+  tabText: { color: '#b7a8cf', fontSize: 12, fontWeight: '700' },
   tabTextActive: { color: '#f8e7a2' },
-  scroll: { flex: 1 },
-  scrollBody: { paddingTop: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  body: { flex: 1, minHeight: 0 },
+  gridScroll: { alignItems: 'flex-start', paddingRight: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignContent: 'flex-start' },
+  gridFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
   tile: {
+    width: TILE_WIDTH,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: 'rgba(240, 215, 140, 0.55)',
@@ -617,7 +616,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.55,
   },
   tileArt: {
-    height: 112,
+    height: 78,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#12081c',
@@ -656,66 +655,61 @@ const styles = StyleSheet.create({
     borderColor: '#7ee7ff',
   },
   statusOwnedText: { color: '#7ee7ff', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
-  tileName: { color: '#f7f1e4', fontSize: 14, marginTop: 8, minHeight: 36 },
-  tilePrice: { color: '#f0d78c', fontSize: 13, fontWeight: '800', marginTop: 2 },
+  tileName: { color: '#f7f1e4', fontSize: 13, marginTop: 6, minHeight: 32 },
+  tilePrice: { color: '#f0d78c', fontSize: 12, fontWeight: '800', marginTop: 2 },
   tileSoon: { color: '#9d8fb4', fontSize: 12, marginTop: 2 },
   tileOwnedCaption: { color: '#7ee7ff', fontSize: 12, fontWeight: '700', marginTop: 2 },
-  notice: { color: '#f0d78c', textAlign: 'center', marginTop: 16, fontSize: 13 },
+  notice: { color: '#f0d78c', fontSize: 13, flex: 1 },
   noticeError: { color: '#ff8aa0' },
-  restoreBtn: { alignSelf: 'center', marginTop: 18, paddingVertical: 8, paddingHorizontal: 12 },
+  restoreBtn: { paddingVertical: 6, paddingHorizontal: 8 },
   restoreText: { color: '#7ee7ff', fontSize: 13, fontWeight: '700', letterSpacing: 0.4 },
-  detailScroll: { paddingHorizontal: 20, paddingBottom: 36, alignItems: 'center' },
+  detailRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 0 },
+  heroSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 },
+  copyPanel: { width: 320, justifyContent: 'center', paddingVertical: 8 },
   fanRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    minHeight: 168,
-    marginTop: 8,
-    marginBottom: 12,
+    minHeight: 150,
   },
   fanCard: {
-    width: 92,
-    height: 128,
+    width: 78,
+    height: 108,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#140818',
     borderWidth: 1,
     borderColor: 'rgba(240, 215, 140, 0.65)',
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
+    shadowColor: '#f0d78c',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  fanBack: { marginLeft: -28, transform: [{ rotate: '7deg' }] },
+  fanBack: { marginLeft: -26, transform: [{ rotate: '7deg' }] },
   fanImage: { width: '100%', height: '100%' },
+  arenaHero: {
+    width: 340,
+    height: 190,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(240, 215, 140, 0.75)',
+    backgroundColor: '#140818',
+    shadowColor: '#f0d78c',
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+  },
   detailName: {
     color: '#f6e7a8',
     fontSize: 26,
-    textAlign: 'center',
     textShadowColor: 'rgba(255, 215, 0, 0.35)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
-  detailBody: { color: '#f4efe4', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 8 },
-  detailNote: { color: '#b7a8cf', fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 16 },
-  actionBtn: {
-    minWidth: 220,
-    borderRadius: 999,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    alignItems: 'center',
-    shadowColor: '#f0d78c',
-    shadowOpacity: 0.55,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  actionBtnDisabled: { shadowOpacity: 0 },
-  actionText: { color: '#1a1004', fontSize: 16, fontWeight: '900', letterSpacing: 0.6 },
-  actionTextDisabled: { color: '#b7a8cf' },
-  arenaStage: { flex: 1 },
+  detailBody: { color: '#f4efe4', fontSize: 14, lineHeight: 20, marginTop: 8 },
+  detailNote: { color: '#b7a8cf', fontSize: 12, lineHeight: 17, marginTop: 8, marginBottom: 14 },
   arrow: {
-    position: 'absolute',
-    top: '42%',
     width: 42,
     height: 42,
     borderRadius: 21,
@@ -724,23 +718,6 @@ const styles = StyleSheet.create({
     borderColor: '#f0d78c',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 3,
   },
-  arrowLeft: { left: 12 },
-  arrowRight: { right: 12 },
   arrowText: { color: '#f6e7a8', fontSize: 28, lineHeight: 30, marginTop: -2 },
-  arenaPanel: {
-    position: 'absolute',
-    left: 56,
-    right: 56,
-    bottom: 28,
-    borderRadius: 22,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    backgroundColor: 'rgba(8, 4, 16, 0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(240, 215, 140, 0.55)',
-    alignItems: 'center',
-    zIndex: 2,
-  },
 });
