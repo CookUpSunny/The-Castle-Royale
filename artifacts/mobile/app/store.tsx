@@ -1,7 +1,6 @@
-import { router } from "expo-router";
 import React from "react";
-import PaywallScreen from "@/components/PaywallScreen";
+import RoyalShop from "@/components/RoyalShop";
 
 export default function StoreScreen() {
-  return <PaywallScreen onClose={() => router.back()} />;
+  return <RoyalShop />;
 }

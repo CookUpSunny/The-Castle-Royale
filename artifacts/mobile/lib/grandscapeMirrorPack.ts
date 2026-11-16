@@ -32,6 +32,11 @@ export const GRANDSCAPE_MIRROR_PACK = {
     'Illustrated faces for every card, plus the matching card back. One-time unlock. The standard deck stays until you equip this pack.',
 } as const;
 
+/** RevenueCat offering lookup key for the one-time pack. */
+export const GRANDSCAPE_OFFERING_LOOKUP_KEY = 'grandscape_mirror_pack';
+/** Lifetime package inside that offering. */
+export const GRANDSCAPE_LIFETIME_PACKAGE_ID = '$rc_lifetime';
+
 export const GRANDSCAPE_ASSET_ROOT = 'assets/cardpacks/grandscape-mirror';
 
 export const GRANDSCAPE_SUIT_FOLDERS = ['spades', 'hearts', 'clubs', 'diamonds'] as const;
@@ -129,6 +134,7 @@ export function cardFacePackAfterHydration(opts: {
 }
 
 export interface GrandscapePackageLike {
+  identifier?: string | null;
   product?: {
     identifier?: string | null;
     priceString?: string | null;
@@ -145,26 +151,42 @@ export interface GrandscapeOfferingsLike<T> {
  * A missing product, or a product with no store price, returns null so the
  * shop can show the row as unavailable instead of throwing.
  */
+function pricedGrandscapePackages<T extends GrandscapePackageLike>(
+  list: readonly T[] | null | undefined,
+): T[] {
+  if (!Array.isArray(list)) return [];
+  const matches: T[] = [];
+  for (const pkg of list) {
+    const identifier = pkg?.product?.identifier ?? '';
+    if (!identifier) continue;
+    if (storeProductId(identifier) !== GRANDSCAPE_MIRROR_PRODUCT_ID) continue;
+    const price = pkg.product?.priceString?.trim() ?? '';
+    if (!price) continue;
+    matches.push(pkg);
+  }
+  return matches;
+}
+
 export function findGrandscapePackage<T extends GrandscapePackageLike>(
   offerings: GrandscapeOfferingsLike<T> | null | undefined,
 ): T | null {
   if (!offerings) return null;
+  const dedicated = pricedGrandscapePackages(
+    offerings.all?.[GRANDSCAPE_OFFERING_LOOKUP_KEY]?.availablePackages,
+  );
+  const lifetime = dedicated.find((pkg) => pkg.identifier === GRANDSCAPE_LIFETIME_PACKAGE_ID);
+  if (lifetime) return lifetime;
+  if (dedicated[0]) return dedicated[0];
+
   const lists = [
     offerings.current?.availablePackages,
     ...Object.values(offerings.all ?? {}).map((offering) => offering?.availablePackages),
   ];
   const seen = new Set<string>();
   for (const list of lists) {
-    if (!Array.isArray(list)) continue;
-    for (const pkg of list) {
-      const identifier = pkg?.product?.identifier ?? '';
+    for (const pkg of pricedGrandscapePackages(list)) {
+      const identifier = pkg.product?.identifier ?? '';
       if (!identifier || seen.has(identifier)) continue;
-      if (storeProductId(identifier) !== GRANDSCAPE_MIRROR_PRODUCT_ID) {
-        seen.add(identifier);
-        continue;
-      }
-      const price = pkg.product?.priceString?.trim() ?? '';
-      if (!price) continue;
       seen.add(identifier);
       return pkg;
     }

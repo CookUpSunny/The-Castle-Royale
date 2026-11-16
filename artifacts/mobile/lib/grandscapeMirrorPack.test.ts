@@ -177,6 +177,19 @@ test('a missing or unpriced RevenueCat product does not throw and is not sellabl
     },
   });
   assert.equal(found?.product?.priceString, '$4.99');
+
+  const lifetime = findGrandscapePackage({
+    all: {
+      grandscape_mirror_pack: {
+        availablePackages: [
+          { identifier: '$rc_monthly', product: { identifier: 'grandscape_mirror_pack', priceString: '$9.99' } },
+          { identifier: '$rc_lifetime', product: { identifier: 'grandscape_mirror_pack', priceString: '$4.99' } },
+        ],
+      },
+    },
+  });
+  assert.equal(lifetime?.identifier, '$rc_lifetime');
+  assert.equal(lifetime?.product?.priceString, '$4.99');
 });
 
 test('a cancelled store purchase is not a failure', () => {

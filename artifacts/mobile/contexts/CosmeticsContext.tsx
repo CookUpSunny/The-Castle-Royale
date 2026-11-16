@@ -28,6 +28,7 @@ import {
   type ArenaId,
 } from '@/lib/loadoutSelection';
 import { warmGameVisualCache } from '@/lib/preloadGameAssets';
+import { preloadGrandscapePackImages } from '@/lib/preloadGrandscapePack';
 
 export type { CardSkin, CardSkinId };
 export type { CardFacePackId };
@@ -381,6 +382,18 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void warmGameVisualCache(scene, arena);
   }, [scene, arena]);
+
+  // Grandscape faces are large. Warm them at launch, and again when the pack
+  // is the saved or active choice, so the first hand does not decode on touch.
+  useEffect(() => {
+    void preloadGrandscapePackImages();
+  }, []);
+
+  useEffect(() => {
+    if (cardFacePack === 'grandscape-mirror' || cardFacePackActive === 'grandscape-mirror') {
+      void preloadGrandscapePackImages();
+    }
+  }, [cardFacePack, cardFacePackActive]);
 
   const setCardSkin = useCallback((id: CardSkinId, isSubscribed = false) => {
     if (!canEquipCardSkin(id, isSubscribed)) return; // Refuse to equip premium skins without an active subscription.
