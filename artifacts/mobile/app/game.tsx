@@ -45,6 +45,7 @@ import GlowPile from '@/components/GlowPile';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import CardCurtain from '@/components/CardCurtain';
 import OrientationCurtain from '@/components/OrientationCurtain';
+import DragCardGhost from '@/components/DragCardGhost';
 import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
@@ -448,18 +449,6 @@ export default function GameScreen() {
     }, 320);
   }, [dragStartX, dragStartY, dragVisible, dragX, dragY, gameView, height, pileRectP, playCard, selfHandRectP, width]);
 
-  const dragCardStyle = useAnimatedStyle(() => ({
-    position: 'absolute' as const,
-    left: dragX.value - 33,
-    top: dragY.value - 70,
-    opacity: dragVisible.value,
-    zIndex: 200,
-    shadowColor: '#000000',
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 },
-    transform: [{ perspective: 800 }, { rotateX: '12deg' }, { scale: 1.08 }],
-  }));
   // End-game curtain — covers the game board, then navigates to victory behind it.
   // Portrait only; landscape owns its own curtain. The hook waits out the
   // winning card's animation and ignores a finished flag that arrives early.
@@ -700,9 +689,15 @@ export default function GameScreen() {
           </View>
 
           {draggingCard ? (
-            <Animated.View style={dragCardStyle} pointerEvents="none">
-              <CardComponent card={draggingCard} size="lg" />
-            </Animated.View>
+            <DragCardGhost
+              card={draggingCard}
+              size="lg"
+              dragX={dragX}
+              dragY={dragY}
+              dragVisible={dragVisible}
+              anchorX={33}
+              anchorY={70}
+            />
           ) : null}
 
           {myHand.length === 0 && myFaceUp.length === 0 && myFaceDownCount > 0 && (

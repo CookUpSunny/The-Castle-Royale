@@ -441,6 +441,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
         </View>
       )}
 
+      {/* Landscape keeps the resting fan cropped. The drag preview is portaled outside this slot so the moving card is not sliced. */}
       <View style={[styles.anchorSlot, fanMode === 'landscape' ? { height: landscapeHandWindow(), overflow: 'hidden' } : null, { width: containerWidth }]}>
       {showFaceUp ? (
         /* Face-up final phase — same bottom anchor as the fan, single-tap play. */

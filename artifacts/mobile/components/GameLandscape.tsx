@@ -35,6 +35,7 @@ import FaceDownReveal from '@/components/FaceDownReveal';
 import FaceDownStage from '@/components/FaceDownStage';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import GlowPile from '@/components/GlowPile';
+import DragCardGhost from '@/components/DragCardGhost';
 import PlayerHand from '@/components/PlayerHand';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
@@ -420,19 +421,6 @@ export default function GameLandscape(): React.JSX.Element | null {
     }, 320);
   }, [pileCenter, playCard, dragX, dragY, dragStartX, dragStartY, dragVisible, selfHandRectLs, height, gameView]);
 
-  const dragCardStyle = useAnimatedStyle(() => ({
-    position: 'absolute',
-    left: dragX.value - 33,
-    top: dragY.value - 70,
-    opacity: dragVisible.value,
-    zIndex: 200,
-    pointerEvents: 'none' as const,
-    shadowColor: '#000000',
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 },
-    transform: [{ perspective: 800 }, { rotateX: '12deg' }, { scale: 1.08 }],
-  }));
 
   const drawAnimStyle = useAnimatedStyle(() => ({
     position: 'absolute',
@@ -625,12 +613,18 @@ export default function GameLandscape(): React.JSX.Element | null {
         </View>
       )}
 
-      {/* Floating drag ghost card — follows finger while dragging */}
-      {draggingCard && (
-        <Animated.View style={dragCardStyle} pointerEvents="none">
-          <CardComponent card={draggingCard} size="md" />
-        </Animated.View>
-      )}
+      {/* Full card above the board. The hand window below crops the resting fan. */}
+      {draggingCard ? (
+        <DragCardGhost
+          card={draggingCard}
+          size="md"
+          dragX={dragX}
+          dragY={dragY}
+          dragVisible={dragVisible}
+          anchorX={33}
+          anchorY={70}
+        />
+      ) : null}
 
       {/* Flying card draw animation overlay */}
       <Animated.View style={drawAnimStyle} pointerEvents="none">

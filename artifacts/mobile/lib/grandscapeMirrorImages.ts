@@ -84,3 +84,14 @@ export function grandscapeCardBackSource(): ImageSourcePropType | null {
 export function grandscapeMarketingSource(): ImageSourcePropType | null {
   return GRANDSCAPE_MARKETING_SOURCE;
 }
+
+/** Bundled module ids for expo-asset / Image.prefetch. Faces, back, and the shop thumbnail. */
+export function grandscapeBundledImageModules(): number[] {
+  const modules: number[] = [];
+  for (const source of Object.values(GRANDSCAPE_FACE_SOURCES)) {
+    if (typeof source === 'number') modules.push(source);
+  }
+  if (typeof GRANDSCAPE_CARD_BACK_SOURCE === 'number') modules.push(GRANDSCAPE_CARD_BACK_SOURCE);
+  if (typeof GRANDSCAPE_MARKETING_SOURCE === 'number') modules.push(GRANDSCAPE_MARKETING_SOURCE);
+  return modules;
+}
