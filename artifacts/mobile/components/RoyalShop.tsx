@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { ARENAS, useCosmetics } from '@/contexts/CosmeticsContext';
-import ArenaBackground, { ARENA_IMAGES } from '@/components/ArenaBackground';
+import { ARENA_IMAGES } from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 import PaywallScreen from '@/components/PaywallScreen';
 import ShopGoldButton from '@/components/ShopGoldButton';
@@ -54,7 +54,7 @@ const TABS: { id: ShopTab; label: string }[] = [
   { id: 'memberships', label: 'Memberships' },
 ];
 
-const TILE_WIDTH = 168;
+const SHOP_NEBULA = require('../assets/shop/shop-bg-nebula.jpg') as number;
 
 function arenaName(id: ArenaId): string {
   return ARENAS.find((arena) => arena.id === id)?.name ?? id;
@@ -92,7 +92,7 @@ function useShopLandscapeLock() {
 export default function RoyalShop() {
   useShopLandscapeLock();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
   const titleFont = fontsLoaded ? 'Cinzel_700Bold' : undefined;
   const bodyFont = fontsLoaded ? 'Cinzel_400Regular' : undefined;
@@ -245,28 +245,21 @@ export default function RoyalShop() {
   };
 
   const detailArena = arenaIndex !== null ? arenaStates[arenaIndex] : null;
-  const showingArena = Boolean(detailArena);
   const gridItems = tab === 'packs' ? 1 : arenaStates.length;
   const columns = Math.max(1, Math.ceil(gridItems / 2));
-  const gridWidth = columns * TILE_WIDTH + Math.max(0, columns - 1) * 12;
+  const tileH = Math.max(112, Math.min(150, Math.floor((height - insets.top - insets.bottom - 112) / 2)));
+  const tileW = Math.round(tileH * 4 / 3);
+  const gridWidth = columns * tileW + Math.max(0, columns - 1) * 12;
 
   return (
     <View style={styles.root}>
-      {showingArena && detailArena ? (
-        <ArenaBackground arenaOverride={detailArena.entry.id} />
-      ) : (
-        <LinearGradient
-          colors={['#1a0a28', '#07140f', '#07000f']}
-          locations={[0, 0.45, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      {showingArena ? <View pointerEvents="none" style={styles.scrim} /> : null}
+      <Image source={SHOP_NEBULA} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <View pointerEvents="none" style={styles.scrim} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }]}>
         <BackButton label="← BACK" onPress={goBack} labelStyle={styles.backLabel} />
         <View style={styles.titleBlock}>
-          <Text style={[styles.kicker, bodyFont ? { fontFamily: bodyFont } : null]}>Castle Royale</Text>
+          <Text style={[styles.kicker, titleFont ? { fontFamily: titleFont } : null]}>Castle Royale</Text>
           <Text style={[styles.title, titleFont ? { fontFamily: titleFont } : null]}>Royal Shop</Text>
           <Text style={styles.subtitle} numberOfLines={1}>Cosmetic looks for your table. Match rules stay the same.</Text>
         </View>
@@ -280,7 +273,7 @@ export default function RoyalShop() {
                 onPress={() => selectTab(item.id)}
                 style={[styles.tab, active && styles.tabActive]}
               >
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>{item.label}</Text>
+                <Text style={[styles.tabText, titleFont ? { fontFamily: titleFont } : null, active && styles.tabTextActive]}>{item.label}</Text>
               </Pressable>
             );
           })}
@@ -338,6 +331,8 @@ export default function RoyalShop() {
               {tab === 'packs' ? (
                 <ShopTile
                   testID="shop-tile-grandscape"
+                  width={tileW}
+                  height={tileH}
                   name={GRANDSCAPE_MIRROR_PACK.name}
                   state={packShown}
                   titleFont={titleFont}
@@ -345,8 +340,8 @@ export default function RoyalShop() {
                   art={
                     <Image
                       source={grandscapeMarketingSource() ?? grandscapeCardBackSource() ?? undefined}
-                      style={styles.tileArtImage}
-                      contentFit="contain"
+                      style={styles.tileArtFill}
+                      contentFit="cover"
                       accessibilityLabel={GRANDSCAPE_MIRROR_PACK.name}
                     />
                   }
@@ -356,6 +351,8 @@ export default function RoyalShop() {
                   <ShopTile
                     key={entry.id}
                     testID={`shop-tile-arena-${entry.id}`}
+                    width={tileW}
+                    height={tileH}
                     name={arenaName(entry.id)}
                     state={state}
                     titleFont={titleFont}
@@ -394,8 +391,59 @@ export default function RoyalShop() {
   );
 }
 
+function OrnateGoldFrame({
+  width,
+  height,
+  equipped,
+  children,
+}: {
+  width: number;
+  height: number;
+  equipped?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={[styles.frameShadow, equipped && styles.frameShadowEquipped, { width, height }]}>
+      <LinearGradient
+        colors={['#fff6d2', '#f0d078', '#8a5a14', '#f8e7a2', '#6b4510', '#fff1c2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.bezel}
+      >
+        <View style={styles.bezelGroove}>
+          <View style={styles.artWell}>
+            {children}
+            <View pointerEvents="none" style={styles.innerGlow} />
+          </View>
+        </View>
+        <CornerFlourish corner="tl" />
+        <CornerFlourish corner="tr" />
+        <CornerFlourish corner="bl" />
+        <CornerFlourish corner="br" />
+      </LinearGradient>
+    </View>
+  );
+}
+
+function CornerFlourish({ corner }: { corner: 'tl' | 'tr' | 'bl' | 'br' }) {
+  const pos = {
+    tl: styles.flourishTL,
+    tr: styles.flourishTR,
+    bl: styles.flourishBL,
+    br: styles.flourishBR,
+  }[corner];
+  return (
+    <View pointerEvents="none" style={[styles.flourish, pos]}>
+      <View style={styles.flourishGem} />
+      <View style={styles.flourishSpark} />
+    </View>
+  );
+}
+
 function ShopTile({
   testID,
+  width,
+  height,
   name,
   state,
   titleFont,
@@ -403,23 +451,30 @@ function ShopTile({
   onPress,
 }: {
   testID: string;
+  width: number;
+  height: number;
   name: string;
   state: StoreItemState;
   titleFont?: string;
   art: React.ReactNode;
   onPress: () => void;
 }) {
+  const caption = state.showPrice && state.priceLabel
+    ? state.priceLabel
+    : state.actionLabel === 'Checking…'
+      ? 'Checking…'
+      : state.status === 'unavailable'
+        ? 'Coming soon'
+        : state.status === 'equipped'
+          ? 'Equipped'
+          : 'Owned';
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.tile,
-        state.status === 'equipped' && styles.tileEquipped,
-        pressed && { opacity: 0.9 },
-      ]}
+      style={({ pressed }) => [pressed && { opacity: 0.92 }]}
     >
-      <View style={styles.tileArt}>
+      <OrnateGoldFrame width={width} height={height} equipped={state.status === 'equipped'}>
         {art}
         {state.locked ? (
           <View style={styles.lockBadge}>
@@ -435,19 +490,19 @@ function ShopTile({
             <Text style={styles.statusOwnedText}>Owned</Text>
           </View>
         ) : null}
-      </View>
-      <Text style={[styles.tileName, titleFont ? { fontFamily: titleFont } : null]} numberOfLines={2}>
-        {name}
-      </Text>
-      {state.showPrice && state.priceLabel ? (
-        <Text style={styles.tilePrice}>{state.priceLabel}</Text>
-      ) : state.actionLabel === 'Checking…' ? (
-        <Text style={styles.tileSoon}>Checking…</Text>
-      ) : state.status === 'unavailable' ? (
-        <Text style={styles.tileSoon}>Coming soon</Text>
-      ) : (
-        <Text style={styles.tileOwnedCaption}>{state.status === 'equipped' ? 'Equipped' : 'Owned'}</Text>
-      )}
+        <LinearGradient
+          pointerEvents="none"
+          colors={['transparent', 'rgba(8, 6, 2, 0.88)']}
+          style={styles.titleWash}
+        >
+          <Text style={[styles.tileName, titleFont ? { fontFamily: titleFont } : null]} numberOfLines={2}>
+            {name}
+          </Text>
+          <Text style={state.showPrice ? styles.tilePrice : state.status === 'unavailable' ? styles.tileSoon : styles.tileOwnedCaption}>
+            {caption}
+          </Text>
+        </LinearGradient>
+      </OrnateGoldFrame>
     </Pressable>
   );
 }
@@ -483,13 +538,15 @@ function PackFan() {
 
 function ArenaHero({ id }: { id: ArenaId }) {
   return (
-    <View style={styles.arenaHero} testID="shop-arena-hero">
-      <Image
-        source={ARENA_IMAGES[id]}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        accessibilityLabel={arenaName(id)}
-      />
+    <View testID="shop-arena-hero">
+      <OrnateGoldFrame width={268} height={201}>
+        <Image
+          source={ARENA_IMAGES[id]}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          accessibilityLabel={arenaName(id)}
+        />
+      </OrnateGoldFrame>
     </View>
   );
 }
@@ -555,7 +612,7 @@ function DetailStage({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#07000f' },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(7, 0, 15, 0.62)' },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2, 10, 6, 0.38)' },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 },
   titleBlock: { flexShrink: 1, maxWidth: 280 },
   backLabel: { color: '#f0d78c', letterSpacing: 1.4 },
@@ -566,10 +623,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: '#f6e7a8',
-    fontSize: 26,
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(255, 215, 0, 0.45)',
+    color: '#f8e7a2',
+    fontSize: 28,
+    letterSpacing: 0.6,
+    textShadowColor: 'rgba(255, 215, 0, 0.55)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
@@ -592,43 +649,67 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
   },
-  tabText: { color: '#b7a8cf', fontSize: 12, fontWeight: '700' },
+  tabText: { color: '#b7a8cf', fontSize: 13 },
   tabTextActive: { color: '#f8e7a2' },
   body: { flex: 1, minHeight: 0 },
   gridScroll: { alignItems: 'flex-start', paddingRight: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignContent: 'flex-start' },
   gridFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
-  tile: {
-    width: TILE_WIDTH,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(240, 215, 140, 0.55)',
-    backgroundColor: 'rgba(10, 18, 16, 0.92)',
-    padding: 8,
-    shadowColor: '#00e5ff',
-    shadowOpacity: 0.18,
+  frameShadow: {
+    shadowColor: '#e0b03a',
+    shadowOpacity: 0.55,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
-  tileEquipped: {
-    borderColor: '#f0d78c',
-    shadowColor: '#f0d78c',
-    shadowOpacity: 0.55,
+  frameShadowEquipped: { shadowOpacity: 0.95, shadowRadius: 16 },
+  bezel: { flex: 1, borderRadius: 14, padding: 4 },
+  bezelGroove: {
+    flex: 1,
+    borderRadius: 10,
+    padding: 1.5,
+    backgroundColor: '#3a2508',
   },
-  tileArt: {
-    height: 78,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#12081c',
-    alignItems: 'center',
-    justifyContent: 'center',
+  artWell: { flex: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#12081c' },
+  innerGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 236, 180, 0.55)',
+    borderRadius: 8,
   },
-  tileArtImage: { width: '86%', height: '92%' },
+  flourish: { position: 'absolute', width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
+  flourishTL: { top: 1, left: 1 },
+  flourishTR: { top: 1, right: 1 },
+  flourishBL: { bottom: 1, left: 1 },
+  flourishBR: { bottom: 1, right: 1 },
+  flourishGem: {
+    width: 8,
+    height: 8,
+    backgroundColor: '#f8e7a2',
+    borderWidth: 1,
+    borderColor: '#fff6d2',
+    transform: [{ rotate: '45deg' }],
+  },
+  flourishSpark: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#fff',
+  },
   tileArtFill: { ...StyleSheet.absoluteFillObject },
+  titleWash: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 8,
+    paddingTop: 18,
+    paddingBottom: 7,
+  },
   lockBadge: {
     position: 'absolute',
-    left: 6,
-    bottom: 6,
+    left: 8,
+    top: 8,
     width: 26,
     height: 26,
     borderRadius: 13,
@@ -655,10 +736,17 @@ const styles = StyleSheet.create({
     borderColor: '#7ee7ff',
   },
   statusOwnedText: { color: '#7ee7ff', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
-  tileName: { color: '#f7f1e4', fontSize: 13, marginTop: 6, minHeight: 32 },
-  tilePrice: { color: '#f0d78c', fontSize: 12, fontWeight: '800', marginTop: 2 },
-  tileSoon: { color: '#9d8fb4', fontSize: 12, marginTop: 2 },
-  tileOwnedCaption: { color: '#7ee7ff', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  tileName: {
+    color: '#f8e7a2',
+    fontSize: 15,
+    lineHeight: 18,
+    textShadowColor: 'rgba(0, 0, 0, 0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  tilePrice: { color: '#fff6d2', fontSize: 12, fontWeight: '800', marginTop: 1 },
+  tileSoon: { color: '#e7d7ef', fontSize: 11, marginTop: 1 },
+  tileOwnedCaption: { color: '#7ee7ff', fontSize: 11, fontWeight: '700', marginTop: 1 },
   notice: { color: '#f0d78c', fontSize: 13, flex: 1 },
   noticeError: { color: '#ff8aa0' },
   restoreBtn: { paddingVertical: 6, paddingHorizontal: 8 },
@@ -687,23 +775,10 @@ const styles = StyleSheet.create({
   },
   fanBack: { marginLeft: -26, transform: [{ rotate: '7deg' }] },
   fanImage: { width: '100%', height: '100%' },
-  arenaHero: {
-    width: 340,
-    height: 190,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: 'rgba(240, 215, 140, 0.75)',
-    backgroundColor: '#140818',
-    shadowColor: '#f0d78c',
-    shadowOpacity: 0.55,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 },
-  },
   detailName: {
-    color: '#f6e7a8',
-    fontSize: 26,
-    textShadowColor: 'rgba(255, 215, 0, 0.35)',
+    color: '#f8e7a2',
+    fontSize: 28,
+    textShadowColor: 'rgba(255, 215, 0, 0.45)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
