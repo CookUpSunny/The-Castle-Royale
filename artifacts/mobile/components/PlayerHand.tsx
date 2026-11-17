@@ -3,20 +3,17 @@ import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, us
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
-  Easing,
-  cancelAnimation,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import { useGlowClock } from '@/components/GlowClock';
+import { haloOpacity } from '@/lib/glow';
 import { fanCardCenter } from '@/lib/cardThrow';
 import { CARD_WIDTH, CARD_HEIGHT, FAN_CONTAINER_H, computeFanPositions, computeLandscapeFanPositions, landscapeHandWindow } from '@/lib/fanLayout';
 import CardComponent from './Card';
@@ -108,37 +105,6 @@ function HandCard({
   hoveredIndex?: SharedValue<number>;
   myIndex?: number;
 }) {
-  const bounce = useSharedValue(0);
-  const glowOpacity = useSharedValue(isPlayable && isMyTurn ? 0.4 : 0.12);
-
-  useEffect(() => {
-    bounce.value = withRepeat(
-      withSequence(
-        withTiming(-5, { duration: 620, easing: Easing.out(Easing.quad) }),
-        withTiming(0, { duration: 360, easing: Easing.in(Easing.quad) }),
-      ),
-      -1,
-    );
-    return () => cancelAnimation(bounce);
-  }, [bounce]);
-
-  useEffect(() => {
-    const peak = isPlayable && isMyTurn ? 0.75 : 0.18;
-    const trough = isPlayable && isMyTurn ? 0.25 : 0.06;
-    glowOpacity.value = withRepeat(
-      withSequence(
-        withTiming(peak, { duration: 600, easing: Easing.inOut(Easing.quad) }),
-        withTiming(trough, { duration: 600, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-    );
-    return () => cancelAnimation(glowOpacity);
-  }, [isPlayable, isMyTurn, glowOpacity]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    shadowOpacity: glowOpacity.value,
-  }));
-
   // Raise animation: –28 px when hovered or selected
   const raiseY = useSharedValue(0);
   const isSelectedSV = useSharedValue(isSelected ?? false);
@@ -158,10 +124,8 @@ function HandCard({
     },
   );
 
-  // Bounce is the only per-card animation — arc position + rotation are
-  // handled by the absolutely-positioned wrapper in the parent.
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: bounce.value + raiseY.value }],
+    transform: [{ translateY: raiseY.value }],
   }));
 
   const handlePress = useCallback(() => {
@@ -221,20 +185,26 @@ function HandCard({
       } as const)
     : undefined;
 
-  const softGlowWrap = {
-    shadowColor: '#fbbf24',
-    shadowOffset: { width: 0, height: 0 } as const,
-    shadowRadius: 5,
-    elevation: 2,
-    borderRadius: 10,
-  };
-
   const restOpacity = isDimmed ? Math.min(0.6, sourceOpacity) : sourceOpacity;
   const dimStyle = restOpacity < 1 ? { opacity: restOpacity } : undefined;
+  const restingHalo = !(isPlayable && isMyTurn) ? {
+    position: 'absolute' as const,
+    left: -4,
+    right: -4,
+    top: -4,
+    bottom: -4,
+    borderRadius: 12,
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 } as const,
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+    opacity: 0.12,
+  } : null;
 
   const cardNode = (
     <View style={dimStyle} pointerEvents={sourceOpacity === 0 ? 'none' : 'auto'}>
-      <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
+      <Animated.View style={animStyle}>
+        {restingHalo ? <View pointerEvents="none" style={restingHalo} /> : null}
         <Animated.View style={starterGlowStyle}>
           <CardComponent
             card={card}
@@ -249,27 +219,8 @@ function HandCard({
     </View>
   );
 
-  const cardNodeFinal = dragGesture
-    ? (
-      <View style={dimStyle} pointerEvents={sourceOpacity === 0 ? 'none' : 'auto'}>
-        <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
-          <Animated.View style={starterGlowStyle}>
-            <CardComponent
-              card={card}
-              size="lg"
-              onPress={isMyTurn && isPlayable ? handlePress : undefined}
-              onLongPress={isMyTurn && isPlayable && multiplicity >= 2 ? handleLongPress : undefined}
-              isPlayable={isMyTurn && isPlayable}
-              multiplicity={multiplicity}
-            />
-          </Animated.View>
-        </Animated.View>
-      </View>
-    )
-    : cardNode;
-
   if (dragGesture) {
-    return <GestureDetector gesture={dragGesture}>{cardNodeFinal}</GestureDetector>;
+    return <GestureDetector gesture={dragGesture}>{cardNode}</GestureDetector>;
   }
   return cardNode;
 }
@@ -616,25 +567,10 @@ function FaceUpCardSlot({
   onLongPress: (card: CardType) => void;
 }) {
   const colors = useColors();
-  const glow = useSharedValue(0.3);
-
-  useEffect(() => {
-    glow.value = withDelay(
-      index * 180,
-      withRepeat(
-        withSequence(
-          withTiming(0.9, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
-          withTiming(0.3, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
-        ),
-        -1,
-      ),
-    );
-    return () => cancelAnimation(glow);
-  }, [index, glow]);
-
+  const clock = useGlowClock();
+  const active = isPlayable && isMyTurn;
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: glow.value * (isPlayable && isMyTurn ? 1 : 0.3),
-    shadowOpacity: glow.value,
+    opacity: haloOpacity(clock.value, active),
   }));
 
   const handlePress = useCallback(() => {

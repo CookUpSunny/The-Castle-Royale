@@ -49,7 +49,7 @@ const DrawPileStack = forwardRef<DrawPileHandle, { count: number }>(({ count }, 
           <CardBack size="sm" scale={DRAW_STACK_SCALE} />
         </View>
         <View style={styles.card0}>
-          <CardBack size="sm" scale={DRAW_STACK_SCALE} />
+          <CardBack size="sm" scale={DRAW_STACK_SCALE} live />
         </View>
       </View>
       <Text style={[styles.label, { color: colors.neonGold }]}>DRAW</Text>

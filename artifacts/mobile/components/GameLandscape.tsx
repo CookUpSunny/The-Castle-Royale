@@ -34,6 +34,7 @@ import FaceDownStage from '@/components/FaceDownStage';
 import MultiPlayBurst from '@/components/MultiPlayBurst';
 import GlowPile from '@/components/GlowPile';
 import DragCardGhost from '@/components/DragCardGhost';
+import { GlowClockProvider } from '@/components/GlowClock';
 import PlayerHand from '@/components/PlayerHand';
 import { lastEventIdentityKey } from '@/lib/lastEventDedupe';
 import { layoutRectsCloseEnough } from '@/lib/layoutRect';
@@ -402,6 +403,7 @@ export default function GameLandscape(): React.JSX.Element | null {
     : Math.max(180, width - sideColW - drawColW - 32);
 
   return (
+    <GlowClockProvider>
     <Animated.View style={[styles.container, { backgroundColor: colors.background }]}>
       <SceneBackground burstToken={endCurtainActive && gameView.winner === gameView.myPlayerId ? 1 : 0} />
       <View pointerEvents="none" style={{ position: 'absolute', top: opponentCorner.top, right: opponentCorner.right, zIndex: 1, width: opponentCorner.width, height: opponentCorner.height, opacity: opponentCorner.opacity }}>
@@ -745,6 +747,7 @@ export default function GameLandscape(): React.JSX.Element | null {
         />
       )}
     </Animated.View>
+    </GlowClockProvider>
   );
 }
 
