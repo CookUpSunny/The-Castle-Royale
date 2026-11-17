@@ -7,8 +7,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
-import { jackpotArenaHtml } from '@/components/jackpotArenaHtml';
-import { jackpotArenaLandscapeHtml } from '@/components/jackpotArenaLandscapeHtml';
+import { useJackpotHtml } from '@/hooks/useJackpotHtml';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import {
   JACKPOT_BURST_SCRIPT,
@@ -41,7 +40,7 @@ export function JackpotFelt({ burstToken = 0 }: { burstToken?: number }) {
 
   const { width, height } = useWindowDimensions();
   const page = jackpotPage(width, height);
-  const html = page === 'landscape' ? jackpotArenaLandscapeHtml : jackpotArenaHtml;
+  const html = useJackpotHtml(page);
 
   useEffect(() => {
     setFailed(false);
@@ -68,7 +67,7 @@ export function JackpotFelt({ burstToken = 0 }: { burstToken?: number }) {
   return (
     <View style={styles.felt} pointerEvents="none">
       <Image source={STILL} style={StyleSheet.absoluteFill} contentFit="cover" />
-      {mount ? (
+      {mount && html ? (
         <WebView
           key={page}
           ref={webRef}

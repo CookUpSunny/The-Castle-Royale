@@ -16,7 +16,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
-config.resolver.assetExts.push("wasm");
+config.resolver.assetExts.push("wasm", "html");
 
 config.resolver.blockList = [
   /node_modules\/.*_tmp_.*\/.*/,

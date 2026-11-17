@@ -12,6 +12,9 @@ export function jackpotPage(width: number, height: number): 'portrait' | 'landsc
   return width > height ? 'landscape' : 'portrait';
 }
 
+/** WebGL backing store. Both arena pages cap device pixels here. */
+export const JACKPOT_MAX_DPR = 2;
+
 export function jackpotLoadAllowed(url: string): boolean {
   if (!url || url === 'about:blank') return true;
   return url.startsWith('about:') || url.startsWith('data:');
