@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import type { LayoutRect } from '@/components/CardPlayFlight';
+import { EASE_OUT } from '@/lib/motion';
+import { HAND_PLACE_MS, handPlaceStops } from '@/lib/handPlace';
 
 function centerOf(r: LayoutRect | null): { x: number; y: number } | null {
   if (!r || r.width <= 0 || r.height <= 0) return null;
@@ -32,29 +34,29 @@ export default function HandPlaceOverlay({
   useEffect(() => {
     if (!enabled || !c) return;
 
+    const y = handPlaceStops(c.y);
     // Start “off camera” and swoop in.
     opacity.value = 0;
     tx.value = c.x + 120;
-    ty.value = c.y + 220;
+    ty.value = y.start;
     rot.value = 18;
     scale.value = 0.95;
 
     opacity.value = withTiming(1, { duration: 80 });
-    tx.value = withTiming(c.x + 28, { duration: 240, easing: Easing.out(Easing.cubic) });
-    ty.value = withTiming(c.y + 36, { duration: 240, easing: Easing.out(Easing.cubic) });
-    rot.value = withTiming(-10, { duration: 260, easing: Easing.out(Easing.cubic) });
-    scale.value = withSequence(
-      withTiming(1.04, { duration: 220, easing: Easing.out(Easing.cubic) }),
-      withTiming(1.0, { duration: 160, easing: Easing.inOut(Easing.cubic) }),
-    );
-
-    // Press + release micro-motion, then fade out.
+    tx.value = withTiming(c.x + 28, { duration: HAND_PLACE_MS.swoop, easing: EASE_OUT });
+    // One vertical timeline. A second assignment used to erase the swoop.
     ty.value = withSequence(
-      withDelay(220, withTiming(c.y + 48, { duration: 120, easing: Easing.out(Easing.cubic) })),
-      withTiming(c.y + 30, { duration: 140, easing: Easing.out(Easing.cubic) }),
-      withDelay(220, withTiming(c.y + 210, { duration: 260, easing: Easing.in(Easing.cubic) })),
+      withTiming(y.approach, { duration: HAND_PLACE_MS.swoop, easing: EASE_OUT }),
+      withTiming(y.press, { duration: HAND_PLACE_MS.press, easing: EASE_OUT }),
+      withTiming(y.release, { duration: HAND_PLACE_MS.release, easing: EASE_OUT }),
+      withTiming(y.exit, { duration: HAND_PLACE_MS.exit, easing: EASE_OUT }),
     );
-    opacity.value = withDelay(720, withTiming(0, { duration: 160 }));
+    rot.value = withTiming(-10, { duration: 260, easing: EASE_OUT });
+    scale.value = withSequence(
+      withTiming(1.04, { duration: 220, easing: EASE_OUT }),
+      withTiming(1.0, { duration: 160, easing: EASE_OUT }),
+    );
+    opacity.value = withDelay(720, withTiming(0, { duration: 160, easing: EASE_OUT }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger]);
 
