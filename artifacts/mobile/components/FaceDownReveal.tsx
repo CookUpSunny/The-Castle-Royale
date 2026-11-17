@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  ReduceMotion,
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -12,6 +13,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { type Card as CardType } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { EASE_OUT } from '@/lib/motion';
+import { overlayHoldMs, softenedFadeMs } from '@/lib/reducedMotion';
 import CardComponent, { CardBack } from './Card';
 
 
@@ -56,8 +60,30 @@ export default function FaceDownReveal({ card, topCard, busted, who, onComplete 
   const revealOpacity = useSharedValue(0);
   const vsScale = useSharedValue(0);
   const [showFront, setShowFront] = useState(false);
+  const reduced = useMotionPreference();
 
   useEffect(() => {
+    const hold = overlayHoldMs('faceDownReveal', reduced);
+    if (reduced) {
+      const fade = {
+        duration: softenedFadeMs(180, true),
+        easing: EASE_OUT,
+        reduceMotion: ReduceMotion.Never,
+      };
+      overlayOpacity.value = withTiming(1, fade);
+      pileOpacity.value = withTiming(1, fade);
+      revealOpacity.value = withTiming(1, fade);
+      verdictOpacity.value = withTiming(1, fade);
+      pileSlide.value = 0;
+      revealEnter.value = 0;
+      vsScale.value = 1;
+      verdictScale.value = 1;
+      flip.value = 1;
+      setShowFront(true);
+      const completeTimer = setTimeout(() => onCompleteRef.current(), hold);
+      return () => clearTimeout(completeTimer);
+    }
+
     overlayOpacity.value = withSequence(
       withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) }),
       withDelay(2000, withTiming(0, { duration: 380, easing: Easing.in(Easing.quad) })),
@@ -96,7 +122,7 @@ export default function FaceDownReveal({ card, topCard, busted, who, onComplete 
       ),
     );
 
-    const completeTimer = setTimeout(() => onCompleteRef.current(), 2580);
+    const completeTimer = setTimeout(() => onCompleteRef.current(), hold);
 
     return () => {
       clearTimeout(swapTimer);
@@ -111,7 +137,7 @@ export default function FaceDownReveal({ card, topCard, busted, who, onComplete 
       cancelAnimation(revealOpacity);
       cancelAnimation(vsScale);
     };
-  }, [flip, overlayOpacity, verdictOpacity, verdictScale, pileSlide, pileOpacity, revealEnter, revealOpacity, vsScale]);
+  }, [flip, overlayOpacity, verdictOpacity, verdictScale, pileSlide, pileOpacity, revealEnter, revealOpacity, vsScale, reduced]);
 
   // ScaleX-based flip — the card horizontally squeezes to a vertical line at
   // the midpoint, swaps face↔back, then expands back to full width. This

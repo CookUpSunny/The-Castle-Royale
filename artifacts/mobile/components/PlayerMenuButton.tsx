@@ -1,15 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import React, { useEffect } from 'react';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useColors } from '@/hooks/useColors';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { PLAYER_MENU_HIT, togglePlayerMenu } from '@/lib/characterSceneLayout';
 
 const PRESS = { damping: 16, stiffness: 420 };
@@ -85,18 +87,14 @@ export function PlayerMenuGlass({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  const [plain, setPlain] = useState(false);
+  const plain = useMotionPreference();
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.92);
   const slide = useSharedValue(16);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setPlain).catch(() => setPlain(false));
-  }, []);
-
-  useEffect(() => {
     if (plain) {
-      opacity.value = withTiming(1, { duration: 160 });
+      opacity.value = withTiming(1, { duration: 160, reduceMotion: ReduceMotion.Never });
       scale.value = 1;
       slide.value = 0;
       return;

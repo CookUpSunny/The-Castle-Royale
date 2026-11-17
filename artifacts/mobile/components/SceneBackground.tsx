@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AppState, StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
+  ReduceMotion,
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -14,6 +15,8 @@ import Animated, {
 import type { SharedValue } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 import RainbowRoadBackground from '@/components/RainbowRoadBackground';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { EASE_OUT } from '@/lib/motion';
 import { JackpotFelt } from '@/components/JackpotArena';
 import { useCosmetics, type ArenaId } from '@/contexts/CosmeticsContext';
 import { ARENA_TABLE_TINT } from '@/lib/sceneAssets';
@@ -340,8 +343,24 @@ function StaticLayer({
 }
 
 function MatrixAmbience() {
+  const reduced = useMotionPreference();
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      setAppActive(state === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  const mount = appActive && !reduced;
+  const fade = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  if (!mount) return null;
+
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Animated.View style={[StyleSheet.absoluteFill, fade]} pointerEvents="none">
       <WebView
         source={{ html: MATRIX_HTML }}
         style={StyleSheet.absoluteFill}
@@ -350,9 +369,12 @@ function MatrixAmbience() {
         overScrollMode="never"
         pointerEvents="none"
         javaScriptEnabled
-        originWhitelist={['*']}
+        originWhitelist={['about:blank', 'data:']}
+        onLoadEnd={() => {
+          opacity.value = withTiming(1, { duration: 300, easing: EASE_OUT, reduceMotion: ReduceMotion.Never });
+        }}
       />
-    </View>
+    </Animated.View>
   );
 }
 
