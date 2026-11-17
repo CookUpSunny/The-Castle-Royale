@@ -36,6 +36,8 @@ import {
 import { REVENUECAT_ENTITLEMENT_IDENTIFIER, useSubscription } from '@/lib/revenuecat';
 import {
   SHOP_ARENA_CATALOG,
+  SHOP_PACK_BLURB,
+  SHOP_TAGLINE,
   activeEntitlementIds,
   arenaStoreInput,
   cardPackStoreInput,
@@ -58,7 +60,6 @@ const TABS: { id: ShopTab; label: string }[] = [
 ];
 
 const SHOP_NEBULA = require('../assets/shop/shop-bg-nebula.jpg') as number;
-const SHOP_SUBTITLE = 'Dress Your Table In Royal Splendor. The House Rules Never Change.';
 
 /** Left card is the normal size. Each card to the right steps up so the fan comes toward the viewer. */
 const FAN_BASE_WIDTH = 126;
@@ -279,12 +280,12 @@ export default function RoyalShop() {
       )}
       {detailArena ? null : <View pointerEvents="none" style={packOpen ? styles.feltShade : styles.scrim} />}
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 8, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }]}>
+      <View style={styles.topBar}>
         <BackButton label="← BACK" onPress={goBack} labelStyle={styles.backLabel} />
         <View style={styles.titleBlock}>
           <Text style={[styles.kicker, titleFont ? { fontFamily: titleFont } : null]}>The Castle Royale</Text>
           <Text style={[styles.title, titleFont ? { fontFamily: titleFont } : null]}>Royal Shop</Text>
-          <Text style={[styles.subtitle, titleFont ? { fontFamily: titleFont } : null]} numberOfLines={3}>{SHOP_SUBTITLE}</Text>
         </View>
         <View style={styles.tabs}>
           {TABS.map((item) => {
@@ -309,6 +310,15 @@ export default function RoyalShop() {
           onPress={() => void onRestore()}
         />
       </View>
+        <Text
+          style={[styles.subtitle, titleFont ? { fontFamily: titleFont } : null]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.45}
+        >
+          {SHOP_TAGLINE}
+        </Text>
+      </View>
 
       {tab === 'memberships' ? (
         <View style={[styles.body, { paddingLeft: insets.left + 16, paddingRight: insets.right + 16, paddingBottom: insets.bottom + 8 }]}>
@@ -317,8 +327,7 @@ export default function RoyalShop() {
       ) : packOpen ? (
         <DetailStage
           title={GRANDSCAPE_MIRROR_PACK.name}
-          body={GRANDSCAPE_MIRROR_PACK.description}
-          note="Cosmetic card faces and a matching back. One-time unlock. It does not change how a hand is played."
+          body={SHOP_PACK_BLURB}
           state={packShown}
           titleFont={titleFont}
           busy={pack.isPurchasing || isPurchasing}
@@ -333,7 +342,6 @@ export default function RoyalShop() {
         <DetailStage
           title={arenaName(detailArena.entry.id)}
           body={detailArena.entry.blurb}
-          note="A cosmetic table. Selecting it changes the look behind your cards, not the rules."
           state={detailArena.state}
           titleFont={titleFont}
           busy={isPurchasing}
@@ -594,7 +602,6 @@ function DetailStage({
   hero,
   title,
   body,
-  note,
   state,
   titleFont,
   busy,
@@ -609,7 +616,6 @@ function DetailStage({
   hero: React.ReactNode;
   title: string;
   body: string;
-  note: string;
   state: StoreItemState;
   titleFont?: string;
   busy: boolean;
@@ -623,9 +629,6 @@ function DetailStage({
 }) {
   const disabled = busy || (!state.canPurchase && !state.canSelect);
   const onPress = state.canPurchase ? onBuy : state.canSelect ? onSelect : undefined;
-  const { height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const textMaxHeight = Math.max(88, height - insets.top - insets.bottom - 214);
   return (
     <View style={[styles.detailRow, { paddingLeft: edge + 8, paddingRight: edge + 16 }]} testID="shop-detail">
       {onPrev ? (
@@ -655,18 +658,11 @@ function DetailStage({
             style={styles.glassSheen}
           />
           <View style={styles.glassInner}>
-            <ScrollView
-              style={{ maxHeight: textMaxHeight }}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-            >
-              <Text style={[styles.detailName, titleFont ? { fontFamily: titleFont } : null]}>{title}</Text>
-              <Text style={[styles.detailBody, titleFont ? { fontFamily: titleFont } : null]}>{body}</Text>
-              <Text style={[styles.detailNote, titleFont ? { fontFamily: titleFont } : null]}>{note}</Text>
-              {state.showPrice && state.priceLabel ? (
-                <Text style={[styles.detailPrice, titleFont ? { fontFamily: titleFont } : null]}>{state.priceLabel}</Text>
-              ) : null}
-            </ScrollView>
+            <Text style={[styles.detailName, titleFont ? { fontFamily: titleFont } : null]}>{title}</Text>
+            <Text style={[styles.detailBody, titleFont ? { fontFamily: titleFont } : null]}>{body}</Text>
+            {state.showPrice && state.priceLabel ? (
+              <Text style={[styles.detailPrice, titleFont ? { fontFamily: titleFont } : null]}>{state.priceLabel}</Text>
+            ) : null}
             <View style={styles.glassAction}>
               <ShopGoldButton label={busy ? 'Please wait…' : state.actionLabel} disabled={disabled} onPress={onPress} />
             </View>
@@ -682,7 +678,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#07000f' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2, 10, 6, 0.38)' },
   feltShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.12)' },
-  topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 },
+  header: { paddingBottom: 4 },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   titleBlock: { flex: 1, flexShrink: 1, minWidth: 0 },
   backLabel: { color: '#f0d78c', letterSpacing: 1.4 },
   kicker: {
@@ -701,9 +698,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: '#fff6d2',
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 0,
     marginTop: 2,
   },
   tabs: { flexDirection: 'row', gap: 8, marginLeft: 'auto' },
@@ -871,13 +868,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     lineHeight: 18,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  detailNote: {
-    color: '#fff4d8',
-    fontSize: 12,
-    lineHeight: 16,
     fontWeight: '700',
     marginTop: 8,
   },
