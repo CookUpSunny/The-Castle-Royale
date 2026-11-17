@@ -3,7 +3,6 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -17,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { ARENAS, useCosmetics } from '@/contexts/CosmeticsContext';
+import { useShopEntrance } from '@/contexts/ShopEntranceContext';
 import SceneBackground from '@/components/SceneBackground';
 import { ARENA_IMAGES } from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
@@ -107,6 +107,7 @@ function useShopLandscapeLock() {
 
 export default function RoyalShop() {
   useShopLandscapeLock();
+  const { leaveShop } = useShopEntrance();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [fontsLoaded] = useFonts({ Cinzel_700Bold });
@@ -251,7 +252,7 @@ export default function RoyalShop() {
       setArenaIndex(null);
       return;
     }
-    router.back();
+    leaveShop();
   };
 
   const selectTab = (next: ShopTab) => {
