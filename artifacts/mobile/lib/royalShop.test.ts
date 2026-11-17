@@ -4,6 +4,8 @@ import test from 'node:test';
 import { ARENA_IDS } from './loadoutSelection';
 import {
   SHOP_ARENA_CATALOG,
+  SHOP_PACK_BLURB,
+  SHOP_TAGLINE,
   activeEntitlementIds,
   arenaStoreInput,
   cardPackStoreInput,
@@ -51,6 +53,25 @@ test('store item state covers equipped, owned, locked, and no product', () => {
   const blank = resolveStoreItemState({ owned: false, equipped: false, priceString: '   ' });
   assert.equal(blank.status, 'unavailable');
   assert.equal(blank.canPurchase, false);
+});
+
+function sentences(copy: string): string[] {
+  return copy.split(/(?<=[.!?])\s+/).map((line) => line.trim()).filter(Boolean);
+}
+
+test('the House speaks in short shop lines, and the tagline is one title-case sentence pair', () => {
+  assert.equal(SHOP_TAGLINE, 'Dress Your Table In Royal Splendor. The House Rules Never Change.');
+  assert.equal(SHOP_TAGLINE.includes('\n'), false);
+  for (const entry of SHOP_ARENA_CATALOG) {
+    const lines = sentences(entry.blurb);
+    assert.ok(lines.length >= 2 && lines.length <= 3, `${entry.id} has ${lines.length} sentences`);
+    assert.match(entry.blurb, /^The House /, entry.id);
+    assert.ok(entry.blurb.length <= 220, entry.id);
+  }
+  const pack = sentences(SHOP_PACK_BLURB);
+  assert.ok(pack.length >= 2 && pack.length <= 3);
+  assert.match(SHOP_PACK_BLURB, /mirror/i);
+  assert.match(SHOP_PACK_BLURB, /no promises/i);
 });
 
 test('free arenas stay free and locked arenas wait for a product', () => {

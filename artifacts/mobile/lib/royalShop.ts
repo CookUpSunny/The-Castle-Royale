@@ -20,38 +20,49 @@ export interface ShopArenaEntry {
   productId?: string;
   /** Optional RevenueCat entitlement. Absent until the product exists. */
   entitlementId?: string;
-  /** Cosmetic line shown in the shop. Not a rule change. */
+  /** The House, speaking in the shop. Cosmetic. Not a rule change. */
   blurb: string;
 }
+
+/** One line under Royal Shop. Bold title case. It must not wrap. */
+export const SHOP_TAGLINE = 'Dress Your Table In Royal Splendor. The House Rules Never Change.';
+
+/**
+ * Shop voice for the Grandscape Mirror Pack.
+ * The catalog description on the pack record stays the factual line.
+ * App Store product notes are not this string.
+ */
+export const SHOP_PACK_BLURB =
+  'The House set these faces in mirror and starlight. Perhaps a reflection will turn luck your way. The House makes no promises, but the mirrors have been known to wink at the lucky.';
 
 export const SHOP_ARENA_CATALOG: readonly ShopArenaEntry[] = [
   {
     id: 'greenTable',
-    blurb: 'A green and gold table. Light turns under the cards while you play.',
+    blurb: 'The House has polished every inch of gold for you. Green marble, a crown, and chips that will not sit still. The rules never change, though the spotlight might.',
   },
   {
     id: 'classic',
-    blurb: 'Pink neon and flamingo silhouettes around a gold rail. A cosmetic floor for your table.',
+    blurb: 'The House kept the pink lights burning for you. Flamingos pose along the gold rail and fully expect to be admired. The game is the same, and the floor is showing off.',
   },
   {
     id: 'cosmic',
-    blurb: 'The Cosmic Sanctum sky, as it plays in a match: deep space, crystals, and a quiet glow behind the cards.',
+    blurb: 'The House opened the sky and set this table in it for you. Crystals drift, and the stars are on their best behavior. The cards still answer to the rules, not the nebula.',
   },
   {
     id: 'royal',
-    blurb: 'Marble columns and warm gold light above the clouds. A cosmetic throne-room table.',
+    blurb: 'The House drew the clouds aside for you. Marble, warm gold, and a throne that is mostly theater. Sit like royalty; the deck is not impressed.',
   },
   {
     id: 'lightning',
-    blurb: 'Waterfalls, lanterns, and blossom color inside a quiet cave. A cosmetic oasis table.',
+    blurb: 'The House found you a cave with a waterfall and excellent manners. Lanterns and blossoms look after the pool. Only the scenery changes.',
   },
   {
     id: 'matrix',
-    blurb: 'Falling green characters over a dark glass table. A cosmetic digital arena.',
+    blurb: 'The House slipped you a seat beneath the green rain. The glass table is convinced those falling characters are classified. Your hand plays exactly as it always has.',
   },
   {
     id: 'rainbowRoad',
-    blurb: 'A glittering road of color through a starfield. A cosmetic table for your matches.',
+    blurb: 'The House unrolled a road of color and dared you to keep a straight face. Stars on one side, glitter on the other. The cards do not care how pretty the journey is.',
   },
 ];
 
