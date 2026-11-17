@@ -119,6 +119,8 @@ interface GameContextType {
   /** Decline a pending Second Chance, then play the interstitial if this was a 3rd loss. */
   resolveAdBreak: () => Promise<void>;
   ensureLossSettlement: (gameId: string) => Promise<void>;
+  /** Increments on each server `play_error` so a thrown card can spring home. */
+  playErrorSeq: number;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -169,6 +171,7 @@ export function GameProvider({
   const [opponentEmoteBubble, setOpponentEmoteBubble] = useState<{ emote: string; key: number } | null>(null);
   const [lastMatchMode, setLastMatchMode] = useState<MatchMode>('online');
   const [pendingSettlement, setPendingSettlement] = useState<Settlement | null>(null);
+  const [playErrorSeq, setPlayErrorSeq] = useState(0);
   const settlementRef = useRef<Settlement | null>(null);
   const resolvingAdBreak = useRef(false);
   const emoteCounterRef = useRef(0);
@@ -334,6 +337,7 @@ export function GameProvider({
 
     socket.on('play_error', (data: { message: string }) => {
       console.warn('Play error:', data.message);
+      setPlayErrorSeq((n) => n + 1);
     });
 
     socket.on('match_settlement', (settlement: Settlement) => {
@@ -615,6 +619,7 @@ export function GameProvider({
         clearSettlement,
         resolveAdBreak,
         ensureLossSettlement,
+        playErrorSeq,
       }}
     >
       {children}

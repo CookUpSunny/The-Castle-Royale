@@ -11,7 +11,6 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,11 +40,10 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { landscapeMenuButton, landscapeOpponentCorner, landscapePlayerCorner } from '@/lib/characterSceneLayout';
-import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
 import { landscapeHandWindow } from '@/lib/fanLayout';
 import { emoteDock, finalThreeFrame } from '@/lib/matchChrome';
+import { useCardThrow } from '@/hooks/useCardThrow';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
-import { usePileDropHighlight } from '@/hooks/usePileDropHighlight';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 import { PlayerMenuButton, PlayerMenuGlass } from '@/components/PlayerMenuButton';
 
@@ -199,7 +197,8 @@ export default function GameLandscape(): React.JSX.Element | null {
   const { width, height } = useWindowDimensions();
   const { 
     gameView, playerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
-    opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
+    opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble,
+    playErrorSeq,
   } = useGame();
   const { isMuted, toggleMute, volumeLevel, setVolumeLevel } = useMusicPlayer();
   const [myEmote, setMyEmote] = useState<{ emote: string; key: number } | null>(null);
@@ -261,21 +260,21 @@ export default function GameLandscape(): React.JSX.Element | null {
   const drawAnimOpacity = useSharedValue(0);
   const drawPileRef = useRef<DrawPileHandle>(null);
 
-  // Drag-and-drop state
-  const dragX = useSharedValue(0);
-  const dragY = useSharedValue(0);
-  const dragStartX = useSharedValue(0);
-  const dragStartY = useSharedValue(0);
-  const dragVisible = useSharedValue(0);
-  const pileX = useSharedValue(0);
-  const pileY = useSharedValue(0);
-  const pileReady = useSharedValue(0);
-  const dragActive = useSharedValue(0);
-  const [draggingCard, setDraggingCard] = useState<CardType | null>(null);
-  const draggingCardRef = useRef<CardType | null>(null);
-  const [pileCenter, setPileCenter] = useState<{ x: number; y: number } | null>(null);
-  const [pileHighlighted, setPileHighlighted] = useState(false);
-  usePileDropHighlight(dragX, dragY, dragActive, pileX, pileY, pileReady, setPileHighlighted);
+  const thrown = useCardThrow({
+    discardPile: gameView?.discardPile ?? [],
+    mustPlayStarter: gameView?.mustPlayStarter,
+    handTop: selfHandRectLs ? selfHandRectLs.y : height * 0.75,
+    myPlayerId: gameView?.myPlayerId ?? '',
+    lastEvent: gameView?.lastEvent,
+    handIds: gameView?.myHand.map((card) => card.id) ?? [],
+    playErrorSeq,
+    playCard,
+  });
+  const {
+    dragX, dragY, dragStartX, dragStartY, dragVisible, dragScale, dragActive,
+    draggingCard, heldCardId, pendingPlayId, skipCardId, tapOrigin, pileHighlighted,
+    placePile, onDragStart: handleDragStart, onDragEnd: handleDragEnd, onFanPlay,
+  } = thrown;
   const tableCenterRef = useRef<View>(null);
 
   // Cosmetics — actual avatar portraits for name plates
@@ -368,53 +367,6 @@ export default function GameLandscape(): React.JSX.Element | null {
       drawAnimOpacity.value = withDelay(500, withTiming(0, { duration: 200 }));
     }).catch(() => {});
   }, [gameView?.drawEventId]);
-
-  // Drag-and-drop handlers (passed to PlayerHand → HandCard)
-  const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
-    draggingCardRef.current = card;
-    setDraggingCard(card);
-    // Position is already on the UI thread. Do not write dragX/dragY here —
-    // this callback can run after the finger has moved.
-    dragStartX.value = x;
-    dragStartY.value = y;
-    dragVisible.value = withTiming(1, { duration: 80 });
-  }, [dragStartX, dragStartY, dragVisible]);
-
-  const handleDragEnd = useCallback((x: number, y: number) => {
-    const drop = pileCenter;
-    const card = draggingCardRef.current;
-    setPileHighlighted(false);
-    const handTop = selfHandRectLs ? selfHandRectLs.y : height * 0.75;
-    const playable = !!card && cardMayPlay(card, gameView?.discardPile ?? [], gameView?.mustPlayStarter);
-    const decision = drop && card
-      ? resolveDragRelease({
-          x,
-          y,
-          pileX: drop.x,
-          pileY: drop.y,
-          handTop,
-          playable,
-        })
-      : 'snap';
-    if (decision === 'play' && card) {
-      playCard(card.id);
-      dragVisible.value = withTiming(0, { duration: 80 });
-      setTimeout(() => {
-        setDraggingCard(null);
-        draggingCardRef.current = null;
-      }, 90);
-      return;
-    }
-    // Missed drop — spring ghost back to start position then fade
-    dragX.value = withSpring(dragStartX.value, { damping: 20, stiffness: 200 });
-    dragY.value = withSpring(dragStartY.value, { damping: 20, stiffness: 200 });
-    dragVisible.value = withDelay(180, withTiming(0, { duration: 120 }));
-    setTimeout(() => {
-      setDraggingCard(null);
-      draggingCardRef.current = null;
-    }, 320);
-  }, [pileCenter, playCard, dragX, dragY, dragStartX, dragStartY, dragVisible, selfHandRectLs, height, gameView]);
-
 
   const drawAnimStyle = useAnimatedStyle(() => ({
     position: 'absolute',
@@ -526,12 +478,7 @@ export default function GameLandscape(): React.JSX.Element | null {
             style={styles.tableCenter}
             onLayout={() => {
               tableCenterRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                const cx = pageX + w / 2;
-                const cy = pageY + h / 2;
-                pileX.value = cx;
-                pileY.value = cy;
-                pileReady.value = 1;
-                setPileCenter({ x: cx, y: cy });
+                placePile(pageX, pageY, w, h);
                 const r = { x: pageX, y: pageY, width: w, height: h };
                 setPileRectLs((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
               });
@@ -561,6 +508,9 @@ export default function GameLandscape(): React.JSX.Element | null {
               isMyTurn={isMyTurn}
               onPlayCard={playCard}
               onPlayCards={playCards}
+              onFanPlay={onFanPlay}
+              heldCardId={heldCardId}
+              pendingPlayId={pendingPlayId}
               mustPlayStarter={gameView.mustPlayStarter}
               fanMode="landscape"
               draggable={isMyTurn && myHand.length > 0}
@@ -624,6 +574,7 @@ export default function GameLandscape(): React.JSX.Element | null {
           dragX={dragX}
           dragY={dragY}
           dragVisible={dragVisible}
+          dragScale={dragScale}
           anchorX={33}
           anchorY={70}
         />
@@ -701,6 +652,8 @@ export default function GameLandscape(): React.JSX.Element | null {
           opponentZoneRect={opponentZoneRectLs}
           onAvatarPulse={() => {}}
           initialLastKey={initialCinematicKeyRef.current}
+          skipCardId={skipCardId}
+          originOverride={tapOrigin}
         />
       )}
 

@@ -28,6 +28,7 @@ export default function DragCardGhost({
   dragX,
   dragY,
   dragVisible,
+  dragScale,
   anchorX,
   anchorY,
 }: {
@@ -36,6 +37,7 @@ export default function DragCardGhost({
   dragX: SharedValue<number>;
   dragY: SharedValue<number>;
   dragVisible: SharedValue<number>;
+  dragScale: SharedValue<number>;
   /** Finger offset into the card, matching the previous ghost anchor. */
   anchorX: number;
   anchorY: number;
@@ -46,6 +48,7 @@ export default function DragCardGhost({
     transform: [
       { translateX: dragX.value - anchorX },
       { translateY: dragY.value - anchorY },
+      { scale: dragScale.value },
     ],
   }));
 

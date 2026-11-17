@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -16,7 +17,8 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
-import { CARD_WIDTH, FAN_CONTAINER_H, computeFanPositions, computeLandscapeFanPositions, landscapeHandWindow } from '@/lib/fanLayout';
+import { fanCardCenter } from '@/lib/cardThrow';
+import { CARD_WIDTH, CARD_HEIGHT, FAN_CONTAINER_H, computeFanPositions, computeLandscapeFanPositions, landscapeHandWindow } from '@/lib/fanLayout';
 import CardComponent from './Card';
 
 function canPlayCardFn(card: CardType, pile: CardType[]): boolean {
@@ -36,12 +38,18 @@ interface PlayerHandProps {
   isMyTurn: boolean;
   onPlayCard: (cardId: string) => void;
   onPlayCards: (cardIds: string[]) => void;
+  /** Single-card tap. The screen plays the card from this fan centre. */
+  onFanPlay?: (cardId: string, origin: { x: number; y: number }) => void;
+  /** Card currently under the finger. Drawn at 0.35 so the ghost reads as the lift. */
+  heldCardId?: string | null;
+  /** Thrown card waiting on the server. Slot stays, the face is hidden. */
+  pendingPlayId?: string | null;
   /** Starter mode: player just picked up the pile and must commit one card to restart it. Any card is playable; the lowest is recommended. Multi-play is disabled. */
   mustPlayStarter?: boolean;
   /** When true, cards can be dragged to the pile in addition to tapped. */
   draggable?: boolean;
   onDragStart?: (card: CardType, x: number, y: number) => void;
-  onDragEnd?: (x: number, y: number) => void;
+  onDragEnd?: (x: number, y: number, velocityX: number, velocityY: number) => void;
   /** Finger position. Written on the UI thread; never mirrored through React state per frame. */
   dragX?: SharedValue<number>;
   dragY?: SharedValue<number>;
@@ -75,6 +83,7 @@ function HandCard({
   dragActive,
   isSelected,
   isDimmed,
+  sourceOpacity = 1,
   hoveredIndex,
   myIndex,
 }: {
@@ -87,7 +96,7 @@ function HandCard({
   isStarterPick?: boolean;
   draggable?: boolean;
   onDragStart?: (card: CardType, x: number, y: number) => void;
-  onDragEnd?: (x: number, y: number) => void;
+  onDragEnd?: (x: number, y: number, velocityX: number, velocityY: number) => void;
   dragX?: SharedValue<number>;
   dragY?: SharedValue<number>;
   dragStartX?: SharedValue<number>;
@@ -95,6 +104,7 @@ function HandCard({
   dragActive?: SharedValue<number>;
   isSelected?: boolean;
   isDimmed?: boolean;
+  sourceOpacity?: number;
   hoveredIndex?: SharedValue<number>;
   myIndex?: number;
 }) {
@@ -195,7 +205,7 @@ function HandCard({
         _dragX.value = e.absoluteX;
         _dragY.value = e.absoluteY;
         if (_dragActive) _dragActive.value = 0;
-        if (_onDragEnd) scheduleOnRN(_onDragEnd, e.absoluteX, e.absoluteY);
+        if (_onDragEnd) scheduleOnRN(_onDragEnd, e.absoluteX, e.absoluteY, e.velocityX, e.velocityY);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggable, isMyTurn, isPlayable, card, dragX, dragY, dragStartX, dragStartY, dragActive]);
@@ -219,10 +229,11 @@ function HandCard({
     borderRadius: 10,
   };
 
-  const dimStyle = isDimmed ? { opacity: 0.6 } : undefined;
+  const restOpacity = isDimmed ? Math.min(0.6, sourceOpacity) : sourceOpacity;
+  const dimStyle = restOpacity < 1 ? { opacity: restOpacity } : undefined;
 
   const cardNode = (
-    <View style={dimStyle}>
+    <View style={dimStyle} pointerEvents={sourceOpacity === 0 ? 'none' : 'auto'}>
       <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
         <Animated.View style={starterGlowStyle}>
           <CardComponent
@@ -240,7 +251,7 @@ function HandCard({
 
   const cardNodeFinal = dragGesture
     ? (
-      <View style={dimStyle}>
+      <View style={dimStyle} pointerEvents={sourceOpacity === 0 ? 'none' : 'auto'}>
         <Animated.View style={[softGlowWrap, glowStyle, animStyle]}>
           <Animated.View style={starterGlowStyle}>
             <CardComponent
@@ -279,6 +290,9 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   isMyTurn,
   onPlayCard,
   onPlayCards,
+  onFanPlay,
+  heldCardId,
+  pendingPlayId,
   mustPlayStarter,
   draggable,
   onDragStart,
@@ -397,25 +411,39 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
     return counts;
   }, [activeCards]);
 
+  const fanPage = useRef({ x: 0, y: 0, measured: false });
+  const fanRef = useRef<View>(null);
+
+  const playFromFan = useCallback((card: CardType) => {
+    const index = activeCards.findIndex((c) => c.id === card.id);
+    const placement = index >= 0 ? fanPositions[index] : undefined;
+    if (onFanPlay && placement && fanPage.current.measured) {
+      onFanPlay(card.id, fanCardCenter(fanPage.current.x, fanPage.current.y, placement.left, placement.top, CARD_WIDTH, CARD_HEIGHT));
+      return;
+    }
+    onPlayCard(card.id);
+  }, [activeCards, fanPositions, onFanPlay, onPlayCard]);
+
   // Fan-only two-tap: first tap selects, second tap plays.
   const handleTap = useCallback((card: CardType) => {
     if (selectedCardId === card.id) {
       setSelectedCardId(null);
-      onPlayCard(card.id);
+      playFromFan(card);
     } else {
       setSelectedCardId(card.id);
     }
-  }, [selectedCardId, onPlayCard]);
+  }, [playFromFan, selectedCardId]);
 
   // Face-up phase uses immediate single-tap play (no selection state).
   const handleFaceUpTap = useCallback((card: CardType) => {
-    onPlayCard(card.id);
-  }, [onPlayCard]);
+    playFromFan(card);
+  }, [playFromFan]);
 
   const handleLongPress = useCallback((card: CardType) => {
     const ids = activeCards.filter((c) => c.value === card.value).map((c) => c.id);
     if (ids.length === 0) return;
     setSelectedCardId(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onPlayCards(ids);
   }, [activeCards, onPlayCards]);
 
@@ -424,6 +452,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
     const ids = activeCards.filter((c) => c.value === value).map((c) => c.id);
     if (ids.length === 0) return;
     setSelectedCardId(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onPlayCards(ids);
   }, [activeCards, onPlayCards]);
 
@@ -501,7 +530,15 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
            Two-tap selection + hover raise are portrait-only features (draggable=false).
            When draggable=true (landscape), the old single-tap behaviour is preserved. */
         <GestureDetector gesture={draggable ? Gesture.Manual() : hoverPan}>
-          <View style={[styles.fanContainer, { width: containerWidth }]}>
+          <View
+            ref={fanRef}
+            style={[styles.fanContainer, { width: containerWidth }]}
+            onLayout={() => {
+              fanRef.current?.measure((_x, _y, _w, _h, pageX, pageY) => {
+                fanPage.current = { x: pageX, y: pageY, measured: true };
+              });
+            }}
+          >
             {activeCards.map((card, i) => {
               const placement = fanPositions[i];
               if (!placement) return null;
@@ -542,6 +579,7 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
                     dragActive={dragActive}
                     isSelected={isThisSelected}
                     isDimmed={isDimmed}
+                    sourceOpacity={card.id === pendingPlayId ? 0 : card.id === heldCardId ? 0.35 : 1}
                     hoveredIndex={draggable ? undefined : hoveredIndex}
                     myIndex={i}
                   />

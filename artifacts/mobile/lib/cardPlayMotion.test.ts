@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { cardMayPlay, playArc, resolveDragRelease } from './cardPlayMotion';
+import { FLICK_UP_VELOCITY, cardMayPlay, playArc, resolveDragRelease } from './cardPlayMotion';
 
 test('an illegal drop snaps back and a lift toward the pile plays', () => {
   const pile = [{ value: 8 }];
@@ -24,6 +24,15 @@ test('an illegal drop snaps back and a lift toward the pile plays', () => {
     resolveDragRelease({ x: 40, y: 200, pileX: 200, pileY: 160, handTop: 280, playable: true }),
     'play',
   );
+});
+
+test('an upward flick plays a legal card and an illegal flick snaps back', () => {
+  const resting = { x: 200, y: 300, pileX: 200, pileY: 160, handTop: 280, playable: true };
+  assert.equal(FLICK_UP_VELOCITY, -900);
+  assert.equal(resolveDragRelease({ ...resting, velocityY: -899 }), 'snap');
+  assert.equal(resolveDragRelease({ ...resting, velocityY: -900 }), 'snap');
+  assert.equal(resolveDragRelease({ ...resting, velocityY: -901 }), 'play');
+  assert.equal(resolveDragRelease({ ...resting, playable: false, velocityY: -2000 }), 'snap');
 });
 
 test('the play arc rises above the straight path from either side', () => {

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { EASE_OUT } from '@/lib/motion';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
 import type { LayoutRect } from '@/components/CardPlayFlight';
@@ -54,6 +56,8 @@ export default function CinematicPlay({
   opponentZoneRect,
   onAvatarPulse,
   initialLastKey,
+  skipCardId,
+  originOverride,
 }: {
   gameId: string;
   lastEvent: LastEvent | undefined;
@@ -63,6 +67,10 @@ export default function CinematicPlay({
   opponentZoneRect: LayoutRect | null;
   onAvatarPulse: (side: 'self' | 'opponent') => void;
   initialLastKey?: string | null;
+  /** Drag-play already flew this card onto the pile. Pulse only. */
+  skipCardId?: string | null;
+  /** Tap-play starts at the tapped fan slot instead of the hand centre. */
+  originOverride?: { cardId: string; x: number; y: number } | null;
 }) {
   const [flight, setFlight] = useState<{ card: CardType; key: string; side: 'self' | 'opponent' } | null>(null);
   const lastKeyRef = useRef<string | null>(initialLastKey ?? null);
@@ -94,6 +102,7 @@ export default function CinematicPlay({
   }, [plainMotion]);
 
   const [spotTrigger, setSpotTrigger] = useState(0);
+  const [impactOnly, setImpactOnly] = useState(false);
 
   useEffect(() => {
     if (isFirstMountRef.current) {
@@ -114,8 +123,28 @@ export default function CinematicPlay({
     if (lastKeyRef.current === key) return;
 
     const side: 'self' | 'opponent' = ev.playerId === myPlayerId ? 'self' : 'opponent';
-    const start = centerOf(side === 'self' ? selfHandRect : opponentZoneRect);
     const end = centerOf(pileRect);
+    const skipped = side === 'self' && !!skipCardId && card.id === skipCardId;
+    if (skipped) {
+      if (!end) return;
+      lastKeyRef.current = key;
+      onAvatarPulse(side);
+      setFlight(null);
+      setImpactOnly(true);
+      const finishImpact = () => setImpactOnly(false);
+      impact.value = 0;
+      impact.value = withSequence(
+        withTiming(1, { duration: 90, easing: EASE_OUT }),
+        withTiming(0, { duration: 220, easing: EASE_OUT }, (finished) => {
+          if (finished) scheduleOnRN(finishImpact);
+        }),
+      );
+      return;
+    }
+    const override = side === 'self' && originOverride && originOverride.cardId === card.id
+      ? { x: originOverride.x, y: originOverride.y }
+      : null;
+    const start = override ?? centerOf(side === 'self' ? selfHandRect : opponentZoneRect);
     if (!start || !end) return;
 
     lastKeyRef.current = key;
@@ -135,6 +164,7 @@ export default function CinematicPlay({
     impact.value = 0;
     sideDir.value = side === 'self' ? 1 : -1;
 
+    setImpactOnly(false);
     setFlight({ card, key, side });
     setSpotTrigger((n) => n + 1);
 
@@ -161,7 +191,7 @@ export default function CinematicPlay({
       }),
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps -- Reanimated SVs are mutated here, not read as deps
-  }, [gameId, lastEvent, myPlayerId, pileRect, selfHandRect, opponentZoneRect, onAvatarPulse]);
+  }, [gameId, lastEvent, myPlayerId, pileRect, selfHandRect, opponentZoneRect, onAvatarPulse, skipCardId, originOverride]);
 
   const spotlightStrength: SpotlightStrength = flight
     ? (lastEvent ? spotlightFromEvent(lastEvent) : 'soft')
@@ -244,9 +274,40 @@ export default function CinematicPlay({
   const trail1 = trailStyle(0.06);
   const trail2 = trailStyle(0.12);
 
-  if (!flight) {
+  const impactStyle = useAnimatedStyle(() => ({
+    opacity: impact.value * 0.85,
+    transform: [{ scale: 0.85 + impact.value * 0.25 }],
+  }));
+
+  if (!flight && !impactOnly) {
     return null;
   }
+
+  if (!flight && impactOnly) {
+    const pile = centerOf(pileRect);
+    if (!pile) return null;
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              borderWidth: 2,
+              borderColor: '#fbbf24',
+              backgroundColor: 'rgba(251, 191, 36, 0.18)',
+            },
+            { left: pile.x - 36, top: pile.y - 36 },
+            impactStyle,
+          ]}
+        />
+      </View>
+    );
+  }
+
+  if (!flight) return null;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
