@@ -310,14 +310,18 @@ export default function RoyalShop() {
           onPress={() => void onRestore()}
         />
       </View>
-        <Text
-          style={[styles.subtitle, titleFont ? { fontFamily: titleFont } : null]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.45}
-        >
-          {SHOP_TAGLINE}
-        </Text>
+        <View style={styles.taglineBanner}>
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+          <View pointerEvents="none" style={styles.taglineWash} />
+          <Text
+            style={[styles.subtitle, titleFont ? { fontFamily: titleFont } : null]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.55}
+          >
+            {SHOP_TAGLINE}
+          </Text>
+        </View>
       </View>
 
       {tab === 'memberships' ? (
@@ -696,12 +700,29 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
+  taglineBanner: {
+    marginTop: 6,
+    borderRadius: 999,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 213, 74, 0.92)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    justifyContent: 'center',
+  },
+  taglineWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.76)',
+  },
   subtitle: {
-    color: '#fff6d2',
-    fontSize: 12,
+    color: '#FFD54A',
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0,
-    marginTop: 2,
+    letterSpacing: 0.15,
+    textShadowColor: 'rgba(0, 0, 0, 0.92)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   tabs: { flexDirection: 'row', gap: 8, marginLeft: 'auto' },
   tab: {
