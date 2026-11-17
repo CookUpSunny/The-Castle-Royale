@@ -16,6 +16,8 @@ import { type CardSkinId, type ArenaId, useCosmetics } from '@/contexts/Cosmetic
 import { CARD_BACK_IMAGES } from '@/lib/cardBackImages';
 import { isImageCardSkinId, type ProceduralCardSkinId } from '@/lib/cardSkins';
 import { grandscapeCardBackSource, grandscapeFaceSource } from '@/lib/grandscapeMirrorImages';
+import { useGlowClock } from '@/components/GlowClock';
+import { cardBackStarsTwinkle, haloOpacity } from '@/lib/glow';
 import { useColors } from '@/hooks/useColors';
 
 const ARENA_FELT_SHADOW: Record<ArenaId, string> = {
@@ -60,12 +62,15 @@ export function CardBack({
   style,
   skinOverride,
   scale = 1,
+  live = false,
 }: {
   size?: 'sm' | 'md' | 'lg';
   style?: object;
   skinOverride?: CardSkinId;
   /** Uniform scale of the back art. 1 keeps every existing card the same size. */
   scale?: number;
+  /** The top draw-deck card. Every other back is a static glow. */
+  live?: boolean;
 }) {
   const cosmetics = useCosmetics();
   const skin = skinOverride ?? cosmetics.cardSkin ?? 'royal-gold';
@@ -85,7 +90,7 @@ export function CardBack({
       />
     );
   }
-  return <SkinnedCardBack skin={skin} size={size} style={style} scale={scale} />;
+  return <SkinnedCardBack skin={skin} size={size} style={style} scale={scale} live={live} />;
 }
 
 interface SkinnedCardBackProps {
@@ -125,7 +130,7 @@ const SKIN_THEMES: Record<ProceduralCardSkinId, SkinTheme> = {
   'vintage-casino':  { bg: '#3a2a18', innerBg: '#5c4528', border: '#a16207', innerBorder: '#78350f', glow: '#92400e', symbol: '♠', symbolColor: '#fcd34d' },
 };
 
-function SkinnedCardBack({ skin, size, style, scale = 1 }: SkinnedCardBackProps & { scale?: number }) {
+function SkinnedCardBack({ skin, size, style, scale = 1, live = false }: SkinnedCardBackProps & { scale?: number; live?: boolean }) {
   if (isImageCardSkinId(skin)) {
     return (
       <ImageCardBack
@@ -143,6 +148,7 @@ function SkinnedCardBack({ skin, size, style, scale = 1 }: SkinnedCardBackProps 
       size={size}
       style={style}
       scale={scale}
+      live={live}
       testID={`card-back-${skin}`}
     />
   );
@@ -214,12 +220,14 @@ function ProceduralCardBack({
   size,
   style,
   scale = 1,
+  live = false,
   testID,
 }: {
   skin: ProceduralCardSkinId;
   size: 'sm' | 'md' | 'lg';
   style?: object;
   scale?: number;
+  live?: boolean;
   testID: string;
 }) {
   const base = SIZES[size];
@@ -235,23 +243,11 @@ function ProceduralCardBack({
   const { arena } = useCosmetics();
   const feltShadowColor = ARENA_FELT_SHADOW[arena] ?? '#0a0a0a';
 
-  // Slow border-glow pulse — applied to every skin so the deck always feels
-  // alive. Intensity varies a bit so light skins (Pearl) don't look bloomed.
-  const glow = useSharedValue(0.4);
-  useEffect(() => {
-    const peak = skin === 'pearl-white' ? 0.45 : 0.85;
-    const trough = skin === 'pearl-white' ? 0.15 : 0.35;
-    glow.value = withRepeat(
-      withSequence(
-        withTiming(peak, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
-        withTiming(trough, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-    );
-    return () => cancelAnimation(glow);
-  }, [glow, skin]);
-
-  const glowStyle = useAnimatedStyle(() => ({ shadowOpacity: glow.value }));
+  const clock = useGlowClock();
+  const restGlow = skin === 'pearl-white' ? 0.3 : 0.6;
+  const liveStyle = useAnimatedStyle(() => ({
+    opacity: live ? haloOpacity(clock.value, true) : restGlow,
+  }));
 
   // Cosmic family gets a randomized starfield rendered inside the card.
   const stars = useMemo<CosmicStarSpec[]>(() => {
@@ -281,7 +277,7 @@ function ProceduralCardBack({
         style,
       ]}
     >
-    <Animated.View
+    <View
       style={[
         styles.cardBase,
         {
@@ -292,13 +288,33 @@ function ProceduralCardBack({
           borderWidth: 1.5 * scale,
           borderRadius: 6 * scale,
           shadowColor: theme.glow,
+          shadowOpacity: restGlow,
           shadowRadius: 8 * scale,
           shadowOffset: { width: 0, height: 0 },
           elevation: 8,
         },
-        glowStyle,
       ]}
     >
+      {live ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              left: -4,
+              right: -4,
+              top: -4,
+              bottom: -4,
+              borderRadius: 8 * scale,
+              shadowColor: theme.glow,
+              shadowOpacity: 0.9,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 0 },
+            },
+            liveStyle,
+          ]}
+        />
+      ) : null}
       {/* Optional accent blob — gives skins like Inferno / Cyber a richer feel. */}
       {theme.accent ? (
         <View
@@ -342,9 +358,9 @@ function ProceduralCardBack({
       {/* Twinkling stars layer (cosmic family only). Drawn on top of the
           inner panel so the symbol still reads cleanly. */}
       {stars.map((s, i) => (
-        <CardStar key={i} {...s} />
+        <CardStar key={i} {...s} twinkle={cardBackStarsTwinkle(size)} />
       ))}
-    </Animated.View>
+    </View>
     </View>
   );
 }
@@ -357,9 +373,10 @@ interface CosmicStarSpec {
   bright: number;
 }
 
-function CardStar({ left, top, size, delay, bright }: CosmicStarSpec) {
-  const opacity = useSharedValue(0.2);
+function CardStar({ left, top, size, delay, bright, twinkle }: CosmicStarSpec & { twinkle: boolean }) {
+  const opacity = useSharedValue(twinkle ? 0.2 : bright * 0.7);
   useEffect(() => {
+    if (!twinkle) return;
     opacity.value = withDelay(
       delay,
       withRepeat(
@@ -371,7 +388,7 @@ function CardStar({ left, top, size, delay, bright }: CosmicStarSpec) {
       ),
     );
     return () => cancelAnimation(opacity);
-  }, [opacity, delay, bright]);
+  }, [opacity, delay, bright, twinkle]);
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
@@ -412,8 +429,8 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
 
   // ── ALL hooks must be called unconditionally before any early return ──────
   const scale = useSharedValue(1);
-  const shimmer = useSharedValue(0);
   const multiPulse = useSharedValue(1);
+  const clock = useGlowClock();
 
   // Derive glow colour from card value so the worklets below can reference it
   // as a stable shared value rather than a JS closure variable.
@@ -424,33 +441,6 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
   if (isSpecial2) glowColor = colors.neonPurple;
   if (isSpecial10) glowColor = colors.neonOrange;
   if (isPlayable) glowColor = colors.neonGold;
-
-  const glowShared = useSharedValue(glowColor);
-  const playableShared = useSharedValue(!!isPlayable);
-
-  // Keep shared values in sync with props without violating hooks rules.
-  useEffect(() => {
-    glowShared.value = glowColor;
-    playableShared.value = !!isPlayable;
-  }, [glowColor, isPlayable, glowShared, playableShared]);
-
-  // Pulsing luminescence — breathes between 35 % and 100 % opacity so playable
-  // cards have a living, gold-shimmering halo rather than a static shadow.
-  useEffect(() => {
-    if (isPlayable) {
-      shimmer.value = withRepeat(
-        withSequence(
-          withTiming(1,    { duration: 900,  easing: Easing.inOut(Easing.quad) }),
-          withTiming(0.35, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
-        ),
-        -1,
-      );
-    } else {
-      cancelAnimation(shimmer);
-      shimmer.value = 0;
-    }
-    return () => cancelAnimation(shimmer);
-  }, [isPlayable, shimmer]);
 
   useEffect(() => {
     if (multiplicity && multiplicity > 1) {
@@ -469,16 +459,13 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
     return () => cancelAnimation(multiPulse);
   }, [multiplicity, multiPulse]);
 
-  const animStyle = useAnimatedStyle(() => {
-    const playable = playableShared.value;
-    const glow = glowShared.value;
-    const op = playable ? 0.3 + shimmer.value * 0.35 : (glow !== 'transparent' ? 0.5 : 0);
-    return {
-      transform: [{ scale: scale.value }],
-      shadowOpacity: op,
-      shadowRadius: playable ? 6 + shimmer.value * 8 : 5,
-    };
-  });
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: haloOpacity(clock.value, !!isPlayable),
+  }));
 
   const multiBadgeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: multiPulse.value }],
@@ -534,18 +521,27 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
         style,
       ]}
     >
-    <Animated.View
-      style={[
-        {
-          shadowColor: glowColor,
-          shadowOffset: { width: 0, height: 0 },
-          shadowRadius: 8 * layoutScale,
-          elevation: glowColor !== 'transparent' ? 20 : 2,
-          borderRadius: 6 * layoutScale,
-        },
-        animStyle,
-      ]}
-    >
+    <Animated.View style={animStyle}>
+      {isPlayable || glowColor !== 'transparent' ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              left: -6,
+              right: -6,
+              top: -6,
+              bottom: -6,
+              borderRadius: 12,
+              shadowColor: isPlayable ? colors.neonGold : glowColor,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.9,
+              shadowRadius: 12,
+            },
+            haloStyle,
+          ]}
+        />
+      ) : null}
       <Pressable
         onPress={onPress}
         onLongPress={onLongPress}

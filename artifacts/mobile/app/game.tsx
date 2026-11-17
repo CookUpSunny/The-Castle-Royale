@@ -44,6 +44,7 @@ import MultiPlayBurst from '@/components/MultiPlayBurst';
 import CardCurtain from '@/components/CardCurtain';
 import OrientationCurtain from '@/components/OrientationCurtain';
 import DragCardGhost from '@/components/DragCardGhost';
+import { GlowClockProvider } from '@/components/GlowClock';
 import PlayerHand, { type PlayerHandRef } from '@/components/PlayerHand';
 import SetupScreen from '@/components/SetupScreen';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
@@ -225,7 +226,7 @@ function DeckBadge({ count }: { count: number }) {
               left: (2 - layer) * DRAW_DECK_PEEK,
             }}
           >
-            <CardBack size="sm" scale={DRAW_DECK_BACK_SCALE} />
+            <CardBack size="sm" scale={DRAW_DECK_BACK_SCALE} live={layer === 0} />
           </View>
         ))}
       </View>
@@ -526,6 +527,7 @@ export default function GameScreen() {
   // layout is active. This prevents it from unmounting when committedLandscape
   // flips at the curtain midpoint.
   return (
+    <GlowClockProvider>
     <View style={styles.container}>
       {/* Active game layout — switches at curtain midpoint behind opaque card */}
       {committedLandscape ? (
@@ -866,6 +868,7 @@ export default function GameScreen() {
         />
       )}
     </View>
+    </GlowClockProvider>
   );
 }
 
