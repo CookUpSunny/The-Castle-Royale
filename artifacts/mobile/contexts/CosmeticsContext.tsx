@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { sceneIdForArena } from '@/lib/arenaScene';
 import type { SceneId } from '@/lib/scenePacks';
 
 import { JACKPOT_ARENA_NAME } from '@/lib/jackpotArena';
@@ -318,14 +319,7 @@ export function CosmeticsProvider({ children }: { children: React.ReactNode }) {
 
   // Derive the scene from the arena so the background imagery matches the
   // arena the player selected. Each arena now has its own scene.
-  const scene: SceneId =
-    arena === 'rainbowRoad' ? 'rainbowRoad'     :
-    arena === 'lightning'   ? 'waterfallCavern' :
-    arena === 'royal'       ? 'olympusThrone'   :
-    arena === 'cosmic'      ? 'cosmicSanctum'   :
-    arena === 'classic'     ? 'flamingoFloor'   :
-    arena === 'matrix'      ? 'matrixArena'     :
-    'casinoGreen';
+  const scene: SceneId = sceneIdForArena(arena);
 
   useEffect(() => {
     let cancelled = false;
