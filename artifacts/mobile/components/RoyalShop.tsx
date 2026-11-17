@@ -61,19 +61,6 @@ const TABS: { id: ShopTab; label: string }[] = [
 
 const SHOP_NEBULA = require('../assets/shop/shop-bg-nebula.jpg') as number;
 
-/** Eight offsets so the yellow tagline reads as a crisp black stroke. */
-const TAGLINE_STROKE = 1.25;
-const TAGLINE_STROKE_OFFSETS: readonly (readonly [number, number])[] = [
-  [-TAGLINE_STROKE, -TAGLINE_STROKE],
-  [0, -TAGLINE_STROKE],
-  [TAGLINE_STROKE, -TAGLINE_STROKE],
-  [-TAGLINE_STROKE, 0],
-  [TAGLINE_STROKE, 0],
-  [-TAGLINE_STROKE, TAGLINE_STROKE],
-  [0, TAGLINE_STROKE],
-  [TAGLINE_STROKE, TAGLINE_STROKE],
-];
-
 /** Left card is the normal size. Each card to the right steps up so the fan comes toward the viewer. */
 const FAN_BASE_WIDTH = 126;
 const FAN_BASE_HEIGHT = 176;
@@ -422,28 +409,18 @@ export default function RoyalShop() {
 }
 
 function ShopTagline({ fontFamily }: { fontFamily?: string }) {
-  const face = [styles.subtitle, fontFamily ? { fontFamily } : null];
   return (
     <View style={styles.taglineBanner}>
       <BlurView intensity={24} tint="light" style={StyleSheet.absoluteFill} />
       <View pointerEvents="none" style={styles.taglineWash} />
-      <View style={styles.taglineLine}>
-        {TAGLINE_STROKE_OFFSETS.map(([x, y], index) => (
-          <Text
-            key={index}
-            pointerEvents="none"
-            style={[face, styles.taglineStroke, { transform: [{ translateX: x }, { translateY: y }] }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.55}
-          >
-            {SHOP_TAGLINE}
-          </Text>
-        ))}
-        <Text style={face} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55}>
-          {SHOP_TAGLINE}
-        </Text>
-      </View>
+      <Text
+        style={[styles.subtitle, fontFamily ? { fontFamily } : null]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.55}
+      >
+        {SHOP_TAGLINE}
+      </Text>
     </View>
   );
 }
@@ -744,19 +721,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  taglineLine: { justifyContent: 'center' },
-  taglineStroke: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    color: '#000000',
-  },
   subtitle: {
     color: '#FFD54A',
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.15,
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   tabs: { flexDirection: 'row', gap: 8, marginLeft: 'auto' },
   tab: {
