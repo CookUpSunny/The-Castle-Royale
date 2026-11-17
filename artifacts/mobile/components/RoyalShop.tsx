@@ -1,4 +1,5 @@
-import { Cinzel_400Regular, Cinzel_700Bold, useFonts } from '@expo-google-fonts/cinzel';
+import { Cinzel_700Bold, useFonts } from '@expo-google-fonts/cinzel';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -57,6 +58,13 @@ const TABS: { id: ShopTab; label: string }[] = [
 ];
 
 const SHOP_NEBULA = require('../assets/shop/shop-bg-nebula.jpg') as number;
+const SHOP_SUBTITLE = 'Dress Your Table In Royal Splendor. The House Rules Never Change.';
+
+/** Left card is the normal size. Each card to the right steps up so the fan comes toward the viewer. */
+const FAN_BASE_WIDTH = 126;
+const FAN_BASE_HEIGHT = 176;
+const FAN_SCALE_STEP = 0.07;
+const FAN_OVERLAP = 0.66;
 
 function arenaName(id: ArenaId): string {
   return ARENAS.find((arena) => arena.id === id)?.name ?? id;
@@ -95,9 +103,8 @@ export default function RoyalShop() {
   useShopLandscapeLock();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const [fontsLoaded] = useFonts({ Cinzel_700Bold, Cinzel_400Regular });
+  const [fontsLoaded] = useFonts({ Cinzel_700Bold });
   const titleFont = fontsLoaded ? 'Cinzel_700Bold' : undefined;
-  const bodyFont = fontsLoaded ? 'Cinzel_400Regular' : undefined;
   const { arena, setArena } = useCosmetics();
   const pack = useGrandscapePack();
   const { offerings, customerInfo, purchase, restore, isPurchasing, isRestoring, isSubscribed } = useSubscription();
@@ -277,7 +284,7 @@ export default function RoyalShop() {
         <View style={styles.titleBlock}>
           <Text style={[styles.kicker, titleFont ? { fontFamily: titleFont } : null]}>The Castle Royale</Text>
           <Text style={[styles.title, titleFont ? { fontFamily: titleFont } : null]}>Royal Shop</Text>
-          <Text style={styles.subtitle} numberOfLines={1}>Cosmetic looks for your table. Match rules stay the same.</Text>
+          <Text style={[styles.subtitle, titleFont ? { fontFamily: titleFont } : null]} numberOfLines={3}>{SHOP_SUBTITLE}</Text>
         </View>
         <View style={styles.tabs}>
           {TABS.map((item) => {
@@ -314,7 +321,6 @@ export default function RoyalShop() {
           note="Cosmetic card faces and a matching back. One-time unlock. It does not change how a hand is played."
           state={packShown}
           titleFont={titleFont}
-          bodyFont={bodyFont}
           busy={pack.isPurchasing || isPurchasing}
           notice={notice}
           noticeTone={noticeTone}
@@ -330,7 +336,6 @@ export default function RoyalShop() {
           note="A cosmetic table. Selecting it changes the look behind your cards, not the rules."
           state={detailArena.state}
           titleFont={titleFont}
-          bodyFont={bodyFont}
           busy={isPurchasing}
           notice={notice}
           noticeTone={noticeTone}
@@ -514,32 +519,54 @@ function ShopTile({
 }
 
 function PackFan() {
+  const { width: screenW } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const playable = GRANDSCAPE_SHOP_PREVIEW_CARDS.map((card) => grandscapeFaceSource(card)).filter(Boolean);
   const marketing = grandscapeMarketingSource();
   const faces = marketing ? [...playable, marketing] : playable;
   const back = grandscapeCardBackSource();
+  const cards = [
+    ...faces.map((source, index) => ({ key: `face-${index}`, source })),
+    ...(back ? [{ key: 'back', source: back }] : []),
+  ];
+  const count = cards.length;
+  let natural = 0;
+  for (let index = 0; index < count; index += 1) {
+    const cardW = Math.round(FAN_BASE_WIDTH * (1 + index * FAN_SCALE_STEP));
+    natural = index === 0 ? cardW : natural + cardW - Math.round(cardW * FAN_OVERLAP);
+  }
+  const budget = Math.max(220, screenW - insets.left - insets.right - 360);
+  const fit = Math.min(1, budget / Math.max(natural, 1));
   return (
     <View style={styles.fanRow} testID="shop-pack-preview">
-      {faces.map((source, index) => (
-        <View
-          key={index}
-          style={[
-            styles.fanCard,
-            {
-              marginLeft: index === 0 ? 0 : -58,
-              zIndex: index,
-              transform: [{ rotate: `${(index - (faces.length - 1) / 2) * 8}deg` }],
-            },
-          ]}
-        >
-          <Image source={source ?? undefined} style={styles.fanImage} contentFit="contain" />
-        </View>
-      ))}
-      {back ? (
-        <View style={[styles.fanCard, styles.fanBack, { marginLeft: -48, zIndex: faces.length }]}>
-          <Image source={back} style={styles.fanImage} contentFit="contain" />
-        </View>
-      ) : null}
+      {cards.map((card, index) => {
+        const scale = 1 + index * FAN_SCALE_STEP;
+        const width = Math.round(FAN_BASE_WIDTH * scale * fit);
+        const height = Math.round(FAN_BASE_HEIGHT * scale * fit);
+        const rotate = (index - (count - 1) / 2) * 5.5;
+        return (
+          <View
+            key={card.key}
+            style={[
+              styles.fanCard,
+              {
+                width,
+                height,
+                marginLeft: index === 0 ? 0 : -Math.round(width * FAN_OVERLAP),
+                zIndex: index,
+                elevation: 6 + index * 4,
+                borderRadius: 8 + index,
+                shadowOpacity: 0.28 + index * 0.09,
+                shadowRadius: 8 + index * 3,
+                shadowOffset: { width: index, height: 4 + index * 3 },
+                transform: [{ rotate: `${rotate}deg` }],
+              },
+            ]}
+          >
+            <Image source={card.source ?? undefined} style={styles.fanImage} contentFit="contain" />
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -570,7 +597,6 @@ function DetailStage({
   note,
   state,
   titleFont,
-  bodyFont,
   busy,
   notice,
   noticeTone,
@@ -586,7 +612,6 @@ function DetailStage({
   note: string;
   state: StoreItemState;
   titleFont?: string;
-  bodyFont?: string;
   busy: boolean;
   notice: string | null;
   noticeTone: 'info' | 'error';
@@ -598,6 +623,9 @@ function DetailStage({
 }) {
   const disabled = busy || (!state.canPurchase && !state.canSelect);
   const onPress = state.canPurchase ? onBuy : state.canSelect ? onSelect : undefined;
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const textMaxHeight = Math.max(88, height - insets.top - insets.bottom - 214);
   return (
     <View style={[styles.detailRow, { paddingLeft: edge + 8, paddingRight: edge + 16 }]} testID="shop-detail">
       {onPrev ? (
@@ -612,11 +640,39 @@ function DetailStage({
         </Pressable>
       ) : null}
       <View style={styles.copyPanel}>
-        <Text style={[styles.detailName, titleFont ? { fontFamily: titleFont } : null]}>{title}</Text>
-        <Text style={[styles.detailBody, bodyFont ? { fontFamily: bodyFont } : null]}>{body}</Text>
-        <Text style={styles.detailNote}>{note}</Text>
-        <ShopGoldButton label={busy ? 'Please wait…' : state.actionLabel} disabled={disabled} onPress={onPress} />
-        {notice ? <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text> : null}
+        <View style={styles.glassShell}>
+          <BlurView intensity={62} tint="dark" style={StyleSheet.absoluteFill} />
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(12, 8, 20, 0.42)', 'rgba(6, 4, 12, 0.62)']}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(255, 248, 220, 0.22)', 'rgba(240, 215, 140, 0.05)', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.7, y: 0.85 }}
+            style={styles.glassSheen}
+          />
+          <View style={styles.glassInner}>
+            <ScrollView
+              style={{ maxHeight: textMaxHeight }}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              <Text style={[styles.detailName, titleFont ? { fontFamily: titleFont } : null]}>{title}</Text>
+              <Text style={[styles.detailBody, titleFont ? { fontFamily: titleFont } : null]}>{body}</Text>
+              <Text style={[styles.detailNote, titleFont ? { fontFamily: titleFont } : null]}>{note}</Text>
+              {state.showPrice && state.priceLabel ? (
+                <Text style={[styles.detailPrice, titleFont ? { fontFamily: titleFont } : null]}>{state.priceLabel}</Text>
+              ) : null}
+            </ScrollView>
+            <View style={styles.glassAction}>
+              <ShopGoldButton label={busy ? 'Please wait…' : state.actionLabel} disabled={disabled} onPress={onPress} />
+            </View>
+            {notice ? <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text> : null}
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -627,7 +683,7 @@ const styles = StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2, 10, 6, 0.38)' },
   feltShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.12)' },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 },
-  titleBlock: { flexShrink: 1, maxWidth: 280 },
+  titleBlock: { flex: 1, flexShrink: 1, minWidth: 0 },
   backLabel: { color: '#f0d78c', letterSpacing: 1.4 },
   kicker: {
     color: '#7ee7ff',
@@ -643,7 +699,13 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
-  subtitle: { color: '#c4b6de', fontSize: 12, marginTop: 1 },
+  subtitle: {
+    color: '#fff6d2',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
   tabs: { flexDirection: 'row', gap: 8, marginLeft: 'auto' },
   tab: {
     paddingVertical: 8,
@@ -766,37 +828,66 @@ const styles = StyleSheet.create({
   restoreText: { color: '#7ee7ff', fontSize: 13, fontWeight: '700', letterSpacing: 0.4 },
   detailRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 0 },
   heroSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 },
-  copyPanel: { width: 268, justifyContent: 'center', paddingVertical: 4 },
+  copyPanel: { width: 286, justifyContent: 'center' },
+  glassShell: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(240, 215, 140, 0.78)',
+    backgroundColor: 'rgba(8, 6, 16, 0.28)',
+    shadowColor: '#000',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  glassSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: 54 },
+  glassInner: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14 },
+  glassAction: { marginTop: 12 },
   fanRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 220,
+    minHeight: 250,
+    overflow: 'visible',
   },
   fanCard: {
-    width: 118,
-    height: 164,
-    borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#140818',
     borderWidth: 1,
-    borderColor: 'rgba(240, 215, 140, 0.65)',
-    shadowColor: '#f0d78c',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
+    borderColor: 'rgba(240, 215, 140, 0.72)',
+    shadowColor: '#1a0a04',
   },
-  fanBack: { transform: [{ rotate: '7deg' }] },
   fanImage: { width: '100%', height: '100%' },
   detailName: {
-    color: '#f8e7a2',
-    fontSize: 28,
-    textShadowColor: 'rgba(255, 215, 0, 0.45)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    color: '#fff8e4',
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  detailBody: { color: '#f4efe4', fontSize: 14, lineHeight: 20, marginTop: 8 },
-  detailNote: { color: '#b7a8cf', fontSize: 12, lineHeight: 17, marginTop: 8, marginBottom: 14 },
+  detailBody: {
+    color: '#ffffff',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  detailNote: {
+    color: '#fff4d8',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  detailPrice: {
+    color: '#ffe27a',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '700',
+    marginTop: 10,
+  },
   arrow: {
     width: 42,
     height: 42,
