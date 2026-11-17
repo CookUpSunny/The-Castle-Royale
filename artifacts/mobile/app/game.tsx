@@ -58,6 +58,7 @@ import { portraitMenuButton, portraitOpponentCorner, portraitPlayerCorner } from
 import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
 import { HAND_RAISE, MAIN_HAND_SLOT, finalThreeFrame, handFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
+import { usePileDropHighlight } from '@/hooks/usePileDropHighlight';
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -405,21 +406,22 @@ export default function GameScreen() {
   const dragStartX = useSharedValue(0);
   const dragStartY = useSharedValue(0);
   const dragVisible = useSharedValue(0);
+  const pileX = useSharedValue(0);
+  const pileY = useSharedValue(0);
+  const pileReady = useSharedValue(0);
+  const dragActive = useSharedValue(0);
+  const [pileHighlighted, setPileHighlighted] = useState(false);
+  usePileDropHighlight(dragX, dragY, dragActive, pileX, pileY, pileReady, setPileHighlighted);
 
   const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
     draggingCardRef.current = card;
     setDraggingCard(card);
-    dragX.value = x;
-    dragY.value = y;
+    // Position is already on the UI thread. Do not write dragX/dragY here —
+    // this callback can run after the finger has moved.
     dragStartX.value = x;
     dragStartY.value = y;
     dragVisible.value = withTiming(1, { duration: 80 });
-  }, [dragStartX, dragStartY, dragVisible, dragX, dragY]);
-
-  const handleDragMove = useCallback((x: number, y: number) => {
-    dragX.value = x;
-    dragY.value = y;
-  }, [dragX, dragY]);
+  }, [dragStartX, dragStartY, dragVisible]);
 
   const handleDragEnd = useCallback((x: number, y: number) => {
     const card = draggingCardRef.current;
@@ -627,12 +629,15 @@ export default function GameScreen() {
                   ref={pileViewRef}
                   onLayout={() => {
                     pileViewRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                      pileX.value = pageX + w / 2;
+                      pileY.value = pageY + h / 2;
+                      pileReady.value = 1;
                       const r = { x: pageX, y: pageY, width: w, height: h };
                       setPileRectP((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
                     });
                   }}
                 >
-                  <GlowPile pile={discardPile} lastEventType={lastEventType} />
+                  <GlowPile pile={discardPile} lastEventType={lastEventType} highlighted={pileHighlighted} />
                 </View>
                 <View style={styles.deckSlot}>
                   <DeckBadge count={deckCount} />
@@ -678,8 +683,12 @@ export default function GameScreen() {
                 mustPlayStarter={gameView.mustPlayStarter}
                 draggable={isMyTurn && myHand.length > 0}
                 onDragStart={handleDragStart}
-                onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
+                dragX={dragX}
+                dragY={dragY}
+                dragStartX={dragStartX}
+                dragStartY={dragStartY}
+                dragActive={dragActive}
                 availableWidth={Math.max(240, Math.round(width - insets.left - insets.right - 8))}
               />
             </View>

@@ -6,7 +6,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -46,6 +45,7 @@ import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
 import { landscapeHandWindow } from '@/lib/fanLayout';
 import { emoteDock, finalThreeFrame } from '@/lib/matchChrome';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
+import { usePileDropHighlight } from '@/hooks/usePileDropHighlight';
 import { CharacterScenePlate } from '@/components/CharacterScenePlate';
 import { PlayerMenuButton, PlayerMenuGlass } from '@/components/PlayerMenuButton';
 
@@ -267,10 +267,15 @@ export default function GameLandscape(): React.JSX.Element | null {
   const dragStartX = useSharedValue(0);
   const dragStartY = useSharedValue(0);
   const dragVisible = useSharedValue(0);
+  const pileX = useSharedValue(0);
+  const pileY = useSharedValue(0);
+  const pileReady = useSharedValue(0);
+  const dragActive = useSharedValue(0);
   const [draggingCard, setDraggingCard] = useState<CardType | null>(null);
   const draggingCardRef = useRef<CardType | null>(null);
   const [pileCenter, setPileCenter] = useState<{ x: number; y: number } | null>(null);
   const [pileHighlighted, setPileHighlighted] = useState(false);
+  usePileDropHighlight(dragX, dragY, dragActive, pileX, pileY, pileReady, setPileHighlighted);
   const tableCenterRef = useRef<View>(null);
 
   // Cosmetics — actual avatar portraits for name plates
@@ -368,23 +373,12 @@ export default function GameLandscape(): React.JSX.Element | null {
   const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
     draggingCardRef.current = card;
     setDraggingCard(card);
-    dragX.value = x;
-    dragY.value = y;
+    // Position is already on the UI thread. Do not write dragX/dragY here —
+    // this callback can run after the finger has moved.
     dragStartX.value = x;
     dragStartY.value = y;
     dragVisible.value = withTiming(1, { duration: 80 });
-  }, [dragX, dragY, dragStartX, dragStartY, dragVisible]);
-
-  const handleDragMove = useCallback((x: number, y: number) => {
-    dragX.value = x;
-    dragY.value = y;
-    // Highlight the pile when the card is within drop radius
-    const drop = pileCenter;
-    if (drop) {
-      const dist = Math.sqrt(Math.pow(x - drop.x, 2) + Math.pow(y - drop.y, 2));
-      setPileHighlighted(dist < 110);
-    }
-  }, [dragX, dragY, pileCenter]);
+  }, [dragStartX, dragStartY, dragVisible]);
 
   const handleDragEnd = useCallback((x: number, y: number) => {
     const drop = pileCenter;
@@ -532,7 +526,12 @@ export default function GameLandscape(): React.JSX.Element | null {
             style={styles.tableCenter}
             onLayout={() => {
               tableCenterRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                setPileCenter({ x: pageX + w / 2, y: pageY + h / 2 });
+                const cx = pageX + w / 2;
+                const cy = pageY + h / 2;
+                pileX.value = cx;
+                pileY.value = cy;
+                pileReady.value = 1;
+                setPileCenter({ x: cx, y: cy });
                 const r = { x: pageX, y: pageY, width: w, height: h };
                 setPileRectLs((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
               });
@@ -566,8 +565,12 @@ export default function GameLandscape(): React.JSX.Element | null {
               fanMode="landscape"
               draggable={isMyTurn && myHand.length > 0}
               onDragStart={handleDragStart}
-              onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
+              dragX={dragX}
+              dragY={dragY}
+              dragStartX={dragStartX}
+              dragStartY={dragStartY}
+              dragActive={dragActive}
               availableWidth={handWidth}
             />
           </View>

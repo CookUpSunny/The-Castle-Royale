@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 import Animated, {
   Easing,
   cancelAnimation,
-  runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
@@ -14,6 +13,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { CARD_WIDTH, FAN_CONTAINER_H, computeFanPositions, computeLandscapeFanPositions, landscapeHandWindow } from '@/lib/fanLayout';
@@ -41,8 +41,14 @@ interface PlayerHandProps {
   /** When true, cards can be dragged to the pile in addition to tapped. */
   draggable?: boolean;
   onDragStart?: (card: CardType, x: number, y: number) => void;
-  onDragMove?: (x: number, y: number) => void;
   onDragEnd?: (x: number, y: number) => void;
+  /** Finger position. Written on the UI thread; never mirrored through React state per frame. */
+  dragX?: SharedValue<number>;
+  dragY?: SharedValue<number>;
+  dragStartX?: SharedValue<number>;
+  dragStartY?: SharedValue<number>;
+  /** 1 while a finger is down. The pile reaction reads this instead of React state. */
+  dragActive?: SharedValue<number>;
   /** Override the available width used for fan arc math (defaults to full screen width). Pass when the container is narrower than the screen. */
   availableWidth?: number;
   /** Landscape uses a low wide row cropped on the bottom edge. Portrait keeps the standing fan. */
@@ -61,8 +67,12 @@ function HandCard({
   isStarterPick,
   draggable,
   onDragStart,
-  onDragMove,
   onDragEnd,
+  dragX,
+  dragY,
+  dragStartX,
+  dragStartY,
+  dragActive,
   isSelected,
   isDimmed,
   hoveredIndex,
@@ -77,8 +87,12 @@ function HandCard({
   isStarterPick?: boolean;
   draggable?: boolean;
   onDragStart?: (card: CardType, x: number, y: number) => void;
-  onDragMove?: (x: number, y: number) => void;
   onDragEnd?: (x: number, y: number) => void;
+  dragX?: SharedValue<number>;
+  dragY?: SharedValue<number>;
+  dragStartX?: SharedValue<number>;
+  dragStartY?: SharedValue<number>;
+  dragActive?: SharedValue<number>;
   isSelected?: boolean;
   isDimmed?: boolean;
   hoveredIndex?: SharedValue<number>;
@@ -151,27 +165,40 @@ function HandCard({
   }, [card, isMyTurn, isPlayable, multiplicity, onLongPress]);
 
   const dragGesture = useMemo(() => {
-    if (!draggable || !isMyTurn || !isPlayable) return null;
+    if (!draggable || !isMyTurn || !isPlayable || !dragX || !dragY) return null;
     const _card = card;
     const _onDragStart = onDragStart;
-    const _onDragMove = onDragMove;
     const _onDragEnd = onDragEnd;
+    const _dragX = dragX;
+    const _dragY = dragY;
+    const _dragStartX = dragStartX;
+    const _dragStartY = dragStartY;
+    const _dragActive = dragActive;
     return Gesture.Pan()
       .minDistance(12)
       .onStart((e) => {
         'worklet';
-        if (_onDragStart) runOnJS(_onDragStart)(_card, e.absoluteX, e.absoluteY);
+        _dragX.value = e.absoluteX;
+        _dragY.value = e.absoluteY;
+        if (_dragStartX) _dragStartX.value = e.absoluteX;
+        if (_dragStartY) _dragStartY.value = e.absoluteY;
+        if (_dragActive) _dragActive.value = 1;
+        if (_onDragStart) scheduleOnRN(_onDragStart, _card, e.absoluteX, e.absoluteY);
       })
       .onUpdate((e) => {
         'worklet';
-        if (_onDragMove) runOnJS(_onDragMove)(e.absoluteX, e.absoluteY);
+        _dragX.value = e.absoluteX;
+        _dragY.value = e.absoluteY;
       })
       .onEnd((e) => {
         'worklet';
-        if (_onDragEnd) runOnJS(_onDragEnd)(e.absoluteX, e.absoluteY);
+        _dragX.value = e.absoluteX;
+        _dragY.value = e.absoluteY;
+        if (_dragActive) _dragActive.value = 0;
+        if (_onDragEnd) scheduleOnRN(_onDragEnd, e.absoluteX, e.absoluteY);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draggable, isMyTurn, isPlayable, card]);
+  }, [draggable, isMyTurn, isPlayable, card, dragX, dragY, dragStartX, dragStartY, dragActive]);
 
   const starterGlowStyle = isStarterPick
     ? ({
@@ -255,8 +282,12 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
   mustPlayStarter,
   draggable,
   onDragStart,
-  onDragMove,
   onDragEnd,
+  dragX,
+  dragY,
+  dragStartX,
+  dragStartY,
+  dragActive: dragActiveProp,
   availableWidth,
   fanMode = 'portrait',
 }: PlayerHandProps, ref) {
@@ -291,6 +322,8 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
 
   // ── Drag hover tracking ────────────────────────────────────────────────────
   const hoveredIndex = useSharedValue(-1);
+  const ownedDragActive = useSharedValue(0);
+  const dragActive = dragActiveProp ?? ownedDragActive;
 
   // One layout for the whole hand so every card shares the bottom anchor.
   const fanPositions = useMemo(
@@ -501,8 +534,12 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
                     isStarterPick={card.id === starterPickId}
                     draggable={draggable}
                     onDragStart={onDragStart}
-                    onDragMove={onDragMove}
                     onDragEnd={onDragEnd}
+                    dragX={dragX}
+                    dragY={dragY}
+                    dragStartX={dragStartX}
+                    dragStartY={dragStartY}
+                    dragActive={dragActive}
                     isSelected={isThisSelected}
                     isDimmed={isDimmed}
                     hoveredIndex={draggable ? undefined : hoveredIndex}
