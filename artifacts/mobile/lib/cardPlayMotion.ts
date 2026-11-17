@@ -5,7 +5,7 @@ export interface Point {
 
 export function cardMayPlay(
   card: { value: number },
-  pile: { value: number }[],
+  pile: readonly { value: number }[],
   mustPlayStarter = false,
 ): boolean {
   if (mustPlayStarter) return true;
@@ -16,9 +16,12 @@ export function cardMayPlay(
   return card.value >= top.value;
 }
 
+/** An upward flick at least this fast counts as a play, same as a lift. */
+export const FLICK_UP_VELOCITY = -900;
+
 /**
- * A drag that stays in the hand snaps back. A drag over the pile, or lifted
- * above the hand, plays only when the card is legal.
+ * A drag that stays in the hand snaps back. A drag over the pile, lifted
+ * above the hand, or flicked upward plays only when the card is legal.
  */
 export function resolveDragRelease(input: {
   x: number;
@@ -27,13 +30,15 @@ export function resolveDragRelease(input: {
   pileY: number;
   handTop: number;
   playable: boolean;
+  velocityY?: number;
 }): 'play' | 'snap' {
   if (!input.playable) return 'snap';
   const dx = input.x - input.pileX;
   const dy = input.y - input.pileY;
   const overPile = dx * dx + dy * dy < 120 * 120;
   const lifted = input.y < input.handTop - 12;
-  return overPile || lifted ? 'play' : 'snap';
+  const flickedUp = (input.velocityY ?? 0) < FLICK_UP_VELOCITY;
+  return overPile || lifted || flickedUp ? 'play' : 'snap';
 }
 
 /** Quadratic control point above the straight path, from the player's or opponent's side. */

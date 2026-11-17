@@ -19,8 +19,6 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withSequence,
-  withSpring,
-  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,10 +53,9 @@ import { layoutRectsCloseEnough } from '@/lib/layoutRect';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 import { hashName, resolveOpponentAvatarId } from '@/lib/avatarPortrait';
 import { portraitMenuButton, portraitOpponentCorner, portraitPlayerCorner } from '@/lib/characterSceneLayout';
-import { cardMayPlay, resolveDragRelease } from '@/lib/cardPlayMotion';
 import { HAND_RAISE, MAIN_HAND_SLOT, finalThreeFrame, handFrame } from '@/lib/matchChrome';
+import { useCardThrow } from '@/hooks/useCardThrow';
 import { useEndCurtain } from '@/hooks/useEndCurtain';
-import { usePileDropHighlight } from '@/hooks/usePileDropHighlight';
 
 function fakeCoins(name: string): string {
   const v = 50000 + (hashName(name) % 150000);
@@ -352,7 +349,8 @@ export default function GameScreen() {
 
   const { 
     gameView, playerName, setPlayerName, playCard, playCards, pickupPile: doPickup, clearGame, leaveGame, 
-    opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble 
+    opponentDisconnected, opponentReconnecting, sendEmote, myEmoteBubble, opponentEmoteBubble,
+    playErrorSeq,
   } = useGame();
   const cosmetics = useCosmetics();
   const myAvatarPortrait = useMemo(
@@ -399,57 +397,21 @@ export default function GameScreen() {
   const selfHandRef = useRef<View>(null);
   const opponentZoneRef = useRef<View>(null);
   const playerHandRef = useRef<PlayerHandRef>(null);
-  const draggingCardRef = useRef<CardType | null>(null);
-  const [draggingCard, setDraggingCard] = useState<CardType | null>(null);
-  const dragX = useSharedValue(0);
-  const dragY = useSharedValue(0);
-  const dragStartX = useSharedValue(0);
-  const dragStartY = useSharedValue(0);
-  const dragVisible = useSharedValue(0);
-  const pileX = useSharedValue(0);
-  const pileY = useSharedValue(0);
-  const pileReady = useSharedValue(0);
-  const dragActive = useSharedValue(0);
-  const [pileHighlighted, setPileHighlighted] = useState(false);
-  usePileDropHighlight(dragX, dragY, dragActive, pileX, pileY, pileReady, setPileHighlighted);
-
-  const handleDragStart = useCallback((card: CardType, x: number, y: number) => {
-    draggingCardRef.current = card;
-    setDraggingCard(card);
-    // Position is already on the UI thread. Do not write dragX/dragY here —
-    // this callback can run after the finger has moved.
-    dragStartX.value = x;
-    dragStartY.value = y;
-    dragVisible.value = withTiming(1, { duration: 80 });
-  }, [dragStartX, dragStartY, dragVisible]);
-
-  const handleDragEnd = useCallback((x: number, y: number) => {
-    const card = draggingCardRef.current;
-    const pile = pileRectP;
-    const pileX = pile ? pile.x + pile.width / 2 : width / 2;
-    const pileY = pile ? pile.y + pile.height / 2 : height / 2;
-    const handTop = selfHandRectP?.y ?? height * 0.7;
-    const playable = !!card && cardMayPlay(card, gameView?.discardPile ?? [], gameView?.mustPlayStarter);
-    const decision = card
-      ? resolveDragRelease({ x, y, pileX, pileY, handTop, playable })
-      : 'snap';
-    if (decision === 'play' && card) {
-      playCard(card.id);
-      dragVisible.value = withTiming(0, { duration: 80 });
-      setTimeout(() => {
-        setDraggingCard(null);
-        draggingCardRef.current = null;
-      }, 90);
-      return;
-    }
-    dragX.value = withSpring(dragStartX.value, { damping: 20, stiffness: 200 });
-    dragY.value = withSpring(dragStartY.value, { damping: 20, stiffness: 200 });
-    dragVisible.value = withDelay(180, withTiming(0, { duration: 120 }));
-    setTimeout(() => {
-      setDraggingCard(null);
-      draggingCardRef.current = null;
-    }, 320);
-  }, [dragStartX, dragStartY, dragVisible, dragX, dragY, gameView, height, pileRectP, playCard, selfHandRectP, width]);
+  const thrown = useCardThrow({
+    discardPile: gameView?.discardPile ?? [],
+    mustPlayStarter: gameView?.mustPlayStarter,
+    handTop: selfHandRectP?.y ?? height * 0.7,
+    myPlayerId: gameView?.myPlayerId ?? '',
+    lastEvent: gameView?.lastEvent,
+    handIds: gameView?.myHand.map((card) => card.id) ?? [],
+    playErrorSeq,
+    playCard,
+  });
+  const {
+    dragX, dragY, dragStartX, dragStartY, dragVisible, dragScale, dragActive,
+    draggingCard, heldCardId, pendingPlayId, skipCardId, tapOrigin, pileHighlighted,
+    placePile, onDragStart: handleDragStart, onDragEnd: handleDragEnd, onFanPlay,
+  } = thrown;
 
   // End-game curtain — covers the game board, then navigates to victory behind it.
   // Portrait only; landscape owns its own curtain. The hook waits out the
@@ -629,9 +591,7 @@ export default function GameScreen() {
                   ref={pileViewRef}
                   onLayout={() => {
                     pileViewRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                      pileX.value = pageX + w / 2;
-                      pileY.value = pageY + h / 2;
-                      pileReady.value = 1;
+                      placePile(pageX, pageY, w, h);
                       const r = { x: pageX, y: pageY, width: w, height: h };
                       setPileRectP((prev) => (layoutRectsCloseEnough(prev, r) ? prev : r));
                     });
@@ -680,6 +640,9 @@ export default function GameScreen() {
                 isMyTurn={isMyTurn}
                 onPlayCard={playCard}
                 onPlayCards={playCards}
+                onFanPlay={onFanPlay}
+                heldCardId={heldCardId}
+                pendingPlayId={pendingPlayId}
                 mustPlayStarter={gameView.mustPlayStarter}
                 draggable={isMyTurn && myHand.length > 0}
                 onDragStart={handleDragStart}
@@ -704,6 +667,7 @@ export default function GameScreen() {
               dragX={dragX}
               dragY={dragY}
               dragVisible={dragVisible}
+              dragScale={dragScale}
               anchorX={33}
               anchorY={70}
             />
@@ -744,6 +708,8 @@ export default function GameScreen() {
               opponentZoneRect={opponentZoneRectP}
               onAvatarPulse={() => {}}
               initialLastKey={gameView.lastEvent ? lastEventIdentityKey(gameView.gameId, gameView.lastEvent) : null}
+              skipCardId={skipCardId}
+              originOverride={tapOrigin}
             />
           )}
 
