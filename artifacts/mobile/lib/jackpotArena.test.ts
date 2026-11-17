@@ -10,6 +10,7 @@ import {
   JACKPOT_ARENA_NAME,
   JACKPOT_BURST_SCRIPT,
   JACKPOT_FELT,
+  JACKPOT_MAX_DPR,
   JACKPOT_ORIGIN_WHITELIST,
   jackpotLoadAllowed,
   jackpotPage,
@@ -30,15 +31,22 @@ test('Jackpot keeps Casino Green’s id and stays free', () => {
   assert.equal(jackpotPage(390, 844), 'portrait');
 });
 
-test('the embedded arena has no external loads and keeps the tuned burst', () => {
-  for (const file of ['jackpotArenaHtml.ts', 'jackpotArenaLandscapeHtml.ts']) {
-    const source = fs.readFileSync(path.join(__dirname, '../components', file), 'utf8');
+test('the arena pages are assets, cap pixels at 2x, and keep the tuned burst', () => {
+  assert.equal(JACKPOT_MAX_DPR, 2);
+  assert.equal(fs.existsSync(path.join(__dirname, '../components/jackpotArenaHtml.ts')), false);
+  assert.equal(fs.existsSync(path.join(__dirname, '../components/jackpotArenaLandscapeHtml.ts')), false);
+  for (const file of ['portrait.html', 'landscape.html']) {
+    const source = fs.readFileSync(path.join(__dirname, '../assets/jackpot', file), 'utf8');
     assert.equal(source.includes('http://'), false, file);
     assert.equal(source.includes('https://'), false, file);
     assert.equal(source.includes('window.castleJackpot'), true, file);
+    assert.equal(source.includes(`Math.min(window.devicePixelRatio||1,${JACKPOT_MAX_DPR})`), true, file);
+    assert.equal(source.includes('Math.min(window.devicePixelRatio||1,3)'), false, file);
   }
-  const portrait = fs.readFileSync(path.join(__dirname, '../components/jackpotArenaHtml.ts'), 'utf8');
+  const portrait = fs.readFileSync(path.join(__dirname, '../assets/jackpot/portrait.html'), 'utf8');
   assert.equal(portrait.includes('ticker 0.58'), true);
+  const landscape = fs.readFileSync(path.join(__dirname, '../assets/jackpot/landscape.html'), 'utf8');
+  assert.equal(landscape.includes('Jackpot Spin (Landscape)'), true);
   assert.equal(JACKPOT_BURST_SCRIPT.includes('window.castleJackpot()'), true);
   assert.deepEqual(JACKPOT_ORIGIN_WHITELIST, ['about:blank', 'data:']);
   assert.equal(jackpotLoadAllowed('about:blank'), true);
