@@ -10,7 +10,7 @@ interface ArenaBackgroundProps {
 }
 
 export const ARENA_IMAGES: Partial<Record<ArenaId, number>> = {
-  greenTable: require('@/assets/arenas/jackpot-still.jpg') as number,
+  greenTable: require('@/assets/arenas/jackpot-avatar.webp') as number,
   classic:   require('@/assets/arenas/flamingo_floor.png') as number,
   cosmic:    require('@/assets/arenas/cosmic_sanctum.png') as number,
   royal:     require('@/assets/arenas/olympus_throne.png') as number,
