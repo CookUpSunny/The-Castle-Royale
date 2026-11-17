@@ -342,8 +342,6 @@ export default function GameLandscape(): React.JSX.Element | null {
       if (Platform.OS === 'ios') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       }
-    } else if (ev.type === 'pickup') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     }
   }, [gameView?.lastEvent]);
 

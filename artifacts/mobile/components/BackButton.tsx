@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, type TextStyle, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, type TextStyle, type ViewStyle } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { useColors } from '@/hooks/useColors';
 
 interface BackButtonProps {
@@ -12,13 +13,9 @@ interface BackButtonProps {
 export default function BackButton({ label = '← BACK', onPress, style, labelStyle }: BackButtonProps) {
   const colors = useColors();
   return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={12}
-      style={({ pressed }) => [styles.btn, style, pressed && { opacity: 0.6 }]}
-    >
+    <PressableScale onPress={onPress} style={[styles.btn, style]}>
       <Text style={[styles.text, { color: colors.mutedForeground }, labelStyle]}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 

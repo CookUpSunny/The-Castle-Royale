@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PressableScale from '@/components/PressableScale';
 import { ARENAS, AVATARS, CARD_SKINS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
@@ -74,16 +75,16 @@ function GrandscapePackTile({
           ? 'UNAVAILABLE'
           : 'TAP TO EQUIP';
   return (
-    <Pressable
+    <PressableScale
       testID="grandscape-mirror-pack-tile"
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.cardBackTile,
         {
           width,
           borderColor: highlighted ? '#ffd700' : 'rgba(255,255,255,0.10)',
           borderWidth: highlighted ? 2.5 : 1,
-          opacity: pressed ? 0.88 : status === 'unavailable' || status === 'checking' ? 0.72 : 1,
+          opacity: status === 'unavailable' || status === 'checking' ? 0.72 : 1,
         },
       ]}
     >
@@ -106,7 +107,7 @@ function GrandscapePackTile({
         <Text style={styles.packPrice}>{priceLabel}</Text>
       )}
       <Text style={styles.selectedBadgeText}>{caption}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -318,10 +319,10 @@ export default function ArenaPickerScreen() {
               const bakedCard = av.selectionFrame != null || av.framed === true;
               const pickerSource = av.selectionFrame ?? av.portrait;
               return (
-                <Pressable
+                <PressableScale
                   key={av.id}
                   onPress={() => setAvatarOverride(av.id)}
-                  style={({ pressed }) => [
+                  style={[
                     styles.avatarCard,
                     {
                       width: avatarCardWidth,
@@ -333,7 +334,6 @@ export default function ArenaPickerScreen() {
                       shadowRadius: 20,
                       shadowOffset: { width: 0, height: 0 },
                       elevation: isSelected ? 14 : 0,
-                      opacity: pressed ? 0.88 : 1,
                     },
                   ]}
                 >
@@ -367,7 +367,7 @@ export default function ArenaPickerScreen() {
                     </OutlinedText>
                   </View>
                   )}
-                </Pressable>
+                </PressableScale>
               );
             })}
           </ScrollView>
@@ -416,19 +416,18 @@ export default function ArenaPickerScreen() {
             {cardChoices.map((skin) => {
               const isSelected = !packHighlighted && selectedCard === skin.id;
               return (
-                <Pressable
+                <PressableScale
                   key={skin.id}
                   onPress={() => {
                     setPackOverride(false);
                     setCardOverride(skin.id);
                   }}
-                  style={({ pressed }) => [
+                  style={[
                     styles.cardBackTile,
                     {
                       width: cardPreviewWidth,
                       borderColor: isSelected ? '#ffd700' : 'rgba(255,255,255,0.10)',
                       borderWidth: isSelected ? 2.5 : 1,
-                      opacity: pressed ? 0.88 : 1,
                     },
                   ]}
                 >
@@ -437,7 +436,7 @@ export default function ArenaPickerScreen() {
                     {skin.name}
                   </Text>
                   {isSelected ? <Text style={styles.selectedBadgeText}>✓  SELECTED</Text> : null}
-                </Pressable>
+                </PressableScale>
               );
             })}
           </ScrollView>
@@ -455,7 +454,7 @@ export default function ArenaPickerScreen() {
           const isLocked = arenaItem.premium && !isSubscribed;
 
           return (
-            <Pressable
+            <PressableScale
               key={arenaItem.id}
               onPress={() => {
                 if (isLocked) {
@@ -465,14 +464,14 @@ export default function ArenaPickerScreen() {
                 }
                 setArenaOverride(arenaItem.id);
               }}
-              style={({ pressed }) => [
+              style={[
                 styles.arenaCard,
                 {
                   width: arenaCardWidth,
                   height: shortFold ? 148 : 200,
                   borderColor: isSelected ? '#ffd700' : 'rgba(255,255,255,0.10)',
                   borderWidth: isSelected ? 2.5 : 1,
-                  opacity: isLocked ? 0.62 : pressed ? 0.88 : 1,
+                  opacity: isLocked ? 0.62 : 1,
                 },
               ]}
             >
@@ -508,7 +507,7 @@ export default function ArenaPickerScreen() {
                   </Text>
                 </View>
               </View>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </ScrollView>
@@ -517,10 +516,10 @@ export default function ArenaPickerScreen() {
       {book ? <View pointerEvents="none" style={{ width: duo.creaseBand }} /> : null}
 
       <View style={[book ? styles.confirmSide : styles.confirmBar, { paddingBottom: insets.bottom + 18, paddingLeft: book ? 24 : insets.left + 24, paddingRight: insets.right + 24 }]}>
-        <Pressable
+        <PressableScale
           onPress={handleConfirm}
           disabled={connectionStatus !== 'connected'}
-          style={({ pressed }) => [styles.confirmOuter, pressed && { opacity: 0.88 }]}
+          style={styles.confirmOuter}
         >
           <LinearGradient
             colors={
@@ -541,7 +540,7 @@ export default function ArenaPickerScreen() {
               {connectionStatus === 'connected' ? 'ENTER THE ARENA' : 'CONNECTING...'}
             </Text>
           </LinearGradient>
-        </Pressable>
+        </PressableScale>
         {book ? (
           <Text style={[styles.subtitle, { color: colors.mutedForeground, marginTop: 16 }]}>
             Play stays free. Memberships are cosmetic.

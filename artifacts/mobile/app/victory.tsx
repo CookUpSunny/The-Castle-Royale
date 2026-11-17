@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import BackButton from '@/components/BackButton';
+import PressableScale from '@/components/PressableScale';
 import CardCurtain from '@/components/CardCurtain';
 import Animated, {
   cancelAnimation,
@@ -451,12 +452,12 @@ export default function VictoryScreen() {
             ) : null}
 
             <View style={[styles.buttonSection, split && { flex: 1, justifyContent: 'center' }]}>
-              <Pressable
+              <PressableScale
                 onPress={handlePlayAgain}
-                style={({ pressed }) => [styles.lossPrimaryBtn, pressed && { opacity: 0.8 }]}
+                style={styles.lossPrimaryBtn}
               >
                 <Text style={[styles.lossPrimaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
-              </Pressable>
+              </PressableScale>
               <Pressable onPress={handleLobby} style={styles.lossSecondaryBtn}>
                 <Text style={[styles.lossSecondaryBtnText, { fontFamily: cinzelRegular }]}>BACK TO LOBBY</Text>
               </Pressable>
@@ -511,9 +512,9 @@ export default function VictoryScreen() {
           ) : null}
 
           <View style={[styles.buttonSection, split && { flex: 1, justifyContent: 'center' }]}>
-            <Pressable
+            <PressableScale
               onPress={handlePlayAgain}
-              style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}
+              style={styles.primaryBtn}
             >
               <LinearGradient
                 colors={['#fbbf24', '#f59e0b', '#d97706']}
@@ -521,7 +522,7 @@ export default function VictoryScreen() {
               >
                 <Text style={[styles.primaryBtnText, { fontFamily: cinzelBold }]}>PLAY AGAIN</Text>
               </LinearGradient>
-            </Pressable>
+            </PressableScale>
 
             <Pressable
               onPress={handleLobby}

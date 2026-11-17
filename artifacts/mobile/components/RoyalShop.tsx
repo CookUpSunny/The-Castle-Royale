@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { ARENAS, useCosmetics } from '@/contexts/CosmeticsContext';
+import PressableScale from '@/components/PressableScale';
 import SceneBackground from '@/components/SceneBackground';
 import { ARENA_IMAGES } from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
@@ -502,10 +503,9 @@ function ShopTile({
         : null;
   const badge = state.status === 'equipped' ? 'Equipped' : state.status === 'owned' ? 'Owned' : null;
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
       onPress={onPress}
-      style={({ pressed }) => [pressed && { opacity: 0.92 }]}
     >
       <OrnateGoldFrame width={width} height={height} equipped={state.status === 'equipped'}>
         {art}
@@ -532,7 +532,7 @@ function ShopTile({
           ) : null}
         </LinearGradient>
       </OrnateGoldFrame>
-    </Pressable>
+    </PressableScale>
   );
 }
 

@@ -13,9 +13,7 @@ import Animated, {
 import { useColors } from '@/hooks/useColors';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { PLAYER_MENU_HIT, togglePlayerMenu } from '@/lib/characterSceneLayout';
-
-const PRESS = { damping: 16, stiffness: 420 };
-const REBOUND = { damping: 9, stiffness: 260 };
+import { EASE_OUT } from '@/lib/motion';
 
 /** Royal 3D control that opens the name and sound menu. */
 export function PlayerMenuButton({
@@ -42,14 +40,14 @@ export function PlayerMenuButton({
       accessibilityRole="button"
       accessibilityLabel="Player menu"
       onPressIn={() => {
-        scale.value = withSpring(0.9, PRESS);
-        drop.value = withSpring(3, PRESS);
-        shade.value = withSpring(4, PRESS);
+        scale.value = withTiming(0.97, { duration: 120, easing: EASE_OUT });
+        drop.value = withTiming(3, { duration: 120, easing: EASE_OUT });
+        shade.value = withTiming(4, { duration: 120, easing: EASE_OUT });
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, REBOUND);
-        drop.value = withSpring(0, REBOUND);
-        shade.value = withSpring(14, REBOUND);
+        scale.value = withTiming(1, { duration: 160, easing: EASE_OUT });
+        drop.value = withTiming(0, { duration: 160, easing: EASE_OUT });
+        shade.value = withTiming(14, { duration: 160, easing: EASE_OUT });
       }}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});

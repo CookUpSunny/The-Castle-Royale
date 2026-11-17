@@ -8,9 +8,9 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { EASE_OUT } from '@/lib/motion';
 import { type Card as CardType, getCardLabel, getSuitSymbol, isRedSuit } from '@/contexts/GameContext';
 import { type CardSkinId, type ArenaId, useCosmetics } from '@/contexts/CosmeticsContext';
 import { CARD_BACK_IMAGES } from '@/lib/cardBackImages';
@@ -471,8 +471,12 @@ export default function Card({ card, faceDown, size = 'md', onPress, onLongPress
     transform: [{ scale: multiPulse.value }],
   }));
 
-  const handlePressIn = () => { scale.value = withTiming(0.92, { duration: 80 }); };
-  const handlePressOut = () => { scale.value = withSpring(1, { damping: 12, stiffness: 200 }); };
+  const handlePressIn = () => {
+    scale.value = withTiming(0.97, { duration: 120, easing: EASE_OUT });
+  };
+  const handlePressOut = () => {
+    scale.value = withTiming(1, { duration: 160, easing: EASE_OUT });
+  };
 
   // ── Early return for face-down / missing card (AFTER all hooks) ────────────
   if (faceDown || !card) {
