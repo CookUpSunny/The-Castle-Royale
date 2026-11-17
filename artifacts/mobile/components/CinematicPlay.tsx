@@ -5,6 +5,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { EASE_OUT } from '@/lib/motion';
 import { softenedFadeMs } from '@/lib/reducedMotion';
+import { selfPlayPresentation } from '@/lib/selfPlay';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
 import type { LayoutRect } from '@/components/CardPlayFlight';
@@ -173,8 +174,9 @@ export default function CinematicPlay({
       setFlight((cur) => (cur?.key === key ? null : cur));
     };
 
-    const flightMs = reduced ? softenedFadeMs(180, true) : 480;
-    const anticipationMs = reduced ? 0 : 90;
+    const presentation = selfPlayPresentation({ side, type: ev.type });
+    const flightMs = reduced ? softenedFadeMs(180, true) : presentation.flightMs;
+    const anticipationMs = reduced ? 0 : presentation.anticipationMs;
 
     trigger.value = trigger.value + 1;
     if (reduced) {
@@ -189,28 +191,35 @@ export default function CinematicPlay({
       });
       return;
     }
-    progress.value = withSequence(
-      // Easing.in accelerates into the pullback so velocity carries through
-      // into the launch — eliminates the near-zero velocity stutter that
-      // Easing.out caused at the anticipation→flight handoff.
-      withTiming(-0.10, { duration: anticipationMs, easing: Easing.in(Easing.quad) }),
-      withTiming(1, { duration: flightMs, easing: Easing.out(Easing.cubic) }, (finished) => {
-        if (!finished) return;
-        impact.value = withSequence(
-          withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) }),
-          withTiming(0, { duration: 220, easing: Easing.in(Easing.cubic) }),
+    const land = (finished?: boolean) => {
+      'worklet';
+      if (!finished) return;
+      impact.value = withSequence(
+        withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) }),
+        withTiming(0, { duration: 220, easing: Easing.in(Easing.cubic) }),
+      );
+      runOnJS(finish)();
+    };
+    progress.value = anticipationMs === 0
+      ? withTiming(1, { duration: flightMs, easing: Easing.out(Easing.cubic) }, land)
+      : withSequence(
+          // Easing.in accelerates into the pullback so velocity carries through
+          // into the launch — eliminates the near-zero velocity stutter that
+          // Easing.out caused at the anticipation→flight handoff.
+          withTiming(-0.10, { duration: anticipationMs, easing: Easing.in(Easing.quad) }),
+          withTiming(1, { duration: flightMs, easing: Easing.out(Easing.cubic) }, land),
         );
-        runOnJS(finish)();
-      }),
-    );
   // eslint-disable-next-line react-hooks/exhaustive-deps -- Reanimated SVs are mutated here, not read as deps
   }, [gameId, lastEvent, myPlayerId, pileRect, selfHandRect, opponentZoneRect, onAvatarPulse, skipCardId, originOverride, reduced]);
 
-  const spotlightStrength: SpotlightStrength = flight
+  const presentation = flight && lastEvent
+    ? selfPlayPresentation({ side: flight.side, type: lastEvent.type })
+    : null;
+  const spotlightStrength: SpotlightStrength = flight && presentation?.spotlight
     ? (lastEvent ? spotlightFromEvent(lastEvent) : 'soft')
     : 'off';
 
-  const enableHand = !!flight && flight.side === 'self' && (lastEvent?.type === 'normal' || lastEvent?.type === 'reset');
+  const enableHand = !!flight && !!presentation?.hand;
 
   // Lead card — full 3D tilt driven inline from progress.value.
   // rotateX: parabola 12° → −8° → 0°   rotateY: sin-bank in travel direction.
