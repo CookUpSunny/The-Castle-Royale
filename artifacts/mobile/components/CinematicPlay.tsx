@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, StyleSheet, View } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import { StyleSheet, View } from 'react-native';
+import Animated, { Easing, ReduceMotion, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { EASE_OUT } from '@/lib/motion';
+import { softenedFadeMs } from '@/lib/reducedMotion';
 import Card from '@/components/Card';
 import type { Card as CardType, LastEvent } from '@/contexts/GameContext';
 import type { LayoutRect } from '@/components/CardPlayFlight';
@@ -95,11 +97,10 @@ export default function CinematicPlay({
   const sideDir = useSharedValue(1);
   const plainMotion = useSharedValue(0);
 
+  const reduced = useMotionPreference();
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
-      plainMotion.value = value ? 1 : 0;
-    }).catch(() => {});
-  }, [plainMotion]);
+    plainMotion.value = reduced ? 1 : 0;
+  }, [plainMotion, reduced]);
 
   const [spotTrigger, setSpotTrigger] = useState(0);
   const [impactOnly, setImpactOnly] = useState(false);
@@ -134,8 +135,8 @@ export default function CinematicPlay({
       const finishImpact = () => setImpactOnly(false);
       impact.value = 0;
       impact.value = withSequence(
-        withTiming(1, { duration: 90, easing: EASE_OUT }),
-        withTiming(0, { duration: 220, easing: EASE_OUT }, (finished) => {
+        withTiming(1, { duration: softenedFadeMs(90, reduced), easing: EASE_OUT, reduceMotion: ReduceMotion.Never }),
+        withTiming(0, { duration: softenedFadeMs(220, reduced), easing: EASE_OUT, reduceMotion: ReduceMotion.Never }, (finished) => {
           if (finished) scheduleOnRN(finishImpact);
         }),
       );
@@ -172,10 +173,22 @@ export default function CinematicPlay({
       setFlight((cur) => (cur?.key === key ? null : cur));
     };
 
-    const flightMs = 480;
-    const anticipationMs = 90;
+    const flightMs = reduced ? softenedFadeMs(180, true) : 480;
+    const anticipationMs = reduced ? 0 : 90;
 
     trigger.value = trigger.value + 1;
+    if (reduced) {
+      progress.value = withTiming(1, {
+        duration: flightMs,
+        easing: EASE_OUT,
+        reduceMotion: ReduceMotion.Never,
+      }, (finished) => {
+        if (!finished) return;
+        impact.value = withTiming(1, { duration: 90, easing: EASE_OUT, reduceMotion: ReduceMotion.Never });
+        runOnJS(finish)();
+      });
+      return;
+    }
     progress.value = withSequence(
       // Easing.in accelerates into the pullback so velocity carries through
       // into the launch — eliminates the near-zero velocity stutter that
@@ -191,7 +204,7 @@ export default function CinematicPlay({
       }),
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps -- Reanimated SVs are mutated here, not read as deps
-  }, [gameId, lastEvent, myPlayerId, pileRect, selfHandRect, opponentZoneRect, onAvatarPulse, skipCardId, originOverride]);
+  }, [gameId, lastEvent, myPlayerId, pileRect, selfHandRect, opponentZoneRect, onAvatarPulse, skipCardId, originOverride, reduced]);
 
   const spotlightStrength: SpotlightStrength = flight
     ? (lastEvent ? spotlightFromEvent(lastEvent) : 'soft')
@@ -207,7 +220,9 @@ export default function CinematicPlay({
     const omt = 1 - t;
     const bx = omt * omt * sx.value + 2 * omt * t * cx.value + t * t * ex.value;
     const by = omt * omt * sy.value + 2 * omt * t * cy.value + t * t * ey.value;
-    const fade = t > 0.92 ? 1 - (t - 0.92) / 0.08 : 1;
+    const fade = plainMotion.value > 0
+      ? 1 - t
+      : (t > 0.92 ? 1 - (t - 0.92) / 0.08 : 1);
 
     const ant = rawT < 0 ? rawT / -0.10 : 0;
     const antX = ant * (sideDir.value > 0 ? -10 : 10);
@@ -221,8 +236,8 @@ export default function CinematicPlay({
 
     return {
       position: 'absolute',
-      left: bx + antX,
-      top: by + antY,
+      left: plainMotion.value > 0 ? ex.value : bx + antX,
+      top: plainMotion.value > 0 ? ey.value : by + antY,
       opacity: fade,
       shadowColor: '#000000',
       shadowOpacity: plainMotion.value > 0 ? 0 : 0.28 + t * 0.35,
@@ -250,7 +265,7 @@ export default function CinematicPlay({
       const omt = 1 - t;
       const bx = omt * omt * sx.value + 2 * omt * t * cx.value + t * t * ex.value;
       const by = omt * omt * sy.value + 2 * omt * t * cy.value + t * t * ey.value;
-      const o = (1 - t0) * 0.16;
+      const o = plainMotion.value > 0 ? 0 : (1 - t0) * 0.16;
 
       const rX = tiltRotX(t) * 0.4;
       const rY = tiltRotY(t, sideDir.value) * 0.4;

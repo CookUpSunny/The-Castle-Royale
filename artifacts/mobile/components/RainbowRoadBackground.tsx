@@ -16,9 +16,11 @@ import {
   makeMutable,
   withRepeat,
   withTiming,
+  cancelAnimation,
   Easing,
   type SharedValue,
 } from "react-native-reanimated";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import {
   buildRoadSamples,
@@ -82,18 +84,24 @@ function generateStars(w: number, h: number): StarData[] {
   }));
 }
 
-const TwinkleStar = ({ star }: { star: StarData }) => {
+const TwinkleStar = ({ star, active }: { star: StarData; active: boolean }) => {
   const opacity = useSharedValue(star.baseOpacity);
   const target = useRef(rand(0.1, 0.7)).current;
   const duration = useRef(rand(1800, 4500)).current;
 
   useEffect(() => {
+    if (!active) {
+      cancelAnimation(opacity);
+      opacity.value = star.baseOpacity;
+      return;
+    }
     opacity.value = withRepeat(
       withTiming(target, { duration, easing: Easing.inOut(Easing.sin) }),
       -1,
       true,
     );
-  }, []);
+    return () => cancelAnimation(opacity);
+  }, [active, duration, opacity, star.baseOpacity, target]);
 
   return (
     <Circle cx={star.cx} cy={star.cy} r={star.r} color="white" opacity={opacity} />
@@ -138,9 +146,10 @@ interface TrollTrailProps {
   startOffset: number;
   samples: RoadSample[];
   t: SharedValue<number>;
+  active: boolean;
 }
 
-const TrollTrail = ({ startOffset, samples, t }: TrollTrailProps) => {
+const TrollTrail = ({ startOffset, samples, t, active }: TrollTrailProps) => {
   const n = PARTICLES_PER_TROLL;
 
   /**
@@ -167,7 +176,7 @@ const TrollTrail = ({ startOffset, samples, t }: TrollTrailProps) => {
   const spawnIdx = useSharedValue(0);
   const spawnCount = useSharedValue(0);
 
-  useFrameCallback((info) => {
+  const frame = useFrameCallback((info) => {
     const dt = info.timeSincePreviousFrame ?? 16;
     const st = sim.value;
     const bo = bops.value;
@@ -228,7 +237,11 @@ const TrollTrail = ({ startOffset, samples, t }: TrollTrailProps) => {
     // whether Reanimated stores arrays by reference or by copy on the UI thread.
     sim.value = st;
     bops.value = bo;
-  });
+  }, active);
+
+  useEffect(() => {
+    frame.setActive(active);
+  }, [active, frame]);
 
   return (
     <Group>
@@ -475,13 +488,20 @@ export default function RainbowRoadBackground() {
 
   // Single master clock so each troll's sprite and glitter trail stay in sync.
   const ride = useSharedValue(0);
+  const reduced = useMotionPreference();
   useEffect(() => {
+    if (reduced) {
+      cancelAnimation(ride);
+      ride.value = 0;
+      return;
+    }
     ride.value = withRepeat(
       withTiming(1, { duration: 8000, easing: Easing.linear }),
       -1,
       false,
     );
-  }, []);
+    return () => cancelAnimation(ride);
+  }, [reduced, ride]);
 
   const tracePreviewPaths = useMemo(
     () =>
@@ -645,7 +665,7 @@ export default function RainbowRoadBackground() {
         )}
 
         {stars.map((star, i) => (
-          <TwinkleStar key={i} star={star} />
+          <TwinkleStar key={i} star={star} active={!reduced} />
         ))}
 
         {/* Glitter trails: behind the avatars, above the road / edge highlights. */}
@@ -656,6 +676,7 @@ export default function RainbowRoadBackground() {
               startOffset={troll.startOffset}
               samples={samples}
               t={ride}
+              active={!reduced}
             />
           ))}
 

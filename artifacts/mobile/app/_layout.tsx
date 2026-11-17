@@ -9,11 +9,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { LaunchIntro } from '@/components/LaunchIntro';
 import AdBreakHost from '@/components/AdBreakHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -129,41 +130,29 @@ function RootLayoutBody() {
   const [showIntro, setShowIntro] = useState(false);
   const [introResolved, setIntroResolved] = useState(launchIntroConsumed);
   const [frameReady, setFrameReady] = useState(false);
+  const reduceMotion = useMotionPreference();
 
   useEffect(() => {
     if (launchIntroConsumed) {
       setIntroResolved(true);
       return;
     }
-    let cancelled = false;
     const giveUp = setTimeout(() => {
-      if (cancelled) return;
       launchIntroConsumed = true;
       setShowIntro(false);
       setIntroResolved(true);
     }, 6000);
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((reduceMotion) => {
-        if (cancelled || launchIntroConsumed) return;
-        if (!shouldPlayLaunchIntro({ reduceMotion, alreadyPlayed: false })) {
-          launchIntroConsumed = true;
-          setShowIntro(false);
-          setIntroResolved(true);
-          return;
-        }
-        launchIntroConsumed = true;
-        setShowIntro(true);
-      })
-      .catch(() => {
-        if (cancelled || launchIntroConsumed) return;
-        launchIntroConsumed = true;
-        setShowIntro(true);
-      });
-    return () => {
-      cancelled = true;
+    if (!shouldPlayLaunchIntro({ reduceMotion, alreadyPlayed: false })) {
+      launchIntroConsumed = true;
+      setShowIntro(false);
+      setIntroResolved(true);
       clearTimeout(giveUp);
-    };
-  }, []);
+      return;
+    }
+    launchIntroConsumed = true;
+    setShowIntro(true);
+    return () => clearTimeout(giveUp);
+  }, [reduceMotion]);
 
   const finishIntro = () => {
     launchIntroConsumed = true;

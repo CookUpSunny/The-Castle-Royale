@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -13,6 +14,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { type Card as CardType } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { overlayHoldMs, softenedFadeMs } from '@/lib/reducedMotion';
 import CardComponent from './Card';
 
 interface MultiPlayBurstProps {
@@ -61,16 +64,30 @@ export default function MultiPlayBurst({ card, count, who, onComplete }: MultiPl
   const flash = useSharedValue(0);
 
   const fanCount = Math.min(safeCount, 4);
+  const reduced = useMotionPreference();
 
   useEffect(() => {
+    const hold = overlayHoldMs('multiPlayBurst', reduced);
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(haptic).catch(() => {});
-      if (safeCount >= 3) {
+      if (!reduced && safeCount >= 3) {
         setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
       }
-      if (safeCount >= 4) {
+      if (!reduced && safeCount >= 4) {
         setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 380);
       }
+    }
+    if (reduced) {
+      const fade = { duration: softenedFadeMs(180, true), reduceMotion: ReduceMotion.Never };
+      cardsOpacity.value = withTiming(1, fade);
+      bannerOpacity.value = withTiming(1, fade);
+      cardsScale.value = 1;
+      cardsY.value = 0;
+      bannerScale.value = 1;
+      bannerY.value = 0;
+      multPop.value = 1;
+      const completeTimer = setTimeout(() => onCompleteRef.current(), hold);
+      return () => clearTimeout(completeTimer);
     }
 
     // Cards fly in
@@ -121,7 +138,7 @@ export default function MultiPlayBurst({ card, count, who, onComplete }: MultiPl
     // created an inline arrow inside the worklet, which is brittle and can
     // skip onComplete entirely — leaving the overlay mounted, which then
     // accumulates animation work as new bursts arrive.
-    const completeTimer = setTimeout(() => onCompleteRef.current(), 1700);
+    const completeTimer = setTimeout(() => onCompleteRef.current(), hold);
     return () => clearTimeout(completeTimer);
   }, [
     safeCount,
@@ -134,6 +151,7 @@ export default function MultiPlayBurst({ card, count, who, onComplete }: MultiPl
     bannerY,
     multPop,
     flash,
+    reduced,
   ]);
 
   const cardsContainerStyle = useAnimatedStyle(() => ({

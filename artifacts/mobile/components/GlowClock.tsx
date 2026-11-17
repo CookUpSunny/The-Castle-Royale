@@ -6,6 +6,7 @@ import {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { EASE_IN_OUT } from '@/lib/motion';
 
 const GlowClockContext = createContext<SharedValue<number> | null>(null);
@@ -13,15 +14,21 @@ const GlowClockContext = createContext<SharedValue<number> | null>(null);
 /** One clock for every gold halo on the table. */
 export function GlowClockProvider({ children }: { children: React.ReactNode }) {
   const clock = useSharedValue(0);
+  const reduced = useMotionPreference();
 
   useEffect(() => {
+    if (reduced) {
+      cancelAnimation(clock);
+      clock.value = 0.5;
+      return;
+    }
     clock.value = withRepeat(
       withTiming(1, { duration: 1200, easing: EASE_IN_OUT }),
       -1,
       true,
     );
     return () => cancelAnimation(clock);
-  }, [clock]);
+  }, [clock, reduced]);
 
   return <GlowClockContext.Provider value={clock}>{children}</GlowClockContext.Provider>;
 }

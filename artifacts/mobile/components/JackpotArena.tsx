@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  AccessibilityInfo,
   AppState,
   StyleSheet,
   View,
@@ -10,6 +9,7 @@ import {
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 import { jackpotArenaHtml } from '@/components/jackpotArenaHtml';
 import { jackpotArenaLandscapeHtml } from '@/components/jackpotArenaLandscapeHtml';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import {
   JACKPOT_BURST_SCRIPT,
   JACKPOT_FELT,
@@ -30,21 +30,7 @@ export function JackpotFelt({ burstToken = 0 }: { burstToken?: number }) {
   const seenBurst = useRef(0);
   const [failed, setFailed] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
-  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
-      if (live) setReduceMotion(value);
-    }).catch(() => {
-      if (live) setReduceMotion(false);
-    });
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      live = false;
-      sub.remove();
-    };
-  }, []);
+  const reduceMotion = useMotionPreference();
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -64,7 +50,7 @@ export function JackpotFelt({ burstToken = 0 }: { burstToken?: number }) {
   const mount = shouldMountJackpotWebView({
     arenaActive: true,
     appActive,
-    reduceMotion: reduceMotion !== false,
+    reduceMotion,
     failed,
   });
 
