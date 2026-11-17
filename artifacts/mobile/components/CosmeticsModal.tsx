@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CardBack } from '@/components/Card';
+import PressableScale from '@/components/PressableScale';
 import ArenaBackground from '@/components/ArenaBackground';
 import PaywallModal from '@/components/PaywallModal';
 import {
@@ -188,16 +189,16 @@ interface CosmeticRowProps {
 function CosmeticRow({ name, description, badge, locked, selected, onPress, preview }: CosmeticRowProps) {
   const colors = useColors();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={({ pressed }) => [
+      disabled={locked}
+      style={[
         styles.itemRow,
         {
           borderColor: selected ? colors.neonGold : '#3a1a5e',
           backgroundColor: selected ? '#3a1a5e80' : '#1a053590',
         },
         locked && { opacity: 0.6 },
-        pressed && !locked && { opacity: 0.85 },
       ]}
     >
       <View style={styles.itemPreview}>
@@ -232,7 +233,7 @@ function CosmeticRow({ name, description, badge, locked, selected, onPress, prev
           )}
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 

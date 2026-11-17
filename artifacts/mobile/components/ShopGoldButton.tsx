@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 
 /**
  * The shop's one button. Buy, Select, Equip, Equipped, and Coming soon all
@@ -21,12 +22,11 @@ export default function ShopGoldButton({
   compact?: boolean;
 }) {
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
       disabled={disabled}
       onPress={onPress}
       accessibilityRole="button"
-      style={({ pressed }) => [pressed && !disabled && { opacity: 0.88 }]}
     >
       <LinearGradient
         colors={compact ? ['#f5e070', '#d4a820', '#f5e070'] : ['#f8e7a2', '#e0b03a', '#f3d36a']}
@@ -36,7 +36,7 @@ export default function ShopGoldButton({
       >
         <Text style={compact ? styles.compactLabel : styles.label}>{label}</Text>
       </LinearGradient>
-    </Pressable>
+    </PressableScale>
   );
 }
 

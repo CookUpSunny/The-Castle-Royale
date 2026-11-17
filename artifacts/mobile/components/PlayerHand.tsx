@@ -14,6 +14,7 @@ import { type Card as CardType, getCardLabel } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { useGlowClock } from '@/components/GlowClock';
 import { haloOpacity } from '@/lib/glow';
+import { scrubTick } from '@/lib/pressFeedback';
 import { fanCardCenter } from '@/lib/cardThrow';
 import { CARD_WIDTH, CARD_HEIGHT, FAN_CONTAINER_H, computeFanPositions, computeLandscapeFanPositions, landscapeHandWindow } from '@/lib/fanLayout';
 import CardComponent from './Card';
@@ -287,6 +288,16 @@ const PlayerHand = React.forwardRef<PlayerHandRef, PlayerHandProps>(function Pla
 
   // ── Drag hover tracking ────────────────────────────────────────────────────
   const hoveredIndex = useSharedValue(-1);
+  const tickFan = useCallback(() => {
+    Haptics.selectionAsync().catch(() => {});
+  }, []);
+  useAnimatedReaction(
+    () => hoveredIndex.value,
+    (next, prev) => {
+      if (!scrubTick(prev, next)) return;
+      scheduleOnRN(tickFan);
+    },
+  );
   const ownedDragActive = useSharedValue(0);
   const dragActive = dragActiveProp ?? ownedDragActive;
 

@@ -23,6 +23,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PressableScale from '@/components/PressableScale';
 import { useGame } from '@/contexts/GameContext';
 import { useGameCenter } from '@/contexts/GameCenterContext';
 import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
@@ -304,10 +305,10 @@ export default function LobbyScreen() {
           </View>
           <View style={styles.menuSection}>
             <Animated.View style={playStyle}>
-              <Pressable
+              <PressableScale
                 onPress={handlePlay}
                 disabled={connectionStatus !== 'connected'}
-                style={({ pressed }) => [styles.goldPillOuter, pressed && { opacity: 0.88 }]}
+                style={styles.goldPillOuter}
               >
                 <LinearGradient
                   colors={connectionStatus === 'connected'
@@ -320,13 +321,13 @@ export default function LobbyScreen() {
                     {connectionStatus === 'connected' ? 'TAP TO PLAY' : 'CONNECTING...'}
                   </Text>
                 </LinearGradient>
-              </Pressable>
+              </PressableScale>
             </Animated.View>
 
             <View style={[styles.goldPillOuter, styles.goldPillSmall, styles.morphPillOuter, shortFold && { height: 40 }]}>
-              <Pressable
+              <PressableScale
                 onPress={() => router.push('/how-to-play')}
-                style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.88 }]}
+                style={{ flex: 1 }}
               >
                 <LinearGradient
                   colors={['#e8d060', '#b89018', '#e8d060']}
@@ -338,7 +339,7 @@ export default function LobbyScreen() {
                     <Text style={[styles.goldPillText, styles.goldPillTextSm]}>HOW TO PLAY</Text>
                   </View>
                 </LinearGradient>
-              </Pressable>
+              </PressableScale>
             </View>
 
           </View>
@@ -390,7 +391,7 @@ export default function LobbyScreen() {
           </View>
 
           <View style={styles.musicRow}>
-            <Pressable
+            <PressableScale
               onPress={() => {
                 if (isMuted) {
                   toggleMute();
@@ -407,17 +408,17 @@ export default function LobbyScreen() {
                 }
               }}
               delayLongPress={400}
-              style={({ pressed }) => [styles.muteBtn, pressed && { opacity: 0.6 }]}
+              style={styles.muteBtn}
               hitSlop={8}
             >
               <Text style={styles.muteIcon}>{isMuted ? '🔇' : '🔊'}</Text>
-            </Pressable>
+            </PressableScale>
             {showPicker && (
               <Animated.View style={[styles.musicPills, pillsAnimStyle]}>
                 {([0, 0.25, 0.5, 1.0] as const).map((v) => {
                   const active = v === 0 ? isMuted : (!isMuted && volumeLevel === v);
                   return (
-                    <Pressable
+                    <PressableScale
                       key={v}
                       onPress={() => {
                         if (v === 0) {
@@ -429,17 +430,13 @@ export default function LobbyScreen() {
                           closePicker();
                         }
                       }}
-                      style={({ pressed }) => [
-                        styles.musicPill,
-                        active && styles.musicPillActive,
-                        pressed && { opacity: 0.6 },
-                      ]}
+                      style={[styles.musicPill, active && styles.musicPillActive]}
                       hitSlop={6}
                     >
                       <Text style={[styles.musicPillText, active && styles.musicPillTextActive]}>
                         {v === 0 ? '0%' : v === 0.25 ? '25%' : v === 0.5 ? '50%' : '100%'}
                       </Text>
-                    </Pressable>
+                    </PressableScale>
                   );
                 })}
               </Animated.View>

@@ -23,6 +23,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import { PortalSpinner } from '@/components/PortalSpinner';
 import BackButton from '@/components/BackButton';
+import PressableScale from '@/components/PressableScale';
 import { useDuoWindow } from '@/hooks/useDuoWindow';
 
 type Mode = 'menu' | 'host' | 'join';
@@ -180,25 +181,25 @@ export default function PrivateRoomScreen() {
               Play with a friend using a 6-character invite code.
             </Text>
 
-            <Pressable
+            <PressableScale
               onPress={goCreate}
               disabled={connectionStatus !== 'connected'}
-              style={({ pressed }) => [styles.bigBtnOuter, pressed && { opacity: 0.85 }]}
+              style={styles.bigBtnOuter}
             >
               <LinearGradient colors={['#fbbf24', '#f59e0b', '#d97706']} style={styles.bigBtn}>
                 <Text style={styles.bigBtnText}>CREATE ROOM</Text>
               </LinearGradient>
-            </Pressable>
+            </PressableScale>
 
-            <Pressable
+            <PressableScale
               onPress={goJoin}
               disabled={connectionStatus !== 'connected'}
-              style={({ pressed }) => [styles.bigBtnOuter, pressed && { opacity: 0.85 }]}
+              style={styles.bigBtnOuter}
             >
               <LinearGradient colors={['#7e22ce', '#5b21b6', '#3b1d6e']} style={styles.bigBtn}>
                 <Text style={[styles.bigBtnText, { color: '#fff' }]}>JOIN ROOM</Text>
               </LinearGradient>
-            </Pressable>
+            </PressableScale>
 
             {connectionStatus !== 'connected' && (
               <Text style={[styles.statusText, { color: '#ef4444' }]}>Reconnecting...</Text>
@@ -226,15 +227,15 @@ export default function PrivateRoomScreen() {
               )}
             </View>
 
-            <Pressable
+            <PressableScale
               onPress={handleShare}
               disabled={!hostedRoomCode}
-              style={({ pressed }) => [styles.shareBtn, { borderColor: colors.neonGold }, pressed && { opacity: 0.85 }]}
+              style={[styles.shareBtn, { borderColor: colors.neonGold }]}
             >
               <Text style={[styles.shareBtnText, { color: colors.neonGold }]}>
                 {Platform.OS === 'web' ? '⧉  COPY / SHARE' : '↗  SHARE CODE'}
               </Text>
-            </Pressable>
+            </PressableScale>
             {copyFeedback && (
               <Text style={[styles.copyFeedback, { color: colors.electric }]}>{copyFeedback}</Text>
             )}
@@ -295,19 +296,18 @@ export default function PrivateRoomScreen() {
               <Text style={[styles.errorText, { color: '#ef4444' }]}>{roomError}</Text>
             )}
 
-            <Pressable
+            <PressableScale
               onPress={handleSubmitCode}
               disabled={codeInput.trim().length === 0 || connectionStatus !== 'connected'}
-              style={({ pressed }) => [
+              style={[
                 styles.bigBtnOuter,
                 (codeInput.trim().length === 0 || connectionStatus !== 'connected') && { opacity: 0.4 },
-                pressed && { opacity: 0.85 },
               ]}
             >
               <LinearGradient colors={['#fbbf24', '#f59e0b', '#d97706']} style={styles.bigBtn}>
                 <Text style={styles.bigBtnText}>JOIN GAME</Text>
               </LinearGradient>
-            </Pressable>
+            </PressableScale>
 
             <Pressable
               onPress={() => setMode('menu')}

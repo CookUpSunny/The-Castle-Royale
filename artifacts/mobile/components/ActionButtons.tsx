@@ -4,9 +4,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { EASE_OUT } from '@/lib/motion';
 interface ActionButtonsProps {
   canPickup: boolean;
   isMyTurn: boolean;
@@ -50,20 +50,24 @@ function ActionButton({
     opacity: enabled ? 1 : 0.3,
   }));
 
-  const handlePress = () => {
+  const pressIn = () => {
     if (!enabled) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    scale.value = withSequence(
-      withTiming(0.9, { duration: 80 }),
-      withTiming(1.05, { duration: 120 }),
-      withTiming(1, { duration: 80 }),
-    );
-    onPress();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    scale.value = withTiming(0.97, { duration: 120, easing: EASE_OUT });
+  };
+  const pressOut = () => {
+    scale.value = withTiming(1, { duration: 160, easing: EASE_OUT });
   };
 
   return (
     <Animated.View style={animStyle}>
-      <Pressable onPress={handlePress} disabled={!enabled}>
+      <Pressable
+        onPressIn={pressIn}
+        onPressOut={pressOut}
+        onPress={enabled ? onPress : undefined}
+        disabled={!enabled}
+        hitSlop={12}
+      >
         <View
           style={[
             styles.buttonShell,

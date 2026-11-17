@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import BackButton from '@/components/BackButton';
+import PressableScale from '@/components/PressableScale';
 import { useDuoWindow } from '@/hooks/useDuoWindow';
 
 export default function ModeSelectScreen() {
@@ -46,10 +47,10 @@ export default function ModeSelectScreen() {
   const buttons = (
     <View style={styles.battleGroup}>
         <View style={[styles.buttonsBlock, shortFold && { gap: 8 }]}>
-          <Pressable
+          <PressableScale
             onPress={goBot}
             disabled={!isConnected}
-            style={({ pressed }) => [styles.bigBtnOuter, pressed && { opacity: 0.86 }]}
+            style={styles.bigBtnOuter}
           >
             <LinearGradient
               colors={isConnected ? ['#f5e070', '#d4a820', '#f5e070'] : ['#3a3020', '#1e1a0a', '#3a3020']}
@@ -61,12 +62,12 @@ export default function ModeSelectScreen() {
               <Text style={[styles.bigBtnText, shortFold && { fontSize: 16, letterSpacing: 2 }, !isConnected && { color: '#5a5030' }]}>PLAY QUICK GAME</Text>
               <Text style={[styles.bigBtnSubText, !isConnected && { color: '#5a5030' }]}>· BOT ·</Text>
             </LinearGradient>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable
+          <PressableScale
             onPress={goOnline}
             disabled={!isConnected}
-            style={({ pressed }) => [styles.bigBtnOuter, styles.tealShadow, pressed && { opacity: 0.86 }]}
+            style={[styles.bigBtnOuter, styles.tealShadow]}
           >
             <LinearGradient
               colors={isConnected ? ['#22d3ee', '#0891b2', '#0e7490'] : ['#0a2428', '#051214', '#0a2428']}
@@ -80,12 +81,12 @@ export default function ModeSelectScreen() {
                 · FIND AN OPPONENT ·
               </Text>
             </LinearGradient>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable
+          <PressableScale
             onPress={goPrivate}
             disabled={!isConnected}
-            style={({ pressed }) => [styles.bigBtnOuter, pressed && { opacity: 0.86 }]}
+            style={styles.bigBtnOuter}
           >
             <LinearGradient
               colors={isConnected ? ['#a855f7', '#7e22ce', '#5b21b6'] : ['#2a1040', '#15081e', '#2a1040']}
@@ -97,7 +98,7 @@ export default function ModeSelectScreen() {
               <Text style={[styles.bigBtnText, shortFold && { fontSize: 16, letterSpacing: 2 }, { color: '#fff' }, !isConnected && { color: '#5a4078' }]}>PLAY PRIVATE ROOM</Text>
               <Text style={[styles.bigBtnSubText, { color: 'rgba(255,255,255,0.78)' }, !isConnected && { color: '#5a4078' }]}>· INVITE A FRIEND ·</Text>
             </LinearGradient>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View style={styles.connectionDot}>

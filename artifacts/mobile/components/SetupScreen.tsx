@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Card as CardType, useGame } from '@/contexts/GameContext';
 import { useColors } from '@/hooks/useColors';
 import CardComponent, { CardBack } from './Card';
+import PressableScale from './PressableScale';
 import { classifyDuoWindow } from '@/lib/duoLayout';
 
 const FAN_R = 200;
@@ -232,11 +233,11 @@ export default function SetupScreen() {
               </Text>
             </View>
           ) : (
-            <Pressable onPress={handleConfirm} style={({ pressed }) => [styles.confirmBtn, pressed && { opacity: 0.85 }]}>
+            <PressableScale onPress={handleConfirm} style={styles.confirmBtn}>
               <LinearGradient colors={['#fbbf24', '#f59e0b', '#d97706']} style={styles.confirmBtnInner}>
                 <Text style={styles.confirmBtnText}>LOCK IN CASTLE</Text>
               </LinearGradient>
-            </Pressable>
+            </PressableScale>
           )}
         </View>
       </View>

@@ -495,8 +495,6 @@ export default function GameScreen() {
         if (Platform.OS === 'ios') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         }
-      } else if (gameView.lastEvent.type === 'pickup') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
     }
   }, [gameView?.lastEvent, committedLandscape]);
