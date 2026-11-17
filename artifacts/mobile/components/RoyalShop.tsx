@@ -21,6 +21,7 @@ import SceneBackground from '@/components/SceneBackground';
 import { ARENA_IMAGES } from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 import PaywallScreen from '@/components/PaywallScreen';
+import ShopEdgeMask from '@/components/ShopEdgeMask';
 import ShopGoldButton from '@/components/ShopGoldButton';
 import {
   GRANDSCAPE_MIRROR_PACK,
@@ -36,13 +37,17 @@ import {
 import { REVENUECAT_ENTITLEMENT_IDENTIFIER, useSubscription } from '@/lib/revenuecat';
 import {
   SHOP_ARENA_CATALOG,
+  SHOP_CAROUSEL_FADE,
   SHOP_PACK_BLURB,
   SHOP_TAGLINE,
   activeEntitlementIds,
   arenaStoreInput,
   cardPackStoreInput,
+  carouselContentInset,
   findPricedPackage,
   resolveStoreItemState,
+  shopArenaTileSize,
+  shopPackTileSize,
   type ShopArenaEntry,
   type StoreItemState,
 } from '@/lib/royalShop';
@@ -114,6 +119,7 @@ export default function RoyalShop() {
   const [arenaIndex, setArenaIndex] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeTone, setNoticeTone] = useState<'info' | 'error'>('info');
+  const [packBox, setPackBox] = useState({ width: 0, height: 0 });
 
   const entitlementIds = useMemo(() => activeEntitlementIds(customerInfo), [customerInfo]);
   const packPending = pack.storeLoading && !pack.owns;
@@ -255,11 +261,33 @@ export default function RoyalShop() {
   };
 
   const detailArena = arenaIndex !== null ? arenaStates[arenaIndex] : null;
-  const gridItems = tab === 'packs' ? 1 : arenaStates.length;
-  const columns = Math.max(1, Math.ceil(gridItems / 2));
-  const tileH = Math.max(112, Math.min(150, Math.floor((height - insets.top - insets.bottom - 112) / 2)));
-  const tileW = Math.round(tileH * 4 / 3);
-  const gridWidth = columns * tileW + Math.max(0, columns - 1) * 12;
+  const tile = shopArenaTileSize(height, insets.top, insets.bottom);
+  const columns = Math.max(1, Math.ceil(arenaStates.length / 2));
+  const gridWidth = columns * tile.width + Math.max(0, columns - 1) * 12;
+  const packGap = 16;
+  const packInsetLeft = insets.left + 12;
+  const packInsetRight = insets.right + 12;
+  const packTiles = [{
+    testID: 'shop-tile-grandscape',
+    name: GRANDSCAPE_MIRROR_PACK.name,
+    state: packShown,
+    onPress: () => setPackOpen(true),
+    source: grandscapeMarketingSource() ?? grandscapeCardBackSource() ?? undefined,
+  }];
+  const packMaxWidth = Math.max(
+    1,
+    (packBox.width > 0 ? packBox.width : width) - packInsetLeft - packInsetRight,
+  );
+  const packMaxHeight = Math.max(
+    1,
+    (packBox.height > 0 ? packBox.height : Math.max(160, height - insets.top - insets.bottom - 108)) - 12,
+  );
+  const packTile = shopPackTileSize(
+    tile,
+    { maxWidth: packMaxWidth, maxHeight: packMaxHeight },
+    packTiles.length,
+    packGap,
+  );
 
   return (
     <View style={styles.root}>
@@ -354,51 +382,79 @@ export default function RoyalShop() {
           edge={insets.left}
         />
       ) : (
-        <View style={[styles.body, { paddingLeft: insets.left + 16, paddingRight: insets.right + 8, paddingBottom: insets.bottom + 8 }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
-            <View style={[styles.grid, { width: Math.max(gridWidth, width - insets.left - insets.right - 32) }]}>
-              {tab === 'packs' ? (
-                <ShopTile
-                  testID="shop-tile-grandscape"
-                  width={tileW}
-                  height={tileH}
-                  name={GRANDSCAPE_MIRROR_PACK.name}
-                  state={packShown}
-                  titleFont={titleFont}
-                  onPress={() => setPackOpen(true)}
-                  art={
-                    <Image
-                      source={grandscapeMarketingSource() ?? grandscapeCardBackSource() ?? undefined}
-                      style={styles.tileArtFill}
-                      contentFit="cover"
-                      accessibilityLabel={GRANDSCAPE_MIRROR_PACK.name}
-                    />
-                  }
-                />
-              ) : (
-                arenaStates.map(({ entry, state }) => (
+        <View style={[styles.body, { paddingBottom: insets.bottom + 8 }]}>
+          {tab === 'packs' ? (
+            <View
+              testID="shop-pack-stage"
+              onLayout={(event) => {
+                const { width: nextW, height: nextH } = event.nativeEvent.layout;
+                setPackBox((prev) => (prev.width === nextW && prev.height === nextH ? prev : { width: nextW, height: nextH }));
+              }}
+              style={[styles.packStage, { paddingLeft: packInsetLeft, paddingRight: packInsetRight }]}
+            >
+              <View style={[styles.packRow, { gap: packGap }]}>
+                {packTiles.map((packTileItem) => (
                   <ShopTile
-                    key={entry.id}
-                    testID={`shop-tile-arena-${entry.id}`}
-                    width={tileW}
-                    height={tileH}
-                    name={arenaName(entry.id)}
-                    state={state}
+                    key={packTileItem.testID}
+                    testID={packTileItem.testID}
+                    width={packTile.width}
+                    height={packTile.height}
+                    name={packTileItem.name}
+                    state={packTileItem.state}
                     titleFont={titleFont}
-                    onPress={() => openArena(entry.id)}
+                    onPress={packTileItem.onPress}
                     art={
                       <Image
-                        source={ARENA_IMAGES[entry.id]}
+                        source={packTileItem.source}
                         style={styles.tileArtFill}
                         contentFit="cover"
-                        accessibilityLabel={arenaName(entry.id)}
+                        accessibilityLabel={packTileItem.name}
                       />
                     }
                   />
-                ))
-              )}
+                ))}
+              </View>
             </View>
-          </ScrollView>
+          ) : (
+            <ShopEdgeMask fade={SHOP_CAROUSEL_FADE}>
+              <ScrollView
+                horizontal
+                testID="shop-arena-carousel"
+                showsHorizontalScrollIndicator={false}
+                style={styles.carousel}
+                contentContainerStyle={[
+                  styles.gridScroll,
+                  {
+                    paddingLeft: carouselContentInset(insets.left),
+                    paddingRight: carouselContentInset(insets.right),
+                  },
+                ]}
+              >
+                <View style={[styles.grid, { width: gridWidth }]}>
+                  {arenaStates.map(({ entry, state }) => (
+                    <ShopTile
+                      key={entry.id}
+                      testID={`shop-tile-arena-${entry.id}`}
+                      width={tile.width}
+                      height={tile.height}
+                      name={arenaName(entry.id)}
+                      state={state}
+                      titleFont={titleFont}
+                      onPress={() => openArena(entry.id)}
+                      art={
+                        <Image
+                          source={ARENA_IMAGES[entry.id]}
+                          style={styles.tileArtFill}
+                          contentFit="cover"
+                          accessibilityLabel={arenaName(entry.id)}
+                        />
+                      }
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+            </ShopEdgeMask>
+          )}
           {notice ? (
             <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text>
           ) : null}
@@ -751,7 +807,10 @@ const styles = StyleSheet.create({
   tabText: { color: '#b7a8cf', fontSize: 13 },
   tabTextActive: { color: '#f8e7a2' },
   body: { flex: 1, minHeight: 0 },
-  gridScroll: { alignItems: 'flex-start', paddingRight: 12 },
+  carousel: { flex: 1, minWidth: 0 },
+  packStage: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
+  packRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  gridScroll: { alignItems: 'flex-start' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignContent: 'flex-start' },
   gridFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
   frameShadow: {

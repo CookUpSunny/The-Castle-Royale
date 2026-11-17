@@ -1,17 +1,24 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 
 import { ARENA_IDS } from './loadoutSelection';
 import {
   SHOP_ARENA_CATALOG,
+  SHOP_CAROUSEL_FADE,
   SHOP_PACK_BLURB,
+  SHOP_PACK_SCALE,
   SHOP_TAGLINE,
   activeEntitlementIds,
   arenaStoreInput,
   cardPackStoreInput,
+  carouselContentInset,
   findPricedPackage,
   resolveStoreItemState,
   shopArenaIds,
+  shopArenaTileSize,
+  shopPackTileSize,
 } from './royalShop';
 
 test('store item state covers equipped, owned, locked, and no product', () => {
@@ -178,4 +185,50 @@ test('a missing arena product does not throw and a priced package is returned', 
   }, 'arena_matrix', { offeringId: 'arena_matrix', packageId: '$rc_lifetime' });
   assert.equal(found?.identifier, '$rc_lifetime');
   assert.equal(found?.product?.priceString, '$1.99');
+});
+
+test('arena carousel inset clears the fade and the landscape safe area', () => {
+  assert.ok(SHOP_CAROUSEL_FADE >= 32 && SHOP_CAROUSEL_FADE <= 48);
+  assert.equal(carouselContentInset(0), SHOP_CAROUSEL_FADE);
+  assert.equal(carouselContentInset(20), SHOP_CAROUSEL_FADE);
+  assert.equal(carouselContentInset(62), 62);
+  assert.equal(carouselContentInset(-4), SHOP_CAROUSEL_FADE);
+});
+
+test('card pack tiles grow to about 1.7x and a row stays inside the stage', () => {
+  assert.ok(SHOP_PACK_SCALE >= 1.6 && SHOP_PACK_SCALE <= 1.8);
+  const base = shopArenaTileSize(402, 0, 21);
+  assert.equal(base.height, 134);
+  assert.equal(base.width, Math.round(134 * 4 / 3));
+  const grown = shopPackTileSize(base, { maxWidth: 850, maxHeight: 280 }, 1, 16);
+  const linear = grown.width / base.width;
+  assert.ok(linear >= 1.6 && linear <= 1.8, `scale ${linear}`);
+  assert.ok(Math.abs(grown.width / grown.height - base.width / base.height) < 0.03);
+  assert.ok(grown.height <= 280);
+  assert.ok(grown.width <= 850);
+
+  const clamped = shopPackTileSize(base, { maxWidth: 850, maxHeight: 180 }, 1, 16);
+  assert.ok(clamped.height <= 180);
+  assert.ok(clamped.height < grown.height);
+  assert.ok(Math.abs(clamped.width / clamped.height - base.width / base.height) < 0.04);
+
+  const row = shopPackTileSize(base, { maxWidth: 500, maxHeight: 280 }, 2, 16);
+  assert.ok(row.width * 2 + 16 <= 501);
+  assert.ok(Math.abs(row.width / row.height - base.width / base.height) < 0.04);
+});
+
+test('the shop screen fades the arena carousel and centers the card pack row', () => {
+  const shop = fs.readFileSync(path.join(__dirname, '../components/RoyalShop.tsx'), 'utf8');
+  const mask = fs.readFileSync(path.join(__dirname, '../components/ShopEdgeMask.tsx'), 'utf8');
+  const web = fs.readFileSync(path.join(__dirname, '../components/ShopEdgeMask.web.tsx'), 'utf8');
+  assert.match(shop, /ShopEdgeMask/);
+  assert.match(shop, /carouselContentInset\(insets\.left\)/);
+  assert.match(shop, /carouselContentInset\(insets\.right\)/);
+  assert.match(shop, /shop-pack-stage/);
+  assert.match(shop, /packStage: \{[^}]*alignItems: 'center'/);
+  assert.match(shop, /packStage: \{[^}]*justifyContent: 'center'/);
+  assert.match(shop, /shopPackTileSize/);
+  assert.match(mask, /pointerEvents="none"/);
+  assert.match(mask, /MaskedView/);
+  assert.match(web, /mask-image/);
 });

@@ -243,3 +243,60 @@ export function findPricedPackage<T extends ShopPackageLike>(
   }
   return fallback;
 }
+
+/** Width of the soft alpha fade on each side of the arena carousel, in points. */
+export const SHOP_CAROUSEL_FADE = 40;
+
+/** Linear scale for a card-pack tile relative to an arena tile. Aspect stays 4:3. */
+export const SHOP_PACK_SCALE = 1.7;
+
+/**
+ * Scroll-content inset so the first tile sits fully inside the fade at rest,
+ * and also clears the landscape safe area (Dynamic Island).
+ */
+export function carouselContentInset(safeInset: number, fade = SHOP_CAROUSEL_FADE): number {
+  const safe = Number.isFinite(safeInset) ? Math.max(0, safeInset) : 0;
+  return Math.max(fade, safe);
+}
+
+/** Arena grid tile. Same 4:3 frame the shop already used. */
+export function shopArenaTileSize(
+  windowHeight: number,
+  insetTop: number,
+  insetBottom: number,
+): { width: number; height: number } {
+  const height = Math.max(112, Math.min(150, Math.floor((windowHeight - insetTop - insetBottom - 112) / 2)));
+  return { width: Math.round(height * 4 / 3), height };
+}
+
+/**
+ * Card-pack tiles, scaled up, then shrunk only enough to fit the stage.
+ * A row of packs shares the width and stays the same aspect.
+ */
+export function shopPackTileSize(
+  base: { width: number; height: number },
+  bounds: { maxWidth: number; maxHeight: number },
+  count = 1,
+  gap = 16,
+  scale = SHOP_PACK_SCALE,
+): { width: number; height: number } {
+  const safeCount = Math.max(1, Math.floor(count));
+  const aspect = base.width / Math.max(1, base.height);
+  let height = base.height * scale;
+  let width = height * aspect;
+  const maxH = Math.max(1, bounds.maxHeight);
+  const maxW = Math.max(1, bounds.maxWidth);
+  if (height > maxH) {
+    height = maxH;
+    width = height * aspect;
+  }
+  const gaps = Math.max(0, safeCount - 1) * gap;
+  if (safeCount * width + gaps > maxW) {
+    width = Math.max(1, (maxW - gaps) / safeCount);
+    height = width / aspect;
+  }
+  return {
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
+  };
+}
