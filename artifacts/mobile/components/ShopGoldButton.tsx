@@ -11,11 +11,14 @@ export default function ShopGoldButton({
   onPress,
   disabled,
   testID = 'shop-action',
+  compact = false,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
   testID?: string;
+  /** Corner actions (Restore, Close) use the home-screen gold pill. */
+  compact?: boolean;
 }) {
   return (
     <Pressable
@@ -26,12 +29,12 @@ export default function ShopGoldButton({
       style={({ pressed }) => [pressed && !disabled && { opacity: 0.88 }]}
     >
       <LinearGradient
-        colors={['#f8e7a2', '#e0b03a', '#f3d36a']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.button}
+        colors={compact ? ['#f5e070', '#d4a820', '#f5e070'] : ['#f8e7a2', '#e0b03a', '#f3d36a']}
+        start={compact ? { x: 0, y: 0 } : { x: 0, y: 0 }}
+        end={compact ? { x: 1, y: 0 } : { x: 1, y: 1 }}
+        style={compact ? styles.compact : styles.button}
       >
-        <Text style={styles.label}>{label}</Text>
+        <Text style={compact ? styles.compactLabel : styles.label}>{label}</Text>
       </LinearGradient>
     </Pressable>
   );
@@ -54,5 +57,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: 0.6,
+  },
+  compact: {
+    height: 40,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#d4a820',
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  compactLabel: {
+    color: '#1a0e00',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.8,
   },
 });

@@ -278,6 +278,13 @@ export default function RoyalShop() {
             );
           })}
         </View>
+        <ShopGoldButton
+          compact
+          testID="shop-restore"
+          label={isRestoring || pack.isRestoring ? 'Restoring…' : 'Restore'}
+          disabled={isRestoring || pack.isRestoring}
+          onPress={() => void onRestore()}
+        />
       </View>
 
       {tab === 'memberships' ? (
@@ -370,21 +377,9 @@ export default function RoyalShop() {
               )}
             </View>
           </ScrollView>
-          <View style={styles.gridFooter}>
-            {notice ? (
-              <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text>
-            ) : <View />}
-            <Pressable
-              testID="shop-restore"
-              onPress={() => void onRestore()}
-              disabled={isRestoring || pack.isRestoring}
-              style={styles.restoreBtn}
-            >
-              <Text style={styles.restoreText}>
-                {isRestoring || pack.isRestoring ? 'Restoring…' : 'Restore Purchases'}
-              </Text>
-            </Pressable>
-          </View>
+          {notice ? (
+            <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text>
+          ) : null}
         </View>
       )}
     </View>
@@ -465,9 +460,8 @@ function ShopTile({
       ? 'Checking…'
       : state.status === 'unavailable'
         ? 'Coming soon'
-        : state.status === 'equipped'
-          ? 'Equipped'
-          : 'Owned';
+        : null;
+  const badge = state.status === 'equipped' ? 'Equipped' : state.status === 'owned' ? 'Owned' : null;
   return (
     <Pressable
       testID={testID}
@@ -481,13 +475,9 @@ function ShopTile({
             <Text style={styles.lockGlyph}>🔒</Text>
           </View>
         ) : null}
-        {state.status === 'equipped' ? (
-          <View style={[styles.statusBadge, styles.statusEquipped]}>
-            <Text style={styles.statusEquippedText}>Equipped</Text>
-          </View>
-        ) : state.status === 'owned' ? (
-          <View style={[styles.statusBadge, styles.statusOwned]}>
-            <Text style={styles.statusOwnedText}>Owned</Text>
+        {badge ? (
+          <View style={[styles.statusBadge, state.status === 'equipped' ? styles.statusEquipped : styles.statusOwned]}>
+            <Text style={state.status === 'equipped' ? styles.statusEquippedText : styles.statusOwnedText}>{badge}</Text>
           </View>
         ) : null}
         <LinearGradient
@@ -498,9 +488,9 @@ function ShopTile({
           <Text style={[styles.tileName, titleFont ? { fontFamily: titleFont } : null]} numberOfLines={2}>
             {name}
           </Text>
-          <Text style={state.showPrice ? styles.tilePrice : state.status === 'unavailable' ? styles.tileSoon : styles.tileOwnedCaption}>
-            {caption}
-          </Text>
+          {caption ? (
+            <Text style={state.showPrice ? styles.tilePrice : styles.tileSoon}>{caption}</Text>
+          ) : null}
         </LinearGradient>
       </OrnateGoldFrame>
     </Pressable>
@@ -518,7 +508,7 @@ function PackFan() {
           style={[
             styles.fanCard,
             {
-              marginLeft: index === 0 ? 0 : -34,
+              marginLeft: index === 0 ? 0 : -58,
               zIndex: index,
               transform: [{ rotate: `${(index - (faces.length - 1) / 2) * 8}deg` }],
             },
@@ -528,7 +518,7 @@ function PackFan() {
         </View>
       ))}
       {back ? (
-        <View style={[styles.fanCard, styles.fanBack, { zIndex: faces.length }]}>
+        <View style={[styles.fanCard, styles.fanBack, { marginLeft: -48, zIndex: faces.length }]}>
           <Image source={back} style={styles.fanImage} contentFit="contain" />
         </View>
       ) : null}
@@ -537,9 +527,13 @@ function PackFan() {
 }
 
 function ArenaHero({ id }: { id: ArenaId }) {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const frameW = Math.max(340, Math.min(480, width - insets.left - insets.right - 360));
+  const frameH = Math.max(230, Math.min(height - insets.top - 92, Math.round(frameW * 0.7)));
   return (
     <View testID="shop-arena-hero">
-      <OrnateGoldFrame width={268} height={201}>
+      <OrnateGoldFrame width={frameW} height={frameH}>
         <Image
           source={ARENA_IMAGES[id]}
           style={StyleSheet.absoluteFill}
@@ -753,16 +747,16 @@ const styles = StyleSheet.create({
   restoreText: { color: '#7ee7ff', fontSize: 13, fontWeight: '700', letterSpacing: 0.4 },
   detailRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 0 },
   heroSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 },
-  copyPanel: { width: 320, justifyContent: 'center', paddingVertical: 8 },
+  copyPanel: { width: 268, justifyContent: 'center', paddingVertical: 4 },
   fanRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    minHeight: 150,
+    minHeight: 220,
   },
   fanCard: {
-    width: 78,
-    height: 108,
+    width: 118,
+    height: 164,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#140818',
@@ -773,7 +767,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  fanBack: { marginLeft: -26, transform: [{ rotate: '7deg' }] },
+  fanBack: { transform: [{ rotate: '7deg' }] },
   fanImage: { width: '100%', height: '100%' },
   detailName: {
     color: '#f8e7a2',
