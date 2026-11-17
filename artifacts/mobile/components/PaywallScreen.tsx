@@ -166,9 +166,6 @@ export default function PaywallScreen({ onClose, featureLabel, shopEntry }: Payw
           <Text style={styles.note}>Prices appear when the App Store is available. No amount is shown until then.</Text>
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Pressable onPress={() => void handleRestore()} disabled={isRestoring} style={styles.restoreBtn}>
-          <Text style={styles.restoreText}>{isRestoring ? "Restoring…" : "Restore Purchases"}</Text>
-        </Pressable>
       </View>
     );
   }
@@ -188,15 +185,7 @@ export default function PaywallScreen({ onClose, featureLabel, shopEntry }: Payw
           <Text style={styles.kicker}>Membership</Text>
           <Text style={styles.heading}>The Castle Royale</Text>
         </View>
-        <Pressable
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          hitSlop={10}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeText}>Close</Text>
-        </Pressable>
+        <ShopGoldButton compact label="Close" onPress={onClose} testID="paywall-close" />
       </View>
 
       <ScrollView
@@ -241,9 +230,12 @@ export default function PaywallScreen({ onClose, featureLabel, shopEntry }: Payw
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {isPurchasing ? <ActivityIndicator color="#f0d78c" style={{ marginTop: 8 }} /> : null}
 
-        <Pressable onPress={() => void handleRestore()} disabled={isRestoring} style={styles.restoreBtn}>
-          <Text style={styles.restoreText}>{isRestoring ? "Restoring…" : "Restore Purchases"}</Text>
-        </Pressable>
+        <ShopGoldButton
+          compact
+          label={isRestoring ? "Restoring…" : "Restore"}
+          disabled={isRestoring}
+          onPress={() => void handleRestore()}
+        />
 
         <View style={styles.legalRow}>
           <Pressable onPress={() => setLegal("terms")} hitSlop={8}>
