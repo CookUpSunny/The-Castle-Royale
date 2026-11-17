@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
+import { sceneIdForArena } from './arenaScene';
 import { isArenaPremium } from './arenaAccess';
 import {
   JACKPOT_ARENA_ID,
@@ -20,6 +21,13 @@ test('Jackpot keeps Casino Green’s id and stays free', () => {
   assert.equal(JACKPOT_ARENA_NAME, 'Jackpot');
   assert.equal(isArenaPremium('greenTable'), false);
   assert.equal(JACKPOT_FELT, '#06120c');
+  assert.equal(sceneIdForArena('greenTable'), 'casinoGreen');
+  assert.equal(sceneIdForArena('cosmic'), 'cosmicSanctum');
+  assert.equal(sceneIdForArena('classic'), 'flamingoFloor');
+  assert.equal(sceneIdForArena('matrix'), 'matrixArena');
+  assert.equal(sceneIdForArena('rainbowRoad'), 'rainbowRoad');
+  assert.equal(jackpotPage(844, 390), 'landscape');
+  assert.equal(jackpotPage(390, 844), 'portrait');
 });
 
 test('the embedded arena has no external loads and keeps the tuned burst', () => {

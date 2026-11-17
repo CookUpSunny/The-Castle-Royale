@@ -15,7 +15,7 @@ import type { SharedValue } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 import RainbowRoadBackground from '@/components/RainbowRoadBackground';
 import { JackpotFelt } from '@/components/JackpotArena';
-import { useCosmetics } from '@/contexts/CosmeticsContext';
+import { useCosmetics, type ArenaId } from '@/contexts/CosmeticsContext';
 import { ARENA_TABLE_TINT } from '@/lib/sceneAssets';
 import {
   type SceneId,
@@ -113,10 +113,20 @@ const MATRIX_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export default function SceneBackground({ sceneOverride, burstToken = 0 }: { sceneOverride?: SceneId; burstToken?: number }) {
+export default function SceneBackground({
+  sceneOverride,
+  arenaOverride,
+  burstToken = 0,
+}: {
+  sceneOverride?: SceneId;
+  /** Tints the in-game layers for a preview without changing the equipped arena. */
+  arenaOverride?: ArenaId;
+  burstToken?: number;
+}) {
   const { width, height } = useWindowDimensions();
   const { arena, scene } = useCosmetics();
   const sceneId = sceneOverride ?? scene;
+  const tintArena = arenaOverride ?? arena;
   const variant = useMemo(() => variantFromDimensions(width, height), [width, height]);
   const pack = useMemo(() => getScenePack(sceneId), [sceneId]);
 
@@ -160,7 +170,7 @@ export default function SceneBackground({ sceneOverride, burstToken = 0 }: { sce
     () => ['rgba(0,0,0,0.32)', 'rgba(0,0,0,0.04)', 'rgba(0,0,0,0.55)'] as const,
     [],
   );
-  const arenaTint = useMemo(() => getArenaTint(arena as keyof typeof ARENA_TABLE_TINT), [arena]);
+  const arenaTint = useMemo(() => getArenaTint(tintArena as keyof typeof ARENA_TABLE_TINT), [tintArena]);
 
   if (sceneId === 'casinoGreen') {
     return (

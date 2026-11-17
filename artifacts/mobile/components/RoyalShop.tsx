@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { ARENAS, useCosmetics } from '@/contexts/CosmeticsContext';
+import SceneBackground from '@/components/SceneBackground';
 import { ARENA_IMAGES } from '@/components/ArenaBackground';
 import BackButton from '@/components/BackButton';
 import PaywallScreen from '@/components/PaywallScreen';
@@ -42,6 +43,7 @@ import {
   type ShopArenaEntry,
   type StoreItemState,
 } from '@/lib/royalShop';
+import { sceneIdForArena } from '@/lib/arenaScene';
 import { restoredShopOrientationLock } from '@/lib/shopOrientation';
 import { useGrandscapePack } from '@/lib/useGrandscapePack';
 import type { ArenaId } from '@/lib/loadoutSelection';
@@ -254,16 +256,21 @@ export default function RoyalShop() {
   return (
     <View style={styles.root}>
       {detailArena ? (
-        <Image
-          source={ARENA_IMAGES[detailArena.entry.id]}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <SceneBackground
+            sceneOverride={sceneIdForArena(detailArena.entry.id)}
+            arenaOverride={detailArena.entry.id}
+          />
+        </View>
+      ) : packOpen ? (
+        <LinearGradient
+          colors={['#0e3a22', '#082016', '#0a2c18']}
           style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          accessibilityLabel={arenaName(detailArena.entry.id)}
         />
       ) : (
         <Image source={SHOP_NEBULA} style={StyleSheet.absoluteFill} contentFit="cover" />
       )}
-      <View pointerEvents="none" style={detailArena ? styles.arenaVeil : styles.scrim} />
+      {detailArena ? null : <View pointerEvents="none" style={packOpen ? styles.feltShade : styles.scrim} />}
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }]}>
         <BackButton label="← BACK" onPress={goBack} labelStyle={styles.backLabel} />
@@ -337,7 +344,7 @@ export default function RoyalShop() {
             const current = index ?? 0;
             return (current + 1) % SHOP_ARENA_CATALOG.length;
           })}
-          hero={<ArenaPreviewFan />}
+          hero={<ArenaPortrait id={detailArena.entry.id} />}
           edge={insets.left}
         />
       ) : (
@@ -507,7 +514,9 @@ function ShopTile({
 }
 
 function PackFan() {
-  const faces = GRANDSCAPE_SHOP_PREVIEW_CARDS.map((card) => grandscapeFaceSource(card)).filter(Boolean);
+  const playable = GRANDSCAPE_SHOP_PREVIEW_CARDS.map((card) => grandscapeFaceSource(card)).filter(Boolean);
+  const marketing = grandscapeMarketingSource();
+  const faces = marketing ? [...playable, marketing] : playable;
   const back = grandscapeCardBackSource();
   return (
     <View style={styles.fanRow} testID="shop-pack-preview">
@@ -535,40 +544,21 @@ function PackFan() {
   );
 }
 
-/** Shop sample faces plus one more Ace (hearts). The spades ace is already in the shop row. */
-const ARENA_PREVIEW_CARDS = [
-  { suit: 'S', value: 14 },
-  { suit: 'H', value: 14 },
-  { suit: 'H', value: 13 },
-  { suit: 'D', value: 12 },
-  { suit: 'C', value: 10 },
-] as const;
-
-function ArenaPreviewFan() {
-  const faces = ARENA_PREVIEW_CARDS.map((card) => grandscapeFaceSource(card)).filter(Boolean);
-  const back = grandscapeCardBackSource();
+function ArenaPortrait({ id }: { id: ArenaId }) {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const frameW = Math.max(300, Math.min(420, width - insets.left - insets.right - 380));
+  const frameH = Math.max(200, Math.min(height - insets.top - 96, Math.round(frameW * 0.7)));
   return (
-    <View style={styles.arenaFanRow} testID="shop-arena-preview">
-      {faces.map((source, index) => (
-        <View
-          key={`${ARENA_PREVIEW_CARDS[index]?.suit}-${index}`}
-          style={[
-            styles.arenaFanCard,
-            {
-              marginLeft: index === 0 ? 0 : -78,
-              zIndex: index,
-              transform: [{ rotate: `${(index - (faces.length - 1) / 2) * 7}deg` }],
-            },
-          ]}
-        >
-          <Image source={source ?? undefined} style={styles.fanImage} contentFit="contain" />
-        </View>
-      ))}
-      {back ? (
-        <View style={[styles.arenaFanCard, styles.fanBack, { marginLeft: -64, zIndex: faces.length }]}>
-          <Image source={back} style={styles.fanImage} contentFit="contain" />
-        </View>
-      ) : null}
+    <View testID="shop-arena-hero">
+      <OrnateGoldFrame width={frameW} height={frameH}>
+        <Image
+          source={ARENA_IMAGES[id]}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          accessibilityLabel={arenaName(id)}
+        />
+      </OrnateGoldFrame>
     </View>
   );
 }
@@ -635,7 +625,7 @@ function DetailStage({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#07000f' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2, 10, 6, 0.38)' },
-  arenaVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4, 6, 16, 0.28)' },
+  feltShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.12)' },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 },
   titleBlock: { flexShrink: 1, maxWidth: 280 },
   backLabel: { color: '#f0d78c', letterSpacing: 1.4 },
@@ -797,25 +787,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
   },
   fanBack: { transform: [{ rotate: '7deg' }] },
-  arenaFanRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    minHeight: 210,
-  },
-  arenaFanCard: {
-    width: 130,
-    height: 180,
-    borderRadius: 9,
-    overflow: 'hidden',
-    backgroundColor: '#140818',
-    borderWidth: 1,
-    borderColor: 'rgba(240, 215, 140, 0.65)',
-    shadowColor: '#f0d78c',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
   fanImage: { width: '100%', height: '100%' },
   detailName: {
     color: '#f8e7a2',
