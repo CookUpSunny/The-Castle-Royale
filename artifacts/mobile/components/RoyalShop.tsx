@@ -253,13 +253,22 @@ export default function RoyalShop() {
 
   return (
     <View style={styles.root}>
-      <Image source={SHOP_NEBULA} style={StyleSheet.absoluteFill} contentFit="cover" />
-      <View pointerEvents="none" style={styles.scrim} />
+      {detailArena ? (
+        <Image
+          source={ARENA_IMAGES[detailArena.entry.id]}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          accessibilityLabel={arenaName(detailArena.entry.id)}
+        />
+      ) : (
+        <Image source={SHOP_NEBULA} style={StyleSheet.absoluteFill} contentFit="cover" />
+      )}
+      <View pointerEvents="none" style={detailArena ? styles.arenaVeil : styles.scrim} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }]}>
         <BackButton label="← BACK" onPress={goBack} labelStyle={styles.backLabel} />
         <View style={styles.titleBlock}>
-          <Text style={[styles.kicker, titleFont ? { fontFamily: titleFont } : null]}>Castle Royale</Text>
+          <Text style={[styles.kicker, titleFont ? { fontFamily: titleFont } : null]}>The Castle Royale</Text>
           <Text style={[styles.title, titleFont ? { fontFamily: titleFont } : null]}>Royal Shop</Text>
           <Text style={styles.subtitle} numberOfLines={1}>Cosmetic looks for your table. Match rules stay the same.</Text>
         </View>
@@ -328,7 +337,7 @@ export default function RoyalShop() {
             const current = index ?? 0;
             return (current + 1) % SHOP_ARENA_CATALOG.length;
           })}
-          hero={<ArenaHero id={detailArena.entry.id} />}
+          hero={<ArenaPreviewFan />}
           edge={insets.left}
         />
       ) : (
@@ -526,21 +535,40 @@ function PackFan() {
   );
 }
 
-function ArenaHero({ id }: { id: ArenaId }) {
-  const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const frameW = Math.max(340, Math.min(480, width - insets.left - insets.right - 360));
-  const frameH = Math.max(230, Math.min(height - insets.top - 92, Math.round(frameW * 0.7)));
+/** Shop sample faces plus one more Ace (hearts). The spades ace is already in the shop row. */
+const ARENA_PREVIEW_CARDS = [
+  { suit: 'S', value: 14 },
+  { suit: 'H', value: 14 },
+  { suit: 'H', value: 13 },
+  { suit: 'D', value: 12 },
+  { suit: 'C', value: 10 },
+] as const;
+
+function ArenaPreviewFan() {
+  const faces = ARENA_PREVIEW_CARDS.map((card) => grandscapeFaceSource(card)).filter(Boolean);
+  const back = grandscapeCardBackSource();
   return (
-    <View testID="shop-arena-hero">
-      <OrnateGoldFrame width={frameW} height={frameH}>
-        <Image
-          source={ARENA_IMAGES[id]}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          accessibilityLabel={arenaName(id)}
-        />
-      </OrnateGoldFrame>
+    <View style={styles.arenaFanRow} testID="shop-arena-preview">
+      {faces.map((source, index) => (
+        <View
+          key={`${ARENA_PREVIEW_CARDS[index]?.suit}-${index}`}
+          style={[
+            styles.arenaFanCard,
+            {
+              marginLeft: index === 0 ? 0 : -78,
+              zIndex: index,
+              transform: [{ rotate: `${(index - (faces.length - 1) / 2) * 7}deg` }],
+            },
+          ]}
+        >
+          <Image source={source ?? undefined} style={styles.fanImage} contentFit="contain" />
+        </View>
+      ))}
+      {back ? (
+        <View style={[styles.arenaFanCard, styles.fanBack, { marginLeft: -64, zIndex: faces.length }]}>
+          <Image source={back} style={styles.fanImage} contentFit="contain" />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -607,6 +635,7 @@ function DetailStage({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#07000f' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2, 10, 6, 0.38)' },
+  arenaVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4, 6, 16, 0.28)' },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 },
   titleBlock: { flexShrink: 1, maxWidth: 280 },
   backLabel: { color: '#f0d78c', letterSpacing: 1.4 },
@@ -768,6 +797,25 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
   },
   fanBack: { transform: [{ rotate: '7deg' }] },
+  arenaFanRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minHeight: 210,
+  },
+  arenaFanCard: {
+    width: 130,
+    height: 180,
+    borderRadius: 9,
+    overflow: 'hidden',
+    backgroundColor: '#140818',
+    borderWidth: 1,
+    borderColor: 'rgba(240, 215, 140, 0.65)',
+    shadowColor: '#f0d78c',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
   fanImage: { width: '100%', height: '100%' },
   detailName: {
     color: '#f8e7a2',
