@@ -1,27 +1,33 @@
 /**
- * Royal Shop doorway. The choreography hides the portrait→landscape lock.
- * Durations are the motion the player watches. The orientation hold is extra,
- * and it only runs while the screen is already covered.
+ * Royal Shop doorway. The card opens, gold covers the screen, then the cover
+ * falls to black. Durations here are the motion the player watches.
+ * The black hold is not part of that budget: it stays up until the next
+ * screen has laid out in the target orientation and its background is ready,
+ * or until the safety cap. A short settle after the last size change hides
+ * the tail of the rotation.
  *
- * Enter, full motion: card 350 + doors 300 + push 250 + reveal 350 = 1250ms.
- * Reduced motion keeps the same coverage with an opacity crossfade only.
+ * Enter, full motion: card 350 + doors 300 + push 250 + toBlack 280 + reveal 480.
+ * Reduced motion is an opacity crossfade through black, with no card travel.
  */
 
 export const SHOP_DOORWAY_MS = {
   card: 350,
   doors: 300,
   push: 250,
-  reveal: 350,
-  orientationCap: 900,
+  toBlack: 280,
+  reveal: 480,
+  orientationCap: 1800,
+  /** Quiet window after the last matching size, so the rotation's last frame stays covered. */
+  settle: 280,
   /** Exit only, when we cannot tell whether the phone will actually rotate. */
   exitQuiet: 520,
-  exitCover: 280,
-  exitReveal: 240,
-  reducedCover: 220,
-  reducedReveal: 200,
+  exitFlood: 300,
+  exitReveal: 420,
+  reducedCover: 280,
+  reducedReveal: 320,
 } as const;
 
-export const SHOP_DOORWAY_MOTION_BUDGET_MS = 1300;
+export const SHOP_DOORWAY_MOTION_BUDGET_MS = 1800;
 
 export type DoorwayPhase =
   | 'idle'
@@ -48,13 +54,14 @@ export function entranceChoreographyMs(reducedMotion: boolean): number {
     SHOP_DOORWAY_MS.card
     + SHOP_DOORWAY_MS.doors
     + SHOP_DOORWAY_MS.push
+    + SHOP_DOORWAY_MS.toBlack
     + SHOP_DOORWAY_MS.reveal
   );
 }
 
 export function exitChoreographyMs(reducedMotion: boolean): number {
   if (reducedMotion) return SHOP_DOORWAY_MS.reducedCover + SHOP_DOORWAY_MS.reducedReveal;
-  return SHOP_DOORWAY_MS.exitCover + SHOP_DOORWAY_MS.exitReveal;
+  return SHOP_DOORWAY_MS.exitFlood + SHOP_DOORWAY_MS.toBlack + SHOP_DOORWAY_MS.exitReveal;
 }
 
 /** True when a portrait phone should play the doorway instead of navigating bare. */
@@ -199,5 +206,98 @@ export function waitForOrientation(
         if (!sawChange) finish('quiet');
       }, quietMs);
     }
+  });
+}
+
+export interface PresentationDeps extends OrientationWaitDeps {
+  isSceneReady: () => boolean;
+  /** Fires when the scene-ready flag changes. A ready scene does not count as a rotation. */
+  subscribeSceneReady: (onReady: () => void) => () => void;
+}
+
+/**
+ * Resolves when the window matches `target`, the destination scene has reported
+ * ready, and the size has stayed still for `settleMs`. `quietMs` still resolves
+ * early when nothing rotates, so web and an already-settled phone can move on.
+ * The cap always wins.
+ */
+export function waitForPresentation(
+  target: 'landscape' | 'portrait',
+  capMs: number,
+  deps: PresentationDeps,
+  options?: { quietMs?: number; settleMs?: number },
+): Promise<OrientationWait> {
+  const settleMs = Math.max(0, options?.settleMs ?? 0);
+  const quietMs = options?.quietMs;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let sawChange = false;
+    let unsubDim = () => {};
+    let unsubOri = () => {};
+    let unsubReady = () => {};
+    let quietTimer: ReturnType<typeof setTimeout> | null = null;
+    let capTimer: ReturnType<typeof setTimeout> | null = null;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    const finish = (reason: OrientationWait) => {
+      if (settled) return;
+      settled = true;
+      if (capTimer) clearTimeout(capTimer);
+      if (quietTimer) clearTimeout(quietTimer);
+      if (settleTimer) clearTimeout(settleTimer);
+      unsubDim();
+      unsubOri();
+      unsubReady();
+      resolve(reason);
+    };
+    const clearSettle = () => {
+      if (settleTimer) {
+        clearTimeout(settleTimer);
+        settleTimer = null;
+      }
+    };
+    const consider = () => {
+      if (settled) return;
+      const now = deps.getSize();
+      if (!orientationMatches(now.width, now.height, target) || !deps.isSceneReady()) {
+        clearSettle();
+        return;
+      }
+      const fire = () => {
+        const size = deps.getSize();
+        if (orientationMatches(size.width, size.height, target) && deps.isSceneReady()) finish('matched');
+      };
+      if (settleMs === 0) {
+        fire();
+        return;
+      }
+      clearSettle();
+      settleTimer = setTimeout(fire, settleMs);
+    };
+    const noteChange = () => {
+      sawChange = true;
+      if (quietTimer) {
+        clearTimeout(quietTimer);
+        quietTimer = null;
+      }
+    };
+    unsubDim = deps.subscribeDimensions(() => {
+      noteChange();
+      consider();
+    });
+    unsubOri = deps.subscribeOrientation(() => {
+      noteChange();
+      consider();
+    });
+    unsubReady = deps.subscribeSceneReady(() => {
+      consider();
+    });
+    capTimer = setTimeout(() => finish('timeout'), capMs);
+    if (quietMs !== undefined && quietMs >= 0) {
+      quietTimer = setTimeout(() => {
+        if (!sawChange) finish('quiet');
+      }, quietMs);
+    }
+    consider();
   });
 }

@@ -18,9 +18,10 @@ import {
   exitOrientationTarget,
   exitShouldCover,
   shouldAnimateShopEntrance,
-  waitForOrientation,
+  waitForPresentation,
   type DoorwayPhase,
   type OrientationWaitDeps,
+  type PresentationDeps,
 } from '@/lib/shopDoorway';
 
 /**
@@ -35,6 +36,10 @@ export type ShopOrigin = { x: number; y: number } | null;
 interface ShopEntranceApi {
   enterShop: (origin: ShopOrigin) => void;
   leaveShop: () => void;
+  /** Landscape shop has laid out and its background can be shown. */
+  reportShopScene: (ready: boolean) => void;
+  /** The screen under the shop has laid out in portrait. */
+  reportReturnScene: (ready: boolean) => void;
 }
 
 const ShopEntranceContext = createContext<ShopEntranceApi | null>(null);
@@ -67,6 +72,22 @@ interface Run {
   beat: ShopDoorwayBeat;
   reduced: boolean;
   origin: ShopOrigin;
+}
+
+function sceneDeps(
+  isSceneReady: () => boolean,
+  listeners: Set<() => void>,
+): PresentationDeps {
+  return {
+    ...orientationDeps(),
+    isSceneReady,
+    subscribeSceneReady: (onReady) => {
+      listeners.add(onReady);
+      return () => {
+        listeners.delete(onReady);
+      };
+    },
+  };
 }
 
 function orientationDeps(): OrientationWaitDeps {
@@ -121,6 +142,10 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
   const phaseRef = useRef<DoorwayPhase>('idle');
   const entryPortrait = useRef<boolean | null>(null);
   const runSerial = useRef(0);
+  const shopReady = useRef(false);
+  const returnReady = useRef(false);
+  const shopListeners = useRef(new Set<() => void>());
+  const returnListeners = useRef(new Set<() => void>());
   const [run, setRun] = useState<Run | null>(null);
   const contentScale = useSharedValue(1);
 
@@ -133,18 +158,11 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
       if (!run) contentScale.set(1);
       return;
     }
-    if (run.beat === 'reveal') {
-      contentScale.set(1.08);
+    if (run.beat === 'reveal' || run.beat === 'exit-reveal') {
+      const duration = run.beat === 'reveal' ? SHOP_DOORWAY_MS.reveal : SHOP_DOORWAY_MS.exitReveal;
+      contentScale.set(1.025);
       contentScale.set(withTiming(1, {
-        duration: SHOP_DOORWAY_MS.reveal,
-        easing: EASE_OUT,
-        reduceMotion: ReduceMotion.Never,
-      }));
-      return;
-    }
-    if (run.beat === 'exit') {
-      contentScale.set(withTiming(1.05, {
-        duration: SHOP_DOORWAY_MS.exitCover,
+        duration,
         easing: EASE_OUT,
         reduceMotion: ReduceMotion.Never,
       }));
@@ -164,11 +182,15 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
     const id = runSerial.current;
     if (phaseRef.current === 'enter') {
       phaseRef.current = 'covered';
-      const pending = waitForOrientation(
+      shopReady.current = false;
+      const pending = waitForPresentation(
         'landscape',
         SHOP_DOORWAY_MS.orientationCap,
-        orientationDeps(),
-        Platform.OS === 'web' ? 40 : undefined,
+        sceneDeps(() => shopReady.current, shopListeners.current),
+        {
+          quietMs: Platform.OS === 'web' ? 40 : undefined,
+          settleMs: Platform.OS === 'web' ? 0 : SHOP_DOORWAY_MS.settle,
+        },
       );
       router.push('/store');
       void pending.then(() => {
@@ -181,6 +203,7 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
     if (phaseRef.current === 'exit') {
       phaseRef.current = 'exit-covered';
       contentScale.set(1);
+      returnReady.current = false;
       const { width, height } = Dimensions.get('window');
       const target = exitOrientationTarget(width, height);
       const quietMs = Platform.OS === 'web'
@@ -188,11 +211,14 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
         : entryPortrait.current === null
           ? SHOP_DOORWAY_MS.exitQuiet
           : undefined;
-      const pending = waitForOrientation(
+      const pending = waitForPresentation(
         target,
         SHOP_DOORWAY_MS.orientationCap,
-        orientationDeps(),
-        quietMs,
+        sceneDeps(() => returnReady.current, returnListeners.current),
+        {
+          quietMs,
+          settleMs: Platform.OS === 'web' ? 0 : SHOP_DOORWAY_MS.settle,
+        },
       );
       leaveRoute();
       void pending.then(() => {
@@ -216,6 +242,7 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
       return;
     }
     entryPortrait.current = true;
+    shopReady.current = false;
     phaseRef.current = 'enter';
     const id = runSerial.current + 1;
     runSerial.current = id;
@@ -236,6 +263,7 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
       leaveRoute();
       return;
     }
+    returnReady.current = false;
     phaseRef.current = 'exit';
     const id = runSerial.current + 1;
     runSerial.current = id;
@@ -247,7 +275,22 @@ export function ShopEntranceProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
-  const api = useMemo(() => ({ enterShop, leaveShop }), [enterShop, leaveShop]);
+  const reportShopScene = useCallback((ready: boolean) => {
+    if (shopReady.current === ready) return;
+    shopReady.current = ready;
+    shopListeners.current.forEach((listener) => listener());
+  }, []);
+
+  const reportReturnScene = useCallback((ready: boolean) => {
+    if (returnReady.current === ready) return;
+    returnReady.current = ready;
+    returnListeners.current.forEach((listener) => listener());
+  }, []);
+
+  const api = useMemo(
+    () => ({ enterShop, leaveShop, reportShopScene, reportReturnScene }),
+    [enterShop, leaveShop, reportReturnScene, reportShopScene],
+  );
 
   return (
     <ShopEntranceContext.Provider value={api}>
@@ -276,6 +319,15 @@ export function useShopEntrance(): ShopEntranceApi {
     throw new Error('useShopEntrance must be used within ShopEntranceProvider');
   }
   return api;
+}
+
+/** Portrait layout of the screen the shop returns to. */
+export function useShopReturnLayout() {
+  const { reportReturnScene } = useShopEntrance();
+  return (event: { nativeEvent: { layout: { width: number; height: number } } }) => {
+    const { width, height } = event.nativeEvent.layout;
+    reportReturnScene(height > width && width > 0);
+  };
 }
 
 const styles = {

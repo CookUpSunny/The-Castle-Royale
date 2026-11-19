@@ -28,12 +28,26 @@ export type SfxName =
   | 'slot-bright'
   | 'fanfare-cathedral'
   | 'fanfare-epic'
-  | 'fanfare-victory';
+  | 'fanfare-victory'
+  | 'shop-tap'
+  | 'shop-tab'
+  | 'shop-back'
+  | 'shop-equip';
 
-// TODO: Add real .wav/.m4a files to assets/audio/ and wire them up here.
-// Each case should return: require('../assets/audio/<name>.wav') as number
-function getSource(_name: SfxName): number | null {
-  return null;
+// Game cues stay silent until their files exist. Shop cues are the approved mp3s.
+function getSource(name: SfxName): number | null {
+  switch (name) {
+    case 'shop-tap':
+      return require('../assets/audio/shop-tap.mp3') as number;
+    case 'shop-tab':
+      return require('../assets/audio/shop-tab.mp3') as number;
+    case 'shop-back':
+      return require('../assets/audio/shop-back.mp3') as number;
+    case 'shop-equip':
+      return require('../assets/audio/shop-equip.mp3') as number;
+    default:
+      return null;
+  }
 }
 
 const VOLUMES: Partial<Record<SfxName, number>> = {
@@ -47,6 +61,11 @@ const VOLUMES: Partial<Record<SfxName, number>> = {
   'fanfare-cathedral': 1,
   'fanfare-epic': 1,
   'fanfare-victory': 1,
+  // Shop cues sit under the music. Confirm is a little louder than a tap.
+  'shop-tap': 0.42,
+  'shop-tab': 0.48,
+  'shop-back': 0.46,
+  'shop-equip': 0.58,
 };
 
 const POOL_SIZE = 4;
@@ -67,6 +86,10 @@ const ALL_NAMES: SfxName[] = [
   'fanfare-cathedral',
   'fanfare-epic',
   'fanfare-victory',
+  'shop-tap',
+  'shop-tab',
+  'shop-back',
+  'shop-equip',
 ];
 
 interface PoolEntry {
@@ -88,7 +111,8 @@ async function ensureAudioMode(): Promise<void> {
       await _audio.setAudioModeAsync({
         // Critical on iOS: true routes playback to earpiece and breaks speaker SFX.
         allowsRecording: false,
-        playsInSilentMode: true,
+        // False follows the hardware silent switch. App mute is separate.
+        playsInSilentMode: false,
         shouldPlayInBackground: false,
         // Mix with other audio so SFX don't interrupt background music
         interruptionMode: 'mixWithOthers',
@@ -138,7 +162,7 @@ export async function preloadSfx(): Promise<void> {
 }
 
 async function playSfxAsync(name: SfxName): Promise<void> {
-  if (muted) return;
+  if (muted || !_audio) return;
 
   // Per-cue throttle so a fast burst of identical playSfx calls (haywire
   // event re-fires, burn + multi-play landing on the same tick, etc.) cannot
@@ -172,9 +196,13 @@ async function playSfxAsync(name: SfxName): Promise<void> {
   }
 }
 
-/** Fire-and-forget playback (never blocks UI thread). */
+/** Fire-and-forget playback. A missing module or a bad cue never throws into a tap. */
 export function playSfx(name: SfxName): void {
-  void playSfxAsync(name);
+  try {
+    void playSfxAsync(name).catch(() => {});
+  } catch {
+    // Audio must not block the control that triggered it.
+  }
 }
 
 export function setSfxMuted(next: boolean): void {

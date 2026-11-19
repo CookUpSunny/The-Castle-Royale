@@ -4,7 +4,7 @@ import React, { useRef, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import BackButton from "@/components/BackButton";
 import DuoSplit from "@/components/DuoSplit";
-import { openShopFrom, useShopEntrance } from "@/contexts/ShopEntranceContext";
+import { openShopFrom, useShopEntrance, useShopReturnLayout } from "@/contexts/ShopEntranceContext";
 import { useMusicPlayer } from "@/contexts/MusicContext";
 import { useDuoWindow } from "@/hooks/useDuoWindow";
 import { topContentInset } from "@/lib/duoLayout";
@@ -17,6 +17,7 @@ export default function SettingsScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const shopRowRef = useRef<View>(null);
   const { enterShop } = useShopEntrance();
+  const onReturnLayout = useShopReturnLayout();
   const [offerAppleMusicSettings, setOfferAppleMusicSettings] = useState(false);
   const version = Constants.expoConfig?.version ?? "1.0.4";
   const top = topContentInset(duo.insets.top, Platform.OS);
@@ -111,6 +112,7 @@ export default function SettingsScreen() {
 
   return (
     <View
+      onLayout={onReturnLayout}
       style={[
         styles.root,
         {

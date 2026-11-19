@@ -1,9 +1,17 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ImageSourcePropType,
+  type ViewStyle,
+} from 'react-native';
 import Animated, {
   Easing,
+  ReduceMotion,
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +20,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import {
+  JACKPOT_LIVE_FADE_MS,
+  JACKPOT_LIVE_FAIL_MS,
+  JACKPOT_LIVE_FRAMES,
+  JACKPOT_LIVE_MESSAGE,
+  isJackpotLiveMessage,
+} from '@/lib/jackpotArena';
 import RainbowRoadBackground from '@/components/RainbowRoadBackground';
 import { JackpotFelt } from '@/components/JackpotArena';
 import { useCosmetics, type ArenaId } from '@/contexts/CosmeticsContext';
@@ -80,6 +95,15 @@ const MATRIX_HTML = `<!DOCTYPE html>
     }
 
     function draw() {
+      if (!window.__castleLiveSent) {
+        window.__castleLiveFrames = (window.__castleLiveFrames || 0) + 1;
+        if (window.__castleLiveFrames >= ${JACKPOT_LIVE_FRAMES}) {
+          try {
+            window.ReactNativeWebView.postMessage("${JACKPOT_LIVE_MESSAGE}");
+            window.__castleLiveSent = 1;
+          } catch (e) {}
+        }
+      }
       ctx.fillStyle = 'rgba(0,8,2,0.13)';
       ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
       ctx.font = fontSize + 'px monospace';
@@ -185,14 +209,14 @@ export default function SceneBackground({
       <LinearGradient colors={[...sceneBaseGradient(sceneId)]} style={StyleSheet.absoluteFill} />
 
       {sceneId === 'rainbowRoad' ? (
-        <RainbowRoadBreathWrapper drift={drift} kenBurns={kenBurns}>
-          <RainbowRoadBackground />
-        </RainbowRoadBreathWrapper>
-      ) : (
+        <RainbowLiveLayer drift={drift} kenBurns={kenBurns} />
+      ) : sceneId === 'matrixArena' ? null : (
         <StaticLayer variant={variant} layerId="L0_far" pack={pack} mode="backdrop" />
       )}
 
-      {sceneId === 'matrixArena' ? <MatrixAmbience /> : null}
+      {sceneId === 'matrixArena' ? (
+        <MatrixLiveLayer source={pack.layers[variant]?.L0_far ?? null} />
+      ) : null}
 
       <LinearGradient colors={[...arenaTint]} style={StyleSheet.absoluteFill} />
 
@@ -339,19 +363,104 @@ function StaticLayer({
   );
 }
 
-function MatrixAmbience() {
+const LIVE_EASE = Easing.bezier(0.23, 1, 0.32, 1);
+
+function useLiveOpacity(live: boolean) {
+  const opacity = useSharedValue(0);
+  useEffect(() => {
+    opacity.set(withTiming(live ? 1 : 0, {
+      duration: live ? JACKPOT_LIVE_FADE_MS : 0,
+      easing: LIVE_EASE,
+      reduceMotion: ReduceMotion.Never,
+    }));
+  }, [live, opacity]);
+  return useAnimatedStyle(() => ({ opacity: opacity.get() }));
+}
+
+/** Rainbow Road fades in once its moving scene has an image. Cosmic is not this path. */
+function RainbowLiveLayer({
+  drift,
+  kenBurns,
+}: {
+  drift: SharedValue<number>;
+  kenBurns: SharedValue<number>;
+}) {
+  const [live, setLive] = useState(false);
+  const onLive = useCallback(() => setLive(true), []);
+  const style = useLiveOpacity(live);
+  return (
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>
+      <RainbowRoadBreathWrapper drift={drift} kenBurns={kenBurns}>
+        <RainbowRoadBackground onLive={onLive} />
+      </RainbowRoadBreathWrapper>
+    </Animated.View>
+  );
+}
+
+/**
+ * Matrix rain fades in after the first frames. The still photo is only the
+ * Reduce Motion and failure fallback, same as Jackpot.
+ */
+function MatrixLiveLayer({ source }: { source: ImageSourcePropType | null | undefined }) {
+  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [live, setLive] = useState(false);
+  const liveRef = useRef(false);
+  const style = useLiveOpacity(live);
+
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+      if (alive) setReduceMotion(value);
+    }).catch(() => {
+      if (alive) setReduceMotion(false);
+    });
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+
+  const showStill = reduceMotion === true || failed;
+  const mount = reduceMotion === false && !failed;
+
+  useEffect(() => {
+    if (!mount || live) return;
+    const timer = setTimeout(() => {
+      if (!liveRef.current) setFailed(true);
+    }, JACKPOT_LIVE_FAIL_MS);
+    return () => clearTimeout(timer);
+  }, [live, mount]);
+
+  const markLive = (event: WebViewMessageEvent) => {
+    if (!isJackpotLiveMessage(event.nativeEvent.data) || liveRef.current) return;
+    liveRef.current = true;
+    setLive(true);
+  };
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <WebView
-        source={{ html: MATRIX_HTML }}
-        style={StyleSheet.absoluteFill}
-        scrollEnabled={false}
-        bounces={false}
-        overScrollMode="never"
-        pointerEvents="none"
-        javaScriptEnabled
-        originWhitelist={['*']}
-      />
+      {showStill && source ? (
+        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : null}
+      {mount ? (
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>
+          <WebView
+            source={{ html: MATRIX_HTML }}
+            style={StyleSheet.absoluteFill}
+            scrollEnabled={false}
+            bounces={false}
+            overScrollMode="never"
+            pointerEvents="none"
+            javaScriptEnabled
+            originWhitelist={['*']}
+            onMessage={markLive}
+            onError={() => setFailed(true)}
+            onHttpError={() => setFailed(true)}
+          />
+        </Animated.View>
+      ) : null}
     </View>
   );
 }

@@ -247,6 +247,17 @@ export function findPricedPackage<T extends ShopPackageLike>(
 /** Width of the soft alpha fade on each side of the arena carousel, in points. */
 export const SHOP_CAROUSEL_FADE = 40;
 
+/**
+ * Shop back control. One constant switches the whole button.
+ * 'gold' is the inverted gold pill. 'emerald' is the bright green pill.
+ */
+export const SHOP_BACK_VARIANTS = ['gold', 'emerald'] as const;
+export type ShopBackVariant = (typeof SHOP_BACK_VARIANTS)[number];
+export const SHOP_BACK_VARIANT: ShopBackVariant = 'gold';
+
+/** Opacity crossfade for shop tabs, opening or closing a detail, and arena swaps. */
+export const SHOP_SWAP_MS = 220;
+
 /** Linear scale for a card-pack tile relative to an arena tile. Aspect stays 4:3. */
 export const SHOP_PACK_SCALE = 1.7;
 

@@ -17,21 +17,25 @@ import {
   shouldAnimateShopEntrance,
   stepDoorway,
   waitForOrientation,
+  waitForPresentation,
 } from './shopDoorway';
 
 const root = path.join(__dirname, '..');
 
 test('the doorway choreography stays under the budget, cover included', () => {
-  assert.equal(entranceChoreographyMs(false), 1250);
+  assert.equal(entranceChoreographyMs(false), 1660);
   assert.ok(entranceChoreographyMs(false) <= SHOP_DOORWAY_MOTION_BUDGET_MS);
   assert.ok(entranceChoreographyMs(true) < entranceChoreographyMs(false));
   assert.equal(entranceChoreographyMs(true), SHOP_DOORWAY_MS.reducedCover + SHOP_DOORWAY_MS.reducedReveal);
+  assert.equal(exitChoreographyMs(false), SHOP_DOORWAY_MS.exitFlood + SHOP_DOORWAY_MS.toBlack + SHOP_DOORWAY_MS.exitReveal);
   assert.ok(exitChoreographyMs(false) < entranceChoreographyMs(false));
-  assert.equal(SHOP_DOORWAY_MS.orientationCap, 900);
+  assert.equal(SHOP_DOORWAY_MS.orientationCap, 1800);
+  assert.equal(SHOP_DOORWAY_MS.settle, 280);
   assert.equal(SHOP_DOORWAY_MS.card, 350);
   assert.equal(SHOP_DOORWAY_MS.doors, 300);
   assert.equal(SHOP_DOORWAY_MS.push, 250);
-  assert.equal(SHOP_DOORWAY_MS.reveal, 350);
+  assert.equal(SHOP_DOORWAY_MS.toBlack, 280);
+  assert.equal(SHOP_DOORWAY_MS.reveal, 480);
 });
 
 test('a second tap does not restart the doorway', () => {
@@ -121,6 +125,58 @@ test('the orientation wait resolves on a dimension change and caps when it never
   assert.equal(timedOut, 'timeout');
 });
 
+test('the reveal waits for a ready scene and a settled landscape, and the cap still wins', async () => {
+  let width = 390;
+  let height = 844;
+  let ready = false;
+  let pushSize = () => {};
+  let markReady = () => {};
+  const pending = waitForPresentation('landscape', 400, {
+    getSize: () => ({ width, height }),
+    subscribeDimensions: (onSize) => {
+      pushSize = () => onSize(width, height);
+      return () => {};
+    },
+    subscribeOrientation: () => () => {},
+    isSceneReady: () => ready,
+    subscribeSceneReady: (onReady) => {
+      markReady = () => {
+        ready = true;
+        onReady();
+      };
+      return () => {};
+    },
+  }, { settleMs: 40 });
+
+  setTimeout(() => {
+    width = 844;
+    height = 390;
+    pushSize();
+  }, 15);
+  setTimeout(() => markReady(), 30);
+  assert.equal(await pending, 'matched');
+
+  const capped = await waitForPresentation('landscape', 30, {
+    getSize: () => ({ width: 390, height: 844 }),
+    subscribeDimensions: () => () => {},
+    subscribeOrientation: () => () => {},
+    isSceneReady: () => false,
+    subscribeSceneReady: () => () => {},
+  }, { settleMs: 20 });
+  assert.equal(capped, 'timeout');
+});
+
+test('a quiet presentation does not wait on a scene that never rotates', async () => {
+  const quiet = await waitForPresentation('portrait', 400, {
+    getSize: () => ({ width: 844, height: 390 }),
+    subscribeDimensions: () => () => {},
+    subscribeOrientation: () => () => {},
+    isSceneReady: () => false,
+    subscribeSceneReady: () => () => {},
+  }, { quietMs: 25, settleMs: 200 });
+  assert.equal(quiet, 'quiet');
+});
+
 test('a quiet exit does not hold the cover when the window never rotates', async () => {
   const quiet = await waitForOrientation('portrait', 400, {
     getSize: () => ({ width: 844, height: 390 }),
@@ -150,11 +206,33 @@ test('the shop doorway replaces a second curtain instead of stacking on the matc
 
   assert.match(doorway, /scheduleOnRN/);
   assert.equal(doorway.includes('runOnJS'), false);
+  assert.equal(doorway.includes('playSfx'), false);
   assert.match(doorway, /ReduceMotion\.Never/);
   assert.match(doorway, /ImpactFeedbackStyle\.Light/);
   assert.match(doorway, /rotateY/);
-  assert.match(entrance, /waitForOrientation/);
+  assert.match(doorway, /backgroundColor: '#000'/);
+  assert.match(doorway, /Easing\.bezier\(0\.23, 1, 0\.32, 1\)/);
+  assert.equal(doorway.includes('cubic-bezier('), false);
+  assert.equal(entrance.includes('cubic-bezier('), false);
+  assert.match(entrance, /waitForPresentation/);
+  assert.match(entrance, /reportShopScene/);
   assert.match(entrance, /orientationCap/);
+  assert.match(shop, /reportShopScene/);
+  assert.match(shop, /ShopCrossfade/);
+  assert.match(shop, /ShopBackButton/);
+  assert.match(shop, /playSfx\('shop-back'\)/);
+  assert.match(shop, /playSfx\('shop-tab'\)/);
+  assert.match(shop, /playSfx\('shop-tap'\)/);
+  assert.match(shop, /playSfx\('shop-equip'\)/);
+  assert.equal(/<BackButton/.test(shop), false);
+  const crossfade = fs.readFileSync(path.join(root, 'components/ShopCrossfade.tsx'), 'utf8');
+  const back = fs.readFileSync(path.join(root, 'components/ShopBackButton.tsx'), 'utf8');
+  for (const source of [doorway, entrance, shop, crossfade, back]) {
+    assert.equal(source.includes('cubic-bezier('), false);
+    assert.equal(source.includes('transitionProperty'), false);
+  }
+  assert.match(crossfade, /withTiming/);
+  assert.match(back, /SHOP_BACK_VARIANT/);
   assert.match(layout, /ShopEntranceProvider/);
   assert.match(home, /openShopFrom/);
   assert.equal(home.includes("router.push('/store')"), false);

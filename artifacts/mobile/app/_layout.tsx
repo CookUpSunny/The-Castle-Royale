@@ -25,6 +25,7 @@ import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext'
 import { MusicProvider, useMusicPlayer } from '@/contexts/MusicContext';
 import { prepareAdsAfterTrackingPrompt } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
+import { preloadSfx } from '@/lib/sfx';
 import { FONT_GATE_TIMEOUT_MS } from '@/lib/splashPhase';
 import { shouldPlayLaunchIntro } from '@/lib/launchIntro';
 import {
@@ -180,6 +181,11 @@ function RootLayoutBody() {
       void SplashScreen.hideAsync().catch(() => {});
     }
   }, [appReady, frameReady, introResolved]);
+
+  useEffect(() => {
+    if (!appReady) return;
+    preloadSfx().catch(() => {});
+  }, [appReady]);
 
   return (
     <SafeAreaProvider>

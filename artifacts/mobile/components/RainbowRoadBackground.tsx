@@ -424,7 +424,7 @@ const TROLLS = [
 ];
 
 
-export default function RainbowRoadBackground() {
+export default function RainbowRoadBackground({ onLive }: { onLive?: () => void }) {
   const { width, height } = useWindowDimensions();
   const [traceSegments, setTraceSegments] = useState<TracePoint[][]>(() =>
     TRACE_RETRACE_SEGMENT_2_ONLY ? [[], []] : [[]],
@@ -454,6 +454,12 @@ export default function RainbowRoadBackground() {
   const bgImage = useImage(
     require("../assets/scenes/rainbowRoad/portrait/L0_far.jpg"),
   );
+  const toldLive = useRef(false);
+  useEffect(() => {
+    if (!bgImage || toldLive.current) return;
+    toldLive.current = true;
+    onLive?.();
+  }, [bgImage, onLive]);
 
   const stars = useMemo(() => generateStars(width, height), [width, height]);
 

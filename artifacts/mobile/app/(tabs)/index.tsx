@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
-import { openShopFrom, useShopEntrance } from '@/contexts/ShopEntranceContext';
+import { openShopFrom, useShopEntrance, useShopReturnLayout } from '@/contexts/ShopEntranceContext';
 import { useGameCenter } from '@/contexts/GameCenterContext';
 import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
@@ -109,6 +109,7 @@ export default function LobbyScreen() {
   const lastNavigatedGameIdRef = useRef<string | null>(null);
   const shopButtonRef = useRef<View>(null);
   const { enterShop } = useShopEntrance();
+  const onReturnLayout = useShopReturnLayout();
 
   const pillOpacity = useSharedValue(0);
   const pillTranslateX = useSharedValue(-20);
@@ -213,7 +214,7 @@ export default function LobbyScreen() {
   const displayElo = profile?.elo ?? null;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]} onLayout={onReturnLayout}>
       <LinearGradient
         colors={['#200040', '#0a0018', '#07000f']}
         style={StyleSheet.absoluteFill}

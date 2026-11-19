@@ -22,17 +22,20 @@ import { SHOP_DOORWAY_MS } from '@/lib/shopDoorway';
  * only cover for the shop's landscape lock, so the two never stack.
  *
  * Lead: the equipped card back. It flies from the Shop button, splits into
- * doors, then the gold light rushes forward and covers the rotation.
- * Support: warm gold light and a static blur faded in on the push.
- * The shop underneath scales 1.08 → 1 while the light recedes.
+ * doors, and the gold light floods the screen. The light then falls to black.
+ * Black holds until the shop has laid out and its background is ready.
+ * The reveal is a fade off that black. Leaving the shop is the same light,
+ * black, and fade, without the card. No sound plays on this transition.
  *
- * | Element | Role    | Starts | Duration | Motion                         |
- * | Card    | Lead    | 0      | 350ms    | scale + rotate to center       |
- * | Doors   | Lead    | 350    | 300ms    | rotateY halves, gold light     |
- * | Push    | Lead    | 650    | 250ms    | scale up, blur, gold/black     |
- * | Shop    | Support | cover  | 350ms    | scale 1.08→1, light recedes    |
+ * | Element | Role    | Starts | Duration | Motion                          |
+ * | Card    | Lead    | 0      | 350ms    | scale + rotate to center        |
+ * | Doors   | Lead    | 350    | 300ms    | rotateY halves, gold light      |
+ * | Gold    | Lead    | 650    | 250ms    | flood until it covers           |
+ * | Black   | Support | 900    | 280ms    | gold falls to black             |
+ * | Hold    | Static  | cover  | layout   | stays black, nothing moves      |
+ * | Shop    | Support | ready  | 480ms    | fade in from black              |
  *
- * Reduced motion is a gold opacity crossfade with the same coverage.
+ * Reduced motion is a gentle opacity crossfade through black. No card travel.
  * Timings use ReduceMotion.Never so the OS setting cannot snap the cover
  * off before the orientation lock has finished.
  */
@@ -103,6 +106,7 @@ export default function ShopDoorway({
   const washScale = useSharedValue(1);
   const light = useSharedValue(beat === 'exit' ? 1 : 0);
   const blur = useSharedValue(0);
+  const veil = useSharedValue(beat === 'reveal' || beat === 'exit-reveal' ? 1 : 0);
   const group = useSharedValue(reduced ? 0 : beat === 'reveal' || beat === 'exit-reveal' ? 0 : 1);
 
   useEffect(() => {
@@ -124,6 +128,7 @@ export default function ShopDoorway({
       cancelAnimation(washScale);
       cancelAnimation(light);
       cancelAnimation(blur);
+      cancelAnimation(veil);
       cancelAnimation(group);
       emitCovered = () => {};
       emitFinished = () => {};
@@ -132,7 +137,8 @@ export default function ShopDoorway({
     if (reduced && (beat === 'enter' || beat === 'exit')) {
       group.set(0);
       wash.set(0);
-      wash.set(withTiming(1, out(SHOP_DOORWAY_MS.reducedCover), (done) => {
+      veil.set(0);
+      veil.set(withTiming(1, out(SHOP_DOORWAY_MS.reducedCover), (done) => {
         'worklet';
         if (done) scheduleOnRN(notifyCovered);
       }));
@@ -141,8 +147,9 @@ export default function ShopDoorway({
 
     if (reduced && (beat === 'reveal' || beat === 'exit-reveal')) {
       group.set(0);
-      wash.set(1);
-      wash.set(withTiming(0, out(SHOP_DOORWAY_MS.reducedReveal), (done) => {
+      wash.set(0);
+      veil.set(1);
+      veil.set(withTiming(0, out(SHOP_DOORWAY_MS.reducedReveal), (done) => {
         'worklet';
         if (done) scheduleOnRN(notifyFinished);
       }));
@@ -157,6 +164,7 @@ export default function ShopDoorway({
       washScale.set(1);
       light.set(0);
       blur.set(0);
+      veil.set(0);
       group.set(1);
       flight.set(withTiming(1, out(SHOP_DOORWAY_MS.card), (done) => {
         'worklet';
@@ -172,54 +180,48 @@ export default function ShopDoorway({
           blur.set(withTiming(1, inOut(SHOP_DOORWAY_MS.push)));
           group.set(withTiming(0, out(SHOP_DOORWAY_MS.push), (pushDone) => {
             'worklet';
-            if (pushDone) scheduleOnRN(notifyCovered);
+            if (!pushDone) return;
+            veil.set(withTiming(1, inOut(SHOP_DOORWAY_MS.toBlack), (blackDone) => {
+              'worklet';
+              if (blackDone) scheduleOnRN(notifyCovered);
+            }));
           }));
         }));
       }));
       return stop;
     }
 
-    if (beat === 'reveal') {
-      wash.set(1);
-      washScale.set(1.12);
+    if (beat === 'reveal' || beat === 'exit-reveal') {
+      const ms = beat === 'reveal' ? SHOP_DOORWAY_MS.reveal : SHOP_DOORWAY_MS.exitReveal;
       group.set(0);
-      light.set(withTiming(0, out(SHOP_DOORWAY_MS.reveal)));
-      blur.set(withTiming(0, out(180)));
-      washScale.set(withTiming(0.92, out(SHOP_DOORWAY_MS.reveal)));
-      wash.set(withTiming(0, out(SHOP_DOORWAY_MS.reveal), (done) => {
+      wash.set(0);
+      light.set(0);
+      blur.set(0);
+      veil.set(1);
+      veil.set(withTiming(0, out(ms), (done) => {
         'worklet';
         if (done) scheduleOnRN(notifyFinished);
       }));
       return stop;
     }
 
-    if (beat === 'exit') {
-      flight.set(1);
-      doors.set(1);
-      push.set(0);
-      light.set(1);
-      blur.set(0);
-      group.set(1);
-      wash.set(0);
-      washScale.set(1.04);
-      doors.set(withTiming(0.05, out(SHOP_DOORWAY_MS.exitCover)));
-      light.set(withTiming(0.2, out(SHOP_DOORWAY_MS.exitCover)));
-      group.set(withTiming(0, out(SHOP_DOORWAY_MS.exitCover)));
-      washScale.set(withTiming(1.16, out(SHOP_DOORWAY_MS.exitCover)));
-      wash.set(withTiming(1, out(SHOP_DOORWAY_MS.exitCover), (done) => {
-        'worklet';
-        if (done) scheduleOnRN(notifyCovered);
-      }));
-      return stop;
-    }
-
-    wash.set(1);
+    flight.set(1);
+    doors.set(0);
+    push.set(0);
+    light.set(0);
+    blur.set(0);
     group.set(0);
-    washScale.set(1.08);
-    washScale.set(withTiming(1, out(SHOP_DOORWAY_MS.exitReveal)));
-    wash.set(withTiming(0, out(SHOP_DOORWAY_MS.exitReveal), (done) => {
+    veil.set(0);
+    wash.set(0);
+    washScale.set(1.16);
+    washScale.set(withTiming(1, inOut(SHOP_DOORWAY_MS.exitFlood)));
+    wash.set(withTiming(1, inOut(SHOP_DOORWAY_MS.exitFlood), (done) => {
       'worklet';
-      if (done) scheduleOnRN(notifyFinished);
+      if (!done) return;
+      veil.set(withTiming(1, inOut(SHOP_DOORWAY_MS.toBlack), (blackDone) => {
+        'worklet';
+        if (blackDone) scheduleOnRN(notifyCovered);
+      }));
     }));
     return stop;
     // Origin is fixed for a run. Window size is read from shared values so a
@@ -272,6 +274,10 @@ export default function ShopDoorway({
 
   const blurStyle = useAnimatedStyle(() => ({
     opacity: blur.get(),
+  }));
+
+  const veilStyle = useAnimatedStyle(() => ({
+    opacity: veil.get(),
   }));
 
   const seamStyle = useAnimatedStyle(() => ({
@@ -331,6 +337,7 @@ export default function ShopDoorway({
           </View>
         </Animated.View>
       </Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.veil, veilStyle]} />
     </View>
   );
 }
@@ -343,6 +350,10 @@ const styles = StyleSheet.create({
   },
   wash: {
     ...StyleSheet.absoluteFillObject,
+  },
+  veil: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
   },
   portal: {
     position: 'absolute',
