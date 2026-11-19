@@ -6,7 +6,10 @@ import test from 'node:test';
 import { ARENA_IDS } from './loadoutSelection';
 import {
   SHOP_ARENA_CATALOG,
+  SHOP_BACK_VARIANT,
+  SHOP_BACK_VARIANTS,
   SHOP_CAROUSEL_FADE,
+  SHOP_SWAP_MS,
   SHOP_PACK_BLURB,
   SHOP_PACK_SCALE,
   SHOP_TAGLINE,
@@ -185,6 +188,17 @@ test('a missing arena product does not throw and a priced package is returned', 
   }, 'arena_matrix', { offeringId: 'arena_matrix', packageId: '$rc_lifetime' });
   assert.equal(found?.identifier, '$rc_lifetime');
   assert.equal(found?.product?.priceString, '$1.99');
+});
+
+test('the shop back control defaults to inverted gold and swaps stay short', () => {
+  assert.equal(SHOP_BACK_VARIANT, 'gold');
+  assert.deepEqual([...SHOP_BACK_VARIANTS], ['gold', 'emerald']);
+  assert.ok(SHOP_SWAP_MS >= 180 && SHOP_SWAP_MS <= 260);
+  const back = fs.readFileSync(path.join(__dirname, '../components/ShopBackButton.tsx'), 'utf8');
+  assert.match(back, /#07000c/);
+  assert.match(back, /#f0d78c/);
+  assert.match(back, /#3dff9a/);
+  assert.equal(back.includes('cubic-bezier('), false);
 });
 
 test('arena carousel inset clears the fade and the landscape safe area', () => {

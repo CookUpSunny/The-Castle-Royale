@@ -3,9 +3,8 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -17,10 +16,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { ARENAS, useCosmetics } from '@/contexts/CosmeticsContext';
+import { useShopEntrance } from '@/contexts/ShopEntranceContext';
 import SceneBackground from '@/components/SceneBackground';
 import { ARENA_IMAGES } from '@/components/ArenaBackground';
-import BackButton from '@/components/BackButton';
 import PaywallScreen from '@/components/PaywallScreen';
+import ShopBackButton from '@/components/ShopBackButton';
+import ShopCrossfade from '@/components/ShopCrossfade';
 import ShopEdgeMask from '@/components/ShopEdgeMask';
 import ShopGoldButton from '@/components/ShopGoldButton';
 import {
@@ -48,10 +49,12 @@ import {
   resolveStoreItemState,
   shopArenaTileSize,
   shopPackTileSize,
+  SHOP_SWAP_MS,
   type ShopArenaEntry,
   type StoreItemState,
 } from '@/lib/royalShop';
 import { sceneIdForArena } from '@/lib/arenaScene';
+import { playSfx, preloadSfx } from '@/lib/sfx';
 import { restoredShopOrientationLock } from '@/lib/shopOrientation';
 import { useGrandscapePack } from '@/lib/useGrandscapePack';
 import type { ArenaId } from '@/lib/loadoutSelection';
@@ -107,6 +110,25 @@ function useShopLandscapeLock() {
 
 export default function RoyalShop() {
   useShopLandscapeLock();
+  useEffect(() => {
+    preloadSfx().catch(() => {});
+  }, []);
+  const { leaveShop, reportShopScene } = useShopEntrance();
+  const landscapeReady = useRef(false);
+  const backgroundReady = useRef(false);
+  const publishScene = () => {
+    reportShopScene(landscapeReady.current && backgroundReady.current);
+  };
+  const onShopLayout = (event: { nativeEvent: { layout: { width: number; height: number } } }) => {
+    const next = event.nativeEvent.layout;
+    landscapeReady.current = next.width > next.height && next.width > 0;
+    publishScene();
+  };
+  const onBackgroundReady = () => {
+    if (backgroundReady.current) return;
+    backgroundReady.current = true;
+    publishScene();
+  };
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [fontsLoaded] = useFonts({ Cinzel_700Bold });
@@ -153,6 +175,7 @@ export default function RoyalShop() {
   };
 
   const openArena = (id: ArenaId) => {
+    playSfx('shop-tap');
     const index = SHOP_ARENA_CATALOG.findIndex((entry) => entry.id === id);
     setPackOpen(false);
     setArenaIndex(index === -1 ? 0 : index);
@@ -165,6 +188,7 @@ export default function RoyalShop() {
     try {
       const result = await pack.buy();
       if (result === 'purchased') {
+        playSfx('shop-equip');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         showNotice('Grandscape Mirror Pack is unlocked and equipped.');
         return;
@@ -206,6 +230,7 @@ export default function RoyalShop() {
       }));
       if (next.status === 'owned' || next.status === 'equipped') {
         setArena(entry.id);
+        playSfx('shop-equip');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         showNotice(`${arenaName(entry.id)} is unlocked and selected.`);
       }
@@ -220,6 +245,7 @@ export default function RoyalShop() {
   };
 
   const onRestore = async () => {
+    playSfx('shop-tap');
     showNotice(null);
     Haptics.selectionAsync().catch(() => {});
     try {
@@ -235,26 +261,30 @@ export default function RoyalShop() {
 
   const onSelectArena = (entry: ShopArenaEntry) => {
     setArena(entry.id);
+    playSfx('shop-equip');
     Haptics.selectionAsync().catch(() => {});
     showNotice(`${arenaName(entry.id)} selected.`);
   };
 
   const onEquipPack = () => {
     pack.equip();
+    playSfx('shop-equip');
     Haptics.selectionAsync().catch(() => {});
     showNotice('Grandscape Mirror Pack equipped.');
   };
 
   const goBack = () => {
+    playSfx('shop-back');
     if (packOpen || arenaIndex !== null) {
       setPackOpen(false);
       setArenaIndex(null);
       return;
     }
-    router.back();
+    leaveShop();
   };
 
   const selectTab = (next: ShopTab) => {
+    if (next !== tab) playSfx('shop-tab');
     setTab(next);
     setPackOpen(false);
     setArenaIndex(null);
@@ -271,7 +301,10 @@ export default function RoyalShop() {
     testID: 'shop-tile-grandscape',
     name: GRANDSCAPE_MIRROR_PACK.name,
     state: packShown,
-    onPress: () => setPackOpen(true),
+    onPress: () => {
+      playSfx('shop-tap');
+      setPackOpen(true);
+    },
     source: grandscapeMarketingSource() ?? grandscapeCardBackSource() ?? undefined,
   }];
   const packMaxWidth = Math.max(
@@ -289,28 +322,47 @@ export default function RoyalShop() {
     packGap,
   );
 
+  const contentKey = detailArena ? 'arena-detail' : packOpen ? 'pack' : tab;
+  const backgroundKey = detailArena ? `scene:${detailArena.entry.id}` : packOpen ? 'felt' : 'nebula';
+
   return (
-    <View style={styles.root}>
-      {detailArena ? (
+    <View style={styles.root} onLayout={onShopLayout}>
+      <ShopCrossfade
+        swapKey={backgroundKey}
+        duration={SHOP_SWAP_MS}
+        fill
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+      >
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <SceneBackground
-            sceneOverride={sceneIdForArena(detailArena.entry.id)}
-            arenaOverride={detailArena.entry.id}
-          />
+          {detailArena ? (
+            <SceneBackground
+              sceneOverride={sceneIdForArena(detailArena.entry.id)}
+              arenaOverride={detailArena.entry.id}
+            />
+          ) : packOpen ? (
+            <LinearGradient
+              colors={['#0e3a22', '#082016', '#0a2c18']}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <Image
+              source={SHOP_NEBULA}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              priority="high"
+              cachePolicy="memory-disk"
+              onLoad={onBackgroundReady}
+              onError={onBackgroundReady}
+            />
+          )}
+          {detailArena ? null : <View pointerEvents="none" style={packOpen ? styles.feltShade : styles.scrim} />}
         </View>
-      ) : packOpen ? (
-        <LinearGradient
-          colors={['#0e3a22', '#082016', '#0a2c18']}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : (
-        <Image source={SHOP_NEBULA} style={StyleSheet.absoluteFill} contentFit="cover" />
-      )}
-      {detailArena ? null : <View pointerEvents="none" style={packOpen ? styles.feltShade : styles.scrim} />}
+      </ShopCrossfade>
 
       <View style={[styles.header, { paddingTop: insets.top + 8, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }]}>
       <View style={styles.topBar}>
-        <BackButton label="← BACK" onPress={goBack} labelStyle={styles.backLabel} />
+        <ShopBackButton onPress={goBack} />
         <View style={styles.titleBlock}>
           <Text style={[styles.kicker, titleFont ? { fontFamily: titleFont } : null]}>The Castle Royale</Text>
           <Text style={[styles.title, titleFont ? { fontFamily: titleFont } : null]}>Royal Shop</Text>
@@ -341,6 +393,7 @@ export default function RoyalShop() {
         <ShopTagline fontFamily={titleFont} />
       </View>
 
+      <ShopCrossfade swapKey={contentKey} duration={SHOP_SWAP_MS} grow style={styles.body}>
       {tab === 'memberships' ? (
         <View style={[styles.body, { paddingLeft: insets.left + 16, paddingRight: insets.right + 16, paddingBottom: insets.bottom + 8 }]}>
           <PaywallScreen shopEntry onClose={() => selectTab('packs')} />
@@ -370,16 +423,23 @@ export default function RoyalShop() {
           noticeTone={noticeTone}
           onBuy={() => void onBuyArena(detailArena.entry)}
           onSelect={() => onSelectArena(detailArena.entry)}
-          onPrev={() => setArenaIndex((index) => {
-            const current = index ?? 0;
-            return (current - 1 + SHOP_ARENA_CATALOG.length) % SHOP_ARENA_CATALOG.length;
-          })}
-          onNext={() => setArenaIndex((index) => {
-            const current = index ?? 0;
-            return (current + 1) % SHOP_ARENA_CATALOG.length;
-          })}
+          onPrev={() => {
+            playSfx('shop-tap');
+            setArenaIndex((index) => {
+              const current = index ?? 0;
+              return (current - 1 + SHOP_ARENA_CATALOG.length) % SHOP_ARENA_CATALOG.length;
+            });
+          }}
+          onNext={() => {
+            playSfx('shop-tap');
+            setArenaIndex((index) => {
+              const current = index ?? 0;
+              return (current + 1) % SHOP_ARENA_CATALOG.length;
+            });
+          }}
           hero={<ArenaPortrait id={detailArena.entry.id} />}
           edge={insets.left}
+          swapKey={detailArena.entry.id}
         />
       ) : (
         <View style={[styles.body, { paddingBottom: insets.bottom + 8 }]}>
@@ -460,6 +520,7 @@ export default function RoyalShop() {
           ) : null}
         </View>
       )}
+      </ShopCrossfade>
     </View>
   );
 }
@@ -678,6 +739,7 @@ function DetailStage({
   onPrev,
   onNext,
   edge,
+  swapKey,
 }: {
   hero: React.ReactNode;
   title: string;
@@ -692,24 +754,12 @@ function DetailStage({
   onPrev?: () => void;
   onNext?: () => void;
   edge: number;
+  swapKey?: string;
 }) {
   const disabled = busy || (!state.canPurchase && !state.canSelect);
   const onPress = state.canPurchase ? onBuy : state.canSelect ? onSelect : undefined;
-  return (
-    <View style={[styles.detailRow, { paddingLeft: edge + 8, paddingRight: edge + 16 }]} testID="shop-detail">
-      {onPrev ? (
-        <Pressable testID="shop-arena-prev" onPress={onPrev} style={styles.arrow} accessibilityLabel="Previous arena">
-          <Text style={styles.arrowText}>‹</Text>
-        </Pressable>
-      ) : null}
-      <View style={styles.heroSlot}>{hero}</View>
-      {onNext ? (
-        <Pressable testID="shop-arena-next" onPress={onNext} style={styles.arrow} accessibilityLabel="Next arena">
-          <Text style={styles.arrowText}>›</Text>
-        </Pressable>
-      ) : null}
-      <View style={styles.copyPanel}>
-        <View style={styles.glassShell}>
+  const copy = (
+    <View style={styles.glassShell}>
           <BlurView intensity={62} tint="dark" style={StyleSheet.absoluteFill} />
           <LinearGradient
             pointerEvents="none"
@@ -735,7 +785,33 @@ function DetailStage({
             {notice ? <Text style={[styles.notice, noticeTone === 'error' && styles.noticeError]}>{notice}</Text> : null}
           </View>
         </View>
-      </View>
+  );
+  return (
+    <View style={[styles.detailRow, { paddingLeft: edge + 8, paddingRight: edge + 16 }]} testID="shop-detail">
+      {onPrev ? (
+        <Pressable testID="shop-arena-prev" onPress={onPrev} style={styles.arrow} accessibilityLabel="Previous arena">
+          <Text style={styles.arrowText}>‹</Text>
+        </Pressable>
+      ) : null}
+      {swapKey ? (
+        <ShopCrossfade swapKey={swapKey} duration={SHOP_SWAP_MS} center style={styles.heroSlot}>
+          {hero}
+        </ShopCrossfade>
+      ) : (
+        <View style={styles.heroSlot}>{hero}</View>
+      )}
+      {onNext ? (
+        <Pressable testID="shop-arena-next" onPress={onNext} style={styles.arrow} accessibilityLabel="Next arena">
+          <Text style={styles.arrowText}>›</Text>
+        </Pressable>
+      ) : null}
+      {swapKey ? (
+        <ShopCrossfade swapKey={swapKey} duration={SHOP_SWAP_MS} style={styles.copyPanel}>
+          {copy}
+        </ShopCrossfade>
+      ) : (
+        <View style={styles.copyPanel}>{copy}</View>
+      )}
     </View>
   );
 }

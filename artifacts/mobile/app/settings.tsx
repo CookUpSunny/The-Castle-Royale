@@ -1,9 +1,10 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import BackButton from "@/components/BackButton";
 import DuoSplit from "@/components/DuoSplit";
+import { openShopFrom, useShopEntrance, useShopReturnLayout } from "@/contexts/ShopEntranceContext";
 import { useMusicPlayer } from "@/contexts/MusicContext";
 import { useDuoWindow } from "@/hooks/useDuoWindow";
 import { topContentInset } from "@/lib/duoLayout";
@@ -14,6 +15,9 @@ export default function SettingsScreen() {
   const { isMuted, toggleMute, appleMusicEnabled, setAppleMusicEnabled } = useMusicPlayer();
   const { restore, isRestoring } = useSubscription();
   const [notice, setNotice] = useState<string | null>(null);
+  const shopRowRef = useRef<View>(null);
+  const { enterShop } = useShopEntrance();
+  const onReturnLayout = useShopReturnLayout();
   const [offerAppleMusicSettings, setOfferAppleMusicSettings] = useState(false);
   const version = Constants.expoConfig?.version ?? "1.0.4";
   const top = topContentInset(duo.insets.top, Platform.OS);
@@ -74,7 +78,12 @@ export default function SettingsScreen() {
           <Text style={styles.linkText}>Open iOS Settings</Text>
         </Pressable>
       ) : null}
-      <Pressable onPress={() => router.push("/store")} style={styles.row}>
+      <Pressable
+        ref={shopRowRef}
+        onPress={() => openShopFrom(shopRowRef.current, enterShop)}
+        style={styles.row}
+        testID="settings-shop"
+      >
         <Text style={styles.rowLabel}>Store</Text>
         <Text style={styles.rowValue}>Open</Text>
       </Pressable>
@@ -103,6 +112,7 @@ export default function SettingsScreen() {
 
   return (
     <View
+      onLayout={onReturnLayout}
       style={[
         styles.root,
         {

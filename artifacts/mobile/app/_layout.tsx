@@ -18,12 +18,14 @@ import { LaunchIntro } from '@/components/LaunchIntro';
 import AdBreakHost from '@/components/AdBreakHost';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import RevenueCatIdentity from '@/components/RevenueCatIdentity';
+import { ShopEntranceProvider } from '@/contexts/ShopEntranceContext';
 import { CosmeticsProvider } from '@/contexts/CosmeticsContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { GameCenterProvider, useGameCenter } from '@/contexts/GameCenterContext';
 import { MusicProvider, useMusicPlayer } from '@/contexts/MusicContext';
 import { prepareAdsAfterTrackingPrompt } from '@/lib/mobileAds';
 import { initializeRevenueCat, SubscriptionProvider } from '@/lib/revenuecat';
+import { preloadSfx } from '@/lib/sfx';
 import { FONT_GATE_TIMEOUT_MS } from '@/lib/splashPhase';
 import { shouldPlayLaunchIntro } from '@/lib/launchIntro';
 import {
@@ -55,9 +57,11 @@ function GameProviderBridge({ children }: { children: React.ReactNode }) {
   return (
     <GameProvider gameCenterId={profile?.gameCenterId ?? null}>
       <View style={{ flex: 1 }}>
-        <RevenueCatIdentity gameCenterId={profile?.gameCenterId ?? null} />
-        {children}
-        <AdBreakHost />
+        <ShopEntranceProvider>
+          <RevenueCatIdentity gameCenterId={profile?.gameCenterId ?? null} />
+          {children}
+          <AdBreakHost />
+        </ShopEntranceProvider>
       </View>
     </GameProvider>
   );
@@ -75,7 +79,8 @@ function RootLayoutNav() {
       <Stack.Screen name="game-loading" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="game" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="victory" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="store" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      {/* The doorway overlay is the shop transition. A stack slide would play under it. */}
+      <Stack.Screen name="store" options={{ headerShown: false, animation: 'none', gestureEnabled: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="legal" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="board-preview" options={{ headerShown: false, animation: 'fade' }} />
@@ -176,6 +181,11 @@ function RootLayoutBody() {
       void SplashScreen.hideAsync().catch(() => {});
     }
   }, [appReady, frameReady, introResolved]);
+
+  useEffect(() => {
+    if (!appReady) return;
+    preloadSfx().catch(() => {});
+  }, [appReady]);
 
   return (
     <SafeAreaProvider>

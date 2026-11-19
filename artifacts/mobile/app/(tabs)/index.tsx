@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/contexts/GameContext';
+import { openShopFrom, useShopEntrance, useShopReturnLayout } from '@/contexts/ShopEntranceContext';
 import { useGameCenter } from '@/contexts/GameCenterContext';
 import { AVATARS, useCosmetics } from '@/contexts/CosmeticsContext';
 import { useColors } from '@/hooks/useColors';
@@ -106,6 +107,9 @@ export default function LobbyScreen() {
   const [nameInput, setNameInput] = useState(playerName);
   const [showPicker, setShowPicker] = useState(false);
   const lastNavigatedGameIdRef = useRef<string | null>(null);
+  const shopButtonRef = useRef<View>(null);
+  const { enterShop } = useShopEntrance();
+  const onReturnLayout = useShopReturnLayout();
 
   const pillOpacity = useSharedValue(0);
   const pillTranslateX = useSharedValue(-20);
@@ -210,7 +214,7 @@ export default function LobbyScreen() {
   const displayElo = profile?.elo ?? null;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]} onLayout={onReturnLayout}>
       <LinearGradient
         colors={['#200040', '#0a0018', '#07000f']}
         style={StyleSheet.absoluteFill}
@@ -344,9 +348,15 @@ export default function LobbyScreen() {
           </View>
 
           <View style={styles.storeRow}>
-            <Pressable onPress={() => router.push('/store')} style={styles.storeBtn}>
-              <Text style={styles.storeBtnText}>Store</Text>
-            </Pressable>
+            <View ref={shopButtonRef} collapsable={false} style={styles.storeBtn}>
+              <Pressable
+                onPress={() => openShopFrom(shopButtonRef.current, enterShop)}
+                style={styles.storeBtnFill}
+                testID="home-shop"
+              >
+                <Text style={styles.storeBtnText}>Store</Text>
+              </Pressable>
+            </View>
             <Pressable onPress={() => router.push('/settings')} style={styles.storeBtn}>
               <Text style={styles.storeBtnText}>Settings</Text>
             </Pressable>
@@ -467,6 +477,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(6,40,31,0.55)',
+  },
+  storeBtnFill: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
   },
   storeBtnText: { color: '#f0d78c', fontSize: 15, fontWeight: '800' },
   topGroup: {

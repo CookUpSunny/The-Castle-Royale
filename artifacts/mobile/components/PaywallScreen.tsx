@@ -18,6 +18,7 @@ import {
 import DuoSplit from "@/components/DuoSplit";
 import LegalCopy, { type LegalDoc } from "@/components/LegalCopy";
 import ShopGoldButton from "@/components/ShopGoldButton";
+import { playSfx } from "@/lib/sfx";
 import { useDuoWindow } from "@/hooks/useDuoWindow";
 import { useSubscription } from "@/lib/revenuecat";
 
@@ -110,6 +111,7 @@ export default function PaywallScreen({ onClose, featureLabel, shopEntry }: Payw
     Haptics.selectionAsync().catch(() => {});
     try {
       await purchase(plan.pkg);
+      if (shopEntry) playSfx('shop-equip');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onClose();
     } catch (err) {
